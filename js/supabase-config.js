@@ -357,7 +357,11 @@ class PaskasDataService {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
       const res = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS };
-      if (!res.ticket_template_image || res.ticket_template_image.includes('boarding-pass-template.png')) {
+      if (!res.ticket_template_image || 
+          typeof res.ticket_template_image !== 'string' || 
+          res.ticket_template_image.includes('[object') || 
+          res.ticket_template_image.includes('boarding-pass-template.png') ||
+          res.ticket_template_image.trim() === '') {
         res.ticket_template_image = 'images/boarding-pass-canva.png';
       }
       return res;
@@ -368,6 +372,13 @@ class PaskasDataService {
 
   saveSettings(newSettings) {
     const current = this.getSettings();
+    if (newSettings && newSettings.ticket_template_image) {
+      if (typeof newSettings.ticket_template_image !== 'string' || 
+          newSettings.ticket_template_image.includes('[object') ||
+          newSettings.ticket_template_image.trim() === '') {
+        newSettings.ticket_template_image = 'images/boarding-pass-canva.png';
+      }
+    }
     const updated = { ...current, ...newSettings };
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
 

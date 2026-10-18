@@ -883,6 +883,20 @@ window.handleIndividuWilayahSelect = handleIndividuWilayahSelect;
 // INITALIZATION
 // ===================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+  // Auto-clean any corrupt ticket template image in localStorage
+  try {
+    const rawSettings = localStorage.getItem('paskas_settings_cache');
+    if (rawSettings && (rawSettings.includes('[object') || rawSettings.includes('boarding-pass-template.png'))) {
+      const parsed = JSON.parse(rawSettings);
+      if (!parsed.ticket_template_image || typeof parsed.ticket_template_image !== 'string' || parsed.ticket_template_image.includes('[object') || parsed.ticket_template_image.includes('boarding-pass-template.png')) {
+        parsed.ticket_template_image = 'images/boarding-pass-canva.png';
+        localStorage.setItem('paskas_settings_cache', JSON.stringify(parsed));
+      }
+    }
+  } catch (e) {
+    console.warn('Settings cleanup error:', e);
+  }
+
   if (DASHBOARD_CARDS && DASHBOARD_CARDS[0] && DASHBOARD_CARDS[0].coverImg) {
     const bg1 = document.getElementById('heroBg1');
     if (bg1) {
