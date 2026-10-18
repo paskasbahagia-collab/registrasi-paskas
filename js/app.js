@@ -336,9 +336,19 @@ Saluran Narahubung Resmi:
   }
 ];
 
+const CARDS_SCHEMA_VERSION = 'v40_tugu_jogja';
+
 // Inisialisasi kartu dinamis (disimpan di browser agar user bisa tambah/edit langsung)
 function loadStoredCards() {
   try {
+    const currentVer = localStorage.getItem('paskas_cards_ver');
+    if (currentVer !== CARDS_SCHEMA_VERSION) {
+      // Pembersihan otomatis satu kali untuk kartu lama yang menduplikasi rocket hall di kartu 1
+      localStorage.removeItem('paskas_custom_cards');
+      localStorage.setItem('paskas_cards_ver', CARDS_SCHEMA_VERSION);
+      return JSON.parse(JSON.stringify(DEFAULT_DASHBOARD_CARDS));
+    }
+
     const saved = localStorage.getItem('paskas_custom_cards');
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -346,7 +356,7 @@ function loadStoredCards() {
         let needsSave = false;
         parsed.forEach((c, idx) => {
           // Jika kartu 1 sempat ter-overwrite otomatis ke rocket hall, pulihkan ke Tugu Jogja
-          if (idx === 0 && (c.coverImg === 'images/rocket-convention-hall-hero.jpg' || c.coverImg === 'images/rocket-convention-hall.jpg')) {
+          if (idx === 0 && (typeof c.coverImg === 'string' && (c.coverImg.includes('rocket') || c.coverImg.includes('convention')))) {
             c.coverImg = 'images/tugu-jogja-hero.jpg';
             c.thumbImg = 'images/tugu-jogja-card.jpg';
             needsSave = true;
@@ -873,6 +883,12 @@ window.handleIndividuWilayahSelect = handleIndividuWilayahSelect;
 // INITALIZATION
 // ===================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+  if (DASHBOARD_CARDS && DASHBOARD_CARDS[0] && DASHBOARD_CARDS[0].coverImg) {
+    const bg1 = document.getElementById('heroBg1');
+    if (bg1) {
+      bg1.style.backgroundImage = `url('${parseDirectImageUrl(DASHBOARD_CARDS[0].coverImg)}')`;
+    }
+  }
   renderDashboardCards();
   renderRegistrationPageContent();
   initCountdownTimer();
