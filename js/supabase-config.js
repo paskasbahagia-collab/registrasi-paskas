@@ -25,7 +25,7 @@ const DEFAULT_SETTINGS = {
   is_registration_open: 'true',
   closed_message: 'Mohon maaf, pendaftaran peserta Paskas Bahagia telah ditutup. Silakan hubungi narahubung panitia.',
   event_name: 'Silaturahmi Akbar Pasukan Amal Sholeh (PASKAS) Bahagia',
-  event_location: 'Pondok Modern Munzalan / Convention Hall',
+  event_location: 'Rocket Convention Hall, Sleman, D.I. Yogyakarta',
   event_desc: 'Selamat datang di portal resmi registrasi peserta Silaturahmi Akbar Paskas Bahagia. Mari eratkan ukhuwah, satukan langkah perjuangan, dan hadirkan senyum bahagia untuk sesama.',
   ticket_template_image: 'images/boarding-pass-canva.png',
   ticket_airline_name: 'MUNZALAN AIRLINES',

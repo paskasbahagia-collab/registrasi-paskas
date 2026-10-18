@@ -115,8 +115,8 @@ Rangkaian Agenda Utama:
     title: 'Lokasi & Venue',
     subtitle: 'Gedung utama, asrama penginapan ber-AC & konsumsi',
     badge: '02 / 06',
-    coverImg: 'https://images.unsplash.com/photo-1541971875076-8f970d573be6?auto=format&fit=crop&w=1200&q=80',
-    thumbImg: 'https://images.unsplash.com/photo-1541971875076-8f970d573be6?auto=format&fit=crop&w=400&q=80',
+    coverImg: 'images/rocket-convention-hall.jpg',
+    thumbImg: 'images/rocket-convention-hall-card.jpg',
     narration: `Panitia telah menyiapkan fasilitas terbaik agar seluruh peserta dan keluarga merasa nyaman dan fokus menikmati rangkaian kegiatan.
 
 Fasilitas Unggulan:
@@ -385,7 +385,7 @@ let DASHBOARD_CARDS = loadStoredCards();
 // PENGELOLA FOTO POLAROID GANTUNG, LOKASI & NARASI REGISTRASI
 // ===================================================================
 const DEFAULT_REGISTRATION_CONTENT = {
-  location: 'Bumi Perkemahan Silaturahmi',
+  location: 'Rocket Convention Hall, Sleman, D.I. Yogyakarta',
   kicker: 'KAFILAH & SAHABAT PASKAS',
   title: 'Silaturahmi Penuh Berkah di Alam Terbuka',
   narration: 'Silaturahmi Akbar Paskas Bahagia adalah ajang bertemunya hati para pejuang kebaikan, kafilah sedekah, dan keluarga besar dari penjuru tanah air. Mari daftarkan kehadiran Anda dan rombongan wilayah untuk menikmati kehangatan ukhuwah di tengah sejuknya alam asri.',
