@@ -33,7 +33,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=51.0">
+  <link rel="stylesheet" href="css/style.css?v=52.0">
 </head>
 <body>
 
@@ -1116,12 +1116,16 @@
                 <div class="preset-title">
                   <i class="fa-solid fa-wand-magic-sparkles"></i> Jadwal & Transportasi Standar Rombongan:
                 </div>
-                <div class="form-row col-4">
+                <div class="form-row col-5">
                   <div class="form-group">
                     <label class="form-label-xs">Wilayah</label>
                     <select id="grp_defaultWilayah" class="form-control form-control-sm" required>
-                      <option value="">-- Pilih Wilayah Asal --</option>
+                      <option value="">-- Pilih Wilayah --</option>
                     </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label-xs">Daerah Asal (Kota/Kab)</label>
+                    <input type="text" id="grp_defaultDaerah" class="form-control form-control-sm" placeholder="Contoh: Pontianak, Sambas" required>
                   </div>
                   <div class="form-group">
                     <label class="form-label-xs">Tgl Datang</label>
@@ -3642,7 +3646,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=51.0"></script>
-  <script src="js/app.js?v=51.0"></script>
+  <script src="js/supabase-config.js?v=52.0"></script>
+  <script src="js/app.js?v=52.0"></script>
 </body>
 </html>

@@ -2754,6 +2754,19 @@ function handleKelompokPreview(e) {
   const leaderPhone = document.getElementById('grp_leaderPhone').value.trim();
   const defaultWilayahRaw = document.getElementById('grp_defaultWilayah')?.value || '';
   const defaultWilayah = normalizeWilayahName(defaultWilayahRaw);
+  const defaultDaerah = (document.getElementById('grp_defaultDaerah')?.value || '').trim() || defaultWilayah;
+
+  if (!defaultWilayah) {
+    showToast('Harap pilih Wilayah Asal kafilah rombongan.', 'warning');
+    document.getElementById('grp_defaultWilayah')?.focus();
+    return;
+  }
+  if (!defaultDaerah) {
+    showToast('Harap isi Daerah Asal (Kota / Kabupaten) rombongan.', 'warning');
+    document.getElementById('grp_defaultDaerah')?.focus();
+    return;
+  }
+
   const defaultArrival = document.getElementById('grp_defaultArrival').value;
   const defaultDeparture = document.getElementById('grp_defaultDeparture').value;
   const defaultTransportSelect = document.getElementById('grp_defaultTransport').value;
@@ -2814,6 +2827,7 @@ function handleKelompokPreview(e) {
       full_name: name,
       phone_number: phone,
       wilayah: defaultWilayah,
+      daerah: defaultDaerah,
       is_child: isChild
     });
 
@@ -2844,6 +2858,7 @@ function handleKelompokPreview(e) {
       guardian_name: guardianName || null,
       gender: gender,
       wilayah: defaultWilayah,
+      daerah: defaultDaerah,
       arrival_date: defaultArrival,
       arrival_time: '12:00',
       departure_date: defaultDeparture,

@@ -4372,6 +4372,10 @@ h1, h2, h3, h4, h5, h6 {
   grid-template-columns: 1fr 1fr 1fr 1fr;
 }
 
+.form-row.col-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
