@@ -905,23 +905,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function setDefaultDates() {
-  const today = new Date();
-  const nextMonth = new Date(today);
-  nextMonth.setDate(today.getDate() + 30);
-  const nextMonthEnd = new Date(today);
-  nextMonthEnd.setDate(today.getDate() + 33);
-
-  const formatDate = d => d.toISOString().split('T')[0];
+  const defaultArrival = '2026-11-10';
+  const defaultDeparture = '2026-11-13';
 
   const arrivalInput = document.getElementById('ind_arrivalDate');
   const departureInput = document.getElementById('ind_departureDate');
   const grpArrInput = document.getElementById('grp_defaultArrival');
   const grpDepInput = document.getElementById('grp_defaultDeparture');
 
-  if (arrivalInput) arrivalInput.value = formatDate(nextMonth);
-  if (departureInput) departureInput.value = formatDate(nextMonthEnd);
-  if (grpArrInput) grpArrInput.value = formatDate(nextMonth);
-  if (grpDepInput) grpDepInput.value = formatDate(nextMonthEnd);
+  if (arrivalInput) arrivalInput.value = defaultArrival;
+  if (departureInput) departureInput.value = defaultDeparture;
+  if (grpArrInput) grpArrInput.value = defaultArrival;
+  if (grpDepInput) grpDepInput.value = defaultDeparture;
 }
 
 // ===================================================================
@@ -1924,14 +1919,101 @@ function handleIndividuAgeChange() {
   const guardianRow = document.getElementById('ind_child_guardian_row');
   if (!ageInput) return;
   const age = parseInt(ageInput.value, 10);
-  if (!isNaN(age) && age > 0 && age < 17) {
+  if (!isNaN(age) && age > 0 && age < 15) {
     if (alertBox) alertBox.style.display = 'block';
     if (guardianRow) guardianRow.style.display = 'block';
+    populateRegisteredGuardiansDatalist();
   } else {
     if (alertBox) alertBox.style.display = 'none';
     if (guardianRow) guardianRow.style.display = 'none';
   }
 }
+
+function populateRegisteredGuardiansDatalist() {
+  const datalist = document.getElementById('registeredGuardiansList');
+  if (!datalist) return;
+  datalist.innerHTML = '';
+
+  const candidates = [];
+  const seen = new Set();
+
+  (allRegistrations || []).forEach(reg => {
+    const name = (reg.full_name || reg.name || '').trim();
+    if (!name || seen.has(name.toLowerCase())) return;
+
+    const ageNum = parseInt(reg.age, 10);
+    const isChild = reg.is_child || (!isNaN(ageNum) && ageNum > 0 && ageNum < 15);
+    if (!isChild) {
+      seen.add(name.toLowerCase());
+      candidates.push(reg);
+    }
+  });
+
+  candidates.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '')).forEach(cand => {
+    const opt = document.createElement('option');
+    opt.value = cand.full_name;
+    const detailParts = [];
+    if (cand.region) detailParts.push(cand.region);
+    if (cand.city) detailParts.push(cand.city);
+    if (cand.registration_code) detailParts.push(cand.registration_code);
+    opt.label = detailParts.join(' • ');
+    datalist.appendChild(opt);
+  });
+}
+
+function handleGuardianSelect(input) {
+  if (!input) return;
+  const val = input.value.trim().toLowerCase();
+  if (!val) return;
+
+  const matched = (allRegistrations || []).find(reg => {
+    const name = (reg.full_name || reg.name || '').trim().toLowerCase();
+    return name === val;
+  });
+
+  if (matched) {
+    // Autofill wilayah & daerah
+    const wilayahSelect = document.getElementById('ind_wilayah_select');
+    if (wilayahSelect && matched.region) {
+      wilayahSelect.value = matched.region;
+    }
+    const daerahInput = document.getElementById('ind_daerah');
+    if (daerahInput && matched.city) {
+      daerahInput.value = matched.city;
+    }
+
+    // Autofill jadwal & transportasi
+    const arrDateInput = document.getElementById('ind_arrivalDate');
+    if (arrDateInput && matched.arrival_date) {
+      arrDateInput.value = matched.arrival_date;
+    }
+    const arrTimeInput = document.getElementById('ind_arrivalTime');
+    if (arrTimeInput && matched.arrival_time) {
+      arrTimeInput.value = matched.arrival_time;
+    }
+    const arrTransInput = document.getElementById('ind_transportArrival');
+    if (arrTransInput && matched.arrival_transport) {
+      arrTransInput.value = matched.arrival_transport;
+    }
+
+    const depDateInput = document.getElementById('ind_departureDate');
+    if (depDateInput && matched.departure_date) {
+      depDateInput.value = matched.departure_date;
+    }
+    const depTimeInput = document.getElementById('ind_departureTime');
+    if (depTimeInput && matched.departure_time) {
+      depTimeInput.value = matched.departure_time;
+    }
+    const depTransInput = document.getElementById('ind_transportDeparture');
+    if (depTransInput && matched.departure_transport) {
+      depTransInput.value = matched.departure_transport;
+    }
+
+    showToast(`Data wilayah, kedatangan & kepulangan otomatis disinkronkan dari Orang Tua/Wali: ${matched.full_name}`, 'success');
+  }
+}
+window.handleGuardianSelect = handleGuardianSelect;
+window.populateRegisteredGuardiansDatalist = populateRegisteredGuardiansDatalist;
 
 function validateIndividuStep(step) {
   if (step === 1) {
@@ -2156,7 +2238,7 @@ function renderIndividuStepPreview() {
   const fullName = document.getElementById('ind_fullName')?.value.trim() || '-';
   const rawAge = document.getElementById('ind_age')?.value;
   const age = parseInt(rawAge || '0', 10);
-  const isChild = age > 0 && age < 17;
+  const isChild = age > 0 && age < 15;
   const genderEl = document.querySelector('input[name="ind_gender"]:checked');
   const gender = genderEl ? genderEl.value : '-';
   const wilayah = document.getElementById('ind_wilayah_select')?.value.trim() || '-';
@@ -2210,7 +2292,7 @@ function renderIndividuStepPreview() {
           <span class="summary-field-label">Usia & Kategori</span>
           <span class="summary-field-value ${isChild ? 'highlight-amber' : ''}">
             <strong>${age > 0 ? age + ' Tahun' : '-'}</strong>
-            ${isChild ? '<span style="font-size: 11px; padding: 2px 7px; background: rgba(245, 158, 11, 0.2); border-radius: 4px; color: #b45309; font-weight: 700; margin-left: 5px;"><i class="fa-solid fa-child"></i> Anak-anak</span>' : (age >= 17 ? '<span style="font-size: 11px; color: #64748b; margin-left: 5px;">(Dewasa)</span>' : '')}
+            ${isChild ? '<span style="font-size: 11px; padding: 2px 7px; background: rgba(245, 158, 11, 0.2); border-radius: 4px; color: #b45309; font-weight: 700; margin-left: 5px;"><i class="fa-solid fa-child"></i> Anak-anak</span>' : (age >= 15 ? '<span style="font-size: 11px; color: #64748b; margin-left: 5px;">(Dewasa)</span>' : '')}
           </span>
         </div>
         <div class="summary-field-item">
@@ -2325,7 +2407,7 @@ function checkDuplicateRegistration({ full_name, phone_number, wilayah, is_child
     const existingName = (reg.full_name || '').trim().toLowerCase();
     const existingPhone = normalizePhoneNumber(reg.phone_number);
     const existingWilayah = (reg.wilayah || '').trim().toLowerCase();
-    const existingIsChild = reg.is_child || (reg.age && parseInt(reg.age, 10) < 17);
+    const existingIsChild = reg.is_child || (reg.age && parseInt(reg.age, 10) < 15);
 
     // Kriteria 1: Untuk dewasa (bukan anak-anak), nomor WhatsApp sama persis
     if (!is_child && !existingIsChild && targetPhone && existingPhone && targetPhone.length >= 8 && targetPhone === existingPhone) {
@@ -2430,7 +2512,7 @@ async function handleIndividuFinalSubmit(e) {
     const fullName = document.getElementById('ind_fullName').value.trim();
     const rawAge = document.getElementById('ind_age')?.value;
     const age = parseInt(rawAge || '0', 10);
-    const isChild = age > 0 && age < 17;
+    const isChild = age > 0 && age < 15;
     const genderEl = document.querySelector('input[name="ind_gender"]:checked');
     const gender = genderEl ? genderEl.value : 'Laki-laki';
     const rawWilayah = document.getElementById('ind_wilayah_select')?.value || '';
@@ -2510,6 +2592,7 @@ async function handleIndividuFinalSubmit(e) {
 
     showToast(`Alhamdulillah! Pendaftaran berhasil dengan No. Registrasi: ${saved.registration_code}`, 'success');
     document.getElementById('formIndividu').reset();
+    setDefaultDates();
     selectMedicalStatus('healthy');
     const detailMed = document.getElementById('ind_medical_detail');
     if (detailMed) detailMed.value = '';
@@ -2606,7 +2689,7 @@ function handleKelompokPreview(e) {
       card.querySelector('.grp-member-age')?.focus();
       return;
     }
-    const isChild = age > 0 && age < 17;
+    const isChild = age > 0 && age < 15;
 
     const genderSelect = card.querySelector('.grp-member-gender');
     const genderRadio = card.querySelector('input[type="radio"]:checked');
@@ -2865,21 +2948,21 @@ function syncAllGroupGuardians() {
     const name = r.querySelector('.grp-member-name')?.value.trim();
     const age = parseInt(r.querySelector('.grp-member-age')?.value || '0', 10);
     const gender = r.querySelector('.grp-member-gender')?.value || 'Laki-laki';
-    if (name && (isNaN(age) || age === 0 || age >= 17)) {
+    if (name && (isNaN(age) || age === 0 || age >= 15)) {
       if (!adults.some(a => a.valName.toLowerCase() === name.toLowerCase())) {
         adults.push({ name: `${name} (${gender})`, valName: name, gender: gender });
       }
     }
   });
 
-  // Perbarui dropdown wali di setiap baris peserta anak (< 17 th)
+  // Perbarui dropdown wali di setiap baris peserta anak (< 15 th)
   rows.forEach(r => {
     const wrap = r.querySelector('.grp-child-guardian-wrap');
     const select = r.querySelector('.grp-member-guardian');
     const age = parseInt(r.querySelector('.grp-member-age')?.value || '0', 10);
     const childGender = r.querySelector('.grp-member-gender')?.value || 'Laki-laki';
 
-    if (age > 0 && age < 17) {
+    if (age > 0 && age < 15) {
       if (wrap) wrap.style.display = 'block';
       if (select) {
         const currentVal = select.value;
@@ -3109,7 +3192,7 @@ function updateGroupStats() {
     }
 
     const ageVal = parseInt(row.querySelector('.grp-member-age')?.value || '0', 10);
-    if (ageVal > 0 && ageVal < 17) {
+    if (ageVal > 0 && ageVal < 15) {
       children++;
     }
   });
@@ -3208,9 +3291,9 @@ function renderActiveTicket(record) {
     elArrivalTime.textContent = record.arrival_time ? record.arrival_time : (record.arrival_date ? formatTicketDate(record.arrival_date) : '15:00 AM');
   }
 
-  // Deteksi status anak di bawah umur (< 17 th)
+  // Deteksi status anak di bawah umur (< 15 th)
   const ageVal = parseInt(record.age, 10);
-  const isChild = record.is_child || (!isNaN(ageVal) && ageVal > 0 && ageVal < 17);
+  const isChild = record.is_child || (!isNaN(ageVal) && ageVal > 0 && ageVal < 15);
 
   // Aturan Kelompok: Anak di bawah umur TIDAK masuk kelompok (kosong / '-')
   const grpVal = isChild 
@@ -3288,7 +3371,7 @@ function showTicketModal(recordOrBatch, initialIndex = 0) {
       selMember.innerHTML = currentTicketBatch.map((item, idx) => {
         const ageNum = parseInt(item.age, 10);
         const ageInfo = (!isNaN(ageNum) && ageNum > 0) ? ` (${ageNum} th)` : '';
-        const childInfo = (item.is_child || (ageNum > 0 && ageNum < 17)) ? ' [Anak]' : '';
+        const childInfo = (item.is_child || (ageNum > 0 && ageNum < 15)) ? ' [Anak]' : '';
         return `<option value="${idx}">Peserta ${idx + 1}: ${escapeHtml(item.full_name || item.name || 'Peserta')}${ageInfo}${childInfo}</option>`;
       }).join('');
       selMember.value = String(currentTicketIndex);
@@ -3498,7 +3581,7 @@ Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`;
   const returnDate = formatTicketDate(record.departure_date || record.return_date || '2026-11-14');
   const arrivalTime = record.arrival_time ? record.arrival_time : (record.arrival_date ? formatTicketDate(record.arrival_date) : '15:00 AM');
   const ageVal = parseInt(record.age, 10);
-  const isChild = record.is_child || (!isNaN(ageVal) && ageVal > 0 && ageVal < 17);
+  const isChild = record.is_child || (!isNaN(ageVal) && ageVal > 0 && ageVal < 15);
   const grpVal = isChild ? '-' : (record.group_name || (record.registration_type === 'kelompok' ? 'Kelompok' : 'Reguler'));
   
   let roomVal = record.room_number || record.kamar || '';
@@ -3537,6 +3620,35 @@ Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`;
     .replace(/{rute_to}/g, settings.ticket_route_to || 'RUMAH');
 }
 
+function sendTicketWhatsApp() {
+  if (!currentTicketRecord) {
+    showToast('Tidak ada data tiket yang sedang aktif.', 'warning');
+    return;
+  }
+  let phone = (currentTicketRecord.phone_number || currentTicketRecord.phone || '').trim();
+  if (!phone) {
+    const input = prompt('Kirim E-Tiket via WhatsApp:\nMasukkan No. WhatsApp peserta / koordinator (contoh: 08123456789):', '');
+    if (input === null) return;
+    phone = input.trim();
+  }
+  if (!phone) {
+    showToast('Nomor WhatsApp belum diisi.', 'warning');
+    return;
+  }
+  let cleanPhone = phone.replace(/[^0-9]/g, '');
+  if (cleanPhone.startsWith('0')) {
+    cleanPhone = '62' + cleanPhone.slice(1);
+  } else if (!cleanPhone.startsWith('62')) {
+    cleanPhone = '62' + cleanPhone;
+  }
+
+  const body = buildConfirmationMessage(currentTicketRecord);
+  const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(body)}`;
+  window.open(waUrl, '_blank');
+  showToast(`Membuka WhatsApp untuk mengirim tiket ke No: ${phone}`, 'success');
+}
+window.sendTicketWhatsApp = sendTicketWhatsApp;
+
 function sendTicketEmail() {
   if (!currentTicketRecord) {
     showToast('Tidak ada data tiket yang sedang aktif.', 'warning');
@@ -3562,10 +3674,20 @@ function sendTicketEmail() {
   // Otomatis salin narasi ke clipboard juga agar nyaman jika email client web digunakan
   copyTicketConfirmationMessage(false);
 
-  const mailtoUrl = `mailto:${encodeURIComponent(destEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.location.href = mailtoUrl;
+  // Buka Gmail Web langsung di tab baru (sangat reliabel di browser modern)
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(destEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(gmailUrl, '_blank');
 
-  showToast(`Membuka aplikasi email untuk pengiriman ke: ${destEmail}. Rincian tiket juga telah disalin ke clipboard!`, 'success');
+  // Trigger link mailto sebagai pelengkap aplikasi email sistem
+  const mailtoUrl = `mailto:${encodeURIComponent(destEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const mailLink = document.createElement('a');
+  mailLink.href = mailtoUrl;
+  mailLink.target = '_blank';
+  document.body.appendChild(mailLink);
+  mailLink.click();
+  document.body.removeChild(mailLink);
+
+  showToast(`Membuka email pengiriman ke: ${destEmail}. Rincian tiket juga telah disalin ke clipboard!`, 'success');
 }
 
 function copyTicketConfirmationMessage(notify = true) {
@@ -3934,9 +4056,9 @@ function applyRekapFilters() {
     let matchAge = true;
     const aVal = item.age ? parseInt(item.age, 10) : null;
     if (filterAge === 'child') {
-      matchAge = aVal !== null && aVal < 17;
+      matchAge = aVal !== null && aVal < 15;
     } else if (filterAge === 'adult') {
-      matchAge = aVal === null || aVal >= 17;
+      matchAge = aVal === null || aVal >= 15;
     }
 
     return matchSearch && matchType && matchGender && matchWilayah && matchCloth && matchAge;
@@ -3980,7 +4102,7 @@ function renderRekapTable() {
                          !item.medical_history.toLowerCase().includes('sehat');
 
     const ageVal = item.age ? parseInt(item.age, 10) : null;
-    const isChild = ageVal !== null && ageVal < 17;
+    const isChild = ageVal !== null && ageVal < 15;
     const ageDisplay = ageVal !== null 
       ? (isChild 
           ? `<span class="badge-age-child" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; background: rgba(245, 158, 11, 0.18); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; border-radius: 999px; font-size: 11px; font-weight: 800;"><i class="fa-solid fa-child"></i> ${ageVal} th</span>`
@@ -4157,7 +4279,7 @@ function viewAttendeeDetail(id) {
   const body = document.getElementById('attendeeModalBody');
 
   const ageNum = parseInt(attendee.age, 10);
-  const isChild = attendee.is_child || (!isNaN(ageNum) && ageNum > 0 && ageNum < 17);
+  const isChild = attendee.is_child || (!isNaN(ageNum) && ageNum > 0 && ageNum < 15);
 
   body.innerHTML = `
     <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px;">
@@ -4168,7 +4290,7 @@ function viewAttendeeDetail(id) {
           <span style="font-size: 13px; color: #fbbf24;">${attendee.gender} &bull; ${attendee.wilayah}${attendee.daerah ? ` &bull; ${attendee.daerah}` : ''}</span>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-          ${isChild ? `<span class="badge-count-pill" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);"><i class="fa-solid fa-child"></i> ANAK-ANAK (${ageNum || '<17'} Th)</span>` : ''}
+          ${isChild ? `<span class="badge-count-pill" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);"><i class="fa-solid fa-child"></i> ANAK-ANAK (${ageNum || '<15'} Th)</span>` : ''}
           <span class="badge-count-pill">${attendee.registration_type.toUpperCase()}</span>
         </div>
       </div>
@@ -4187,7 +4309,7 @@ function viewAttendeeDetail(id) {
         <i class="fa-solid fa-child-reaching" style="font-size: 26px; color: #fbbf24; margin-top: 2px;"></i>
         <div style="flex: 1;">
           <strong style="color: #fbbf24; font-size: 14.5px; display: block; margin-bottom: 3px;">
-            <i class="fa-solid fa-triangle-exclamation"></i> Peserta Di Bawah Umur (${ageNum ? ageNum + ' Tahun' : '< 17 Tahun'})
+            <i class="fa-solid fa-triangle-exclamation"></i> Peserta Di Bawah Umur (${ageNum ? ageNum + ' Tahun' : '< 15 Tahun'})
           </strong>
           <p style="font-size: 13px; color: #fef3c7; margin: 0; line-height: 1.5;">
             ${attendee.guardian_name 
@@ -5002,7 +5124,7 @@ function exportToExcel() {
     'Koordinator Kelompok': item.group_leader_name || '-',
     'Nama Peserta': item.full_name,
     'Usia': item.age ? `${item.age} Th` : '-',
-    'Kategori Usia': (item.is_child || (item.age && item.age < 17)) ? 'Anak-anak (<17)' : (item.age ? 'Dewasa' : '-'),
+    'Kategori Usia': (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
     'Orang Tua / Wali': item.guardian_name || '-',
     'Gedung / Asrama': item.building || '-',
     'Kamar / Tenda': item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-'),
@@ -5046,7 +5168,7 @@ function exportToCSV() {
     `"${item.registration_type}"`,
     `"${item.full_name}"`,
     `"${item.age ? item.age + ' Th' : '-'}"`,
-    `"${(item.is_child || (item.age && item.age < 17)) ? 'Anak-anak' : (item.age ? 'Dewasa' : '-')}"`,
+    `"${(item.is_child || (item.age && item.age < 15)) ? 'Anak-anak' : (item.age ? 'Dewasa' : '-')}"`,
     `"${(item.guardian_name || '-').replace(/"/g, '""')}"`,
     `"${(item.building || '-').replace(/"/g, '""')}"`,
     `"${(item.room_name ? item.room_name + ' (No. ' + (item.room_number || '-') + ')' : (item.room_number || '-')).replace(/"/g, '""')}"`,

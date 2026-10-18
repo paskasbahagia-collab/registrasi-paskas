@@ -542,7 +542,7 @@
                             <input type="number" id="ind_age" name="age" class="form-control" placeholder="Cth: 24" min="1" max="120" required oninput="handleIndividuAgeChange()">
                           </div>
                           <div id="ind_age_child_alert" style="display: none; font-size: 11px; margin-top: 5px; color: #b45309; line-height: 1.3; font-weight: 600;">
-                            <i class="fa-solid fa-child"></i> Anak-anak (&lt;17 Th)
+                            <i class="fa-solid fa-child"></i> Anak-anak (&lt;15 Th)
                           </div>
                         </div>
 
@@ -553,10 +553,11 @@
                           </label>
                           <div class="input-with-icon">
                             <i class="fa-solid fa-user-shield text-cyan"></i>
-                            <input type="text" id="ind_guardianName" class="form-control" placeholder="Nama lengkap Ayah / Ibu / Wali yang diikuti kamarnya">
+                            <input type="text" id="ind_guardianName" class="form-control" list="registeredGuardiansList" placeholder="Ketik atau pilih nama Ayah / Ibu / Wali terdaftar..." oninput="handleGuardianSelect(this)" onchange="handleGuardianSelect(this)" autocomplete="off">
+                            <datalist id="registeredGuardiansList"></datalist>
                           </div>
                           <span style="font-size: 11px; color: #94a3b8; margin-top: 4px; display: block;">
-                            Kamar anak akan otomatis disamakan dengan kamar orang tua / wali yang dipilih saat setting tempat.
+                            💡 Ketik atau pilih nama orang tua yang sudah mendaftar. Wilayah, jadwal kedatangan & kamar anak akan otomatis diselaraskan.
                           </span>
                         </div>
 
@@ -698,7 +699,7 @@
                         </div>
                         <div class="form-group">
                           <label for="ind_arrivalDate" class="form-label">Tanggal Kedatangan <span class="required">*</span></label>
-                          <input type="date" id="ind_arrivalDate" name="arrivalDate" class="form-control" required>
+                          <input type="date" id="ind_arrivalDate" name="arrivalDate" class="form-control" value="2026-11-10" required>
                         </div>
                         <div class="form-group">
                           <label for="ind_arrivalTime" class="form-label">Perkiraan Jam Tiba (Format 24 Jam WIB)</label>
@@ -794,7 +795,7 @@
                         </div>
                         <div class="form-group">
                           <label for="ind_departureDate" class="form-label">Tanggal Kepulangan <span class="required">*</span></label>
-                          <input type="date" id="ind_departureDate" name="departureDate" class="form-control" required>
+                          <input type="date" id="ind_departureDate" name="departureDate" class="form-control" value="2026-11-13" required>
                         </div>
                         <div class="form-group">
                           <label for="ind_departureTime" class="form-label">Perkiraan Jam Pulang (Format 24 Jam WIB)</label>
@@ -1119,11 +1120,11 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label-xs">Tgl Datang</label>
-                    <input type="date" id="grp_defaultArrival" class="form-control form-control-sm" required>
+                    <input type="date" id="grp_defaultArrival" class="form-control form-control-sm" value="2026-11-10" required>
                   </div>
                   <div class="form-group">
                     <label class="form-label-xs">Tgl Pulang</label>
-                    <input type="date" id="grp_defaultDeparture" class="form-control form-control-sm" required>
+                    <input type="date" id="grp_defaultDeparture" class="form-control form-control-sm" value="2026-11-13" required>
                   </div>
                   <div class="form-group">
                     <label class="form-label-xs">Kendaraan</label>
@@ -1194,7 +1195,7 @@
                   <span class="stat-value" id="grpStatFemale">0</span>
                 </div>
                 <div class="stat-pill" style="border-left: 2px solid rgba(245, 158, 11, 0.4);">
-                  <span class="stat-label">Anak-anak (&lt;17 th):</span>
+                  <span class="stat-label">Anak-anak (&lt;15 th):</span>
                   <span class="stat-value" id="grpStatChildren" style="color: #fbbf24;">0</span>
                 </div>
                 <span class="group-stats-hint">
@@ -2178,8 +2179,8 @@
 
             <select id="filterAgeCategory" class="filter-select" onchange="applyRekapFilters()">
               <option value="ALL">Semua Usia</option>
-              <option value="child">Anak-anak (&lt;17 Th)</option>
-              <option value="adult">Dewasa (&ge;17 Th)</option>
+              <option value="child">Anak-anak (&lt;15 Th)</option>
+              <option value="adult">Dewasa (&ge;15 Th)</option>
             </select>
 
             <select id="filterType" class="filter-select" onchange="applyRekapFilters()">
@@ -3422,23 +3423,20 @@ CREATE TABLE IF NOT EXISTS registrations (
         </div>
       </div>
 
-      <div class="bp-actions-bar">
+      <div class="bp-actions-bar" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.12);">
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" class="btn btn-primary" onclick="sendTicketEmail()" id="btnSendTicketEmail" style="background: #10b981; border-color: #059669; color: #ffffff;">
-            <i class="fa-solid fa-envelope"></i> Kirim Tiket via Email
+          <button type="button" class="btn" onclick="sendTicketWhatsApp()" id="btnSendTicketWa" style="background: #25d366; color: #ffffff; border: none; font-weight: 600; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);">
+            <i class="fa-brands fa-whatsapp"></i> Kirim via WhatsApp
           </button>
-          <button type="button" class="btn btn-copy-ticket" onclick="copyTicketConfirmationMessage()">
-            <i class="fa-regular fa-copy"></i> Salin Teks E-Tiket
+          <button type="button" class="btn btn-primary" onclick="sendTicketEmail()" id="btnSendTicketEmail" style="background: #0284c7; border: none; color: #ffffff; font-weight: 600; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
+            <i class="fa-solid fa-envelope"></i> Kirim via Email
           </button>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button type="button" class="btn btn-accent" onclick="downloadTicketImage()" id="btnDownloadTicketPng" style="background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; border: none; font-weight: 600; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
             <i class="fa-solid fa-download"></i> Unduh E-Tiket (PNG)
           </button>
-          <button type="button" class="btn btn-glass-cyan" onclick="printTicketOnly()">
-            <i class="fa-solid fa-print"></i> Cetak E-Tiket
-          </button>
-          <button type="button" class="btn btn-primary" onclick="closeTicketModal(); if (typeof isAdminLoggedIn !== 'undefined' && isAdminLoggedIn) { navigateTo('rekap'); } else { navigateTo('dashboard'); }">
+          <button type="button" class="btn btn-primary" onclick="closeTicketModal(); if (typeof isAdminLoggedIn !== 'undefined' && isAdminLoggedIn) { navigateTo('rekap'); } else { navigateTo('dashboard'); }" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #1a1815; font-weight: 700; border: none; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);">
             <i class="fa-solid fa-circle-check"></i> Selesai
           </button>
         </div>
