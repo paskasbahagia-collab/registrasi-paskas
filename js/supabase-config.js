@@ -9,8 +9,8 @@
 // ===================================================================
 // KREDENSIAL DEFAULT CLOUD SUPABASE (Otomatis Aktif Saat Deploy Vercel)
 // ===================================================================
-const DEFAULT_SUPABASE_URL = ''; // Tempelkan Project URL Anda di sini (Cth: https://xxxx.supabase.co)
-const DEFAULT_SUPABASE_KEY = ''; // Tempelkan Project API Key (anon public) Anda di sini
+const DEFAULT_SUPABASE_URL = 'https://cyqtyobzhqzmelmmpbdb.supabase.co'; // Project URL Supabase
+const DEFAULT_SUPABASE_KEY = ''; // Tempelkan Project API Key (anon/publishable) di sini
 
 const STORAGE_KEYS = {
   SUPABASE_URL: 'paskas_supabase_url',
@@ -56,140 +56,8 @@ Jazakumullahu Khairan Katsiran,
 Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`
 };
 
-// Data Dummy Demo Awal (agar langsung terlihat indah saat pertama kali dibuka)
-const INITIAL_DEMO_DATA = [
-  {
-    id: 1,
-    registration_code: 'PKB-IND-2026-001',
-    registration_type: 'individu',
-    group_name: '',
-    group_leader_name: '',
-    full_name: 'Ustadz Ahmad Fauzi',
-    age: 38,
-    is_child: false,
-    gender: 'Laki-laki',
-    wilayah: 'Pontianak',
-    arrival_date: '2026-11-19',
-    arrival_time: '09:00',
-    departure_date: '2026-11-22',
-    departure_time: '15:00',
-    transport_arrival: 'Pesawat Terbang',
-    transport_departure: 'Pesawat Terbang',
-    cloth_size: 'XL',
-    medical_history: 'Tidak Ada',
-    phone_number: '081234567890',
-    notes: 'Kafilah Duta Infaq Pontianak',
-    room_number: '101',
-    room_name: 'Kamar Bilal bin Rabah',
-    building: 'Gedung Asrama Utama',
-    created_at: new Date(Date.now() - 3600000 * 24 * 2).toISOString()
-  },
-  {
-    id: 2,
-    registration_code: 'PKB-IND-2026-002',
-    registration_type: 'individu',
-    group_name: '',
-    group_leader_name: '',
-    full_name: 'Siti Nurhaliza',
-    age: 26,
-    is_child: false,
-    gender: 'Perempuan',
-    wilayah: 'Bandung',
-    arrival_date: '2026-11-19',
-    arrival_time: '14:00',
-    departure_date: '2026-11-22',
-    departure_time: '13:00',
-    transport_arrival: 'Kereta Api',
-    transport_departure: 'Kereta Api',
-    cloth_size: 'M',
-    medical_history: 'Maag kambuhan (membawa obat antasida sendiri)',
-    phone_number: '081398765432',
-    notes: 'Mohon info posko akhwat',
-    room_number: '201',
-    room_name: 'Kamar Sayyidah Khadijah',
-    building: 'Gedung Siti Maryam (Akhwat)',
-    created_at: new Date(Date.now() - 3600000 * 24 * 1.5).toISOString()
-  },
-  {
-    id: 3,
-    registration_code: 'PKB-GRP-2026-001',
-    registration_type: 'kelompok',
-    group_name: 'Rombongan Paskas Wilayah Sambas',
-    group_leader_name: 'H. Syamsul Bahri',
-    full_name: 'H. Syamsul Bahri',
-    age: 45,
-    is_child: false,
-    gender: 'Laki-laki',
-    wilayah: 'Sambas',
-    arrival_date: '2026-11-19',
-    arrival_time: '11:00',
-    departure_date: '2026-11-22',
-    departure_time: '16:00',
-    transport_arrival: 'Bus Panitia',
-    transport_departure: 'Bus Panitia',
-    cloth_size: 'XXL',
-    medical_history: 'Tidak Ada',
-    phone_number: '085245678901',
-    notes: 'Ketua rombongan 1 bus dari Sambas',
-    room_number: '102',
-    room_name: 'Kamar Ali bin Abi Thalib',
-    building: 'Gedung Asrama Utama',
-    created_at: new Date(Date.now() - 3600000 * 18).toISOString()
-  },
-  {
-    id: 4,
-    registration_code: 'PKB-GRP-2026-002',
-    registration_type: 'kelompok',
-    group_name: 'Rombongan Paskas Wilayah Sambas',
-    group_leader_name: 'H. Syamsul Bahri',
-    full_name: 'Muhammad Ilham',
-    age: 12,
-    is_child: true,
-    gender: 'Laki-laki',
-    wilayah: 'Sambas',
-    arrival_date: '2026-11-19',
-    arrival_time: '11:00',
-    departure_date: '2026-11-22',
-    departure_time: '16:00',
-    transport_arrival: 'Bus Panitia',
-    transport_departure: 'Bus Panitia',
-    cloth_size: 'L',
-    medical_history: 'Riwayat asma jika kena hawa dingin malam',
-    phone_number: '085345678902',
-    notes: 'Anggota rombongan Sambas (Ikut Orang Tua)',
-    guardian_name: 'H. Syamsul Bahri',
-    room_number: '102',
-    room_name: 'Kamar Ali bin Abi Thalib',
-    building: 'Gedung Asrama Utama',
-    created_at: new Date(Date.now() - 3600000 * 17).toISOString()
-  },
-  {
-    id: 5,
-    registration_code: 'PKB-IND-2026-003',
-    registration_type: 'individu',
-    group_name: '',
-    group_leader_name: '',
-    full_name: 'dr. Fatimah Azzahra',
-    age: 32,
-    is_child: false,
-    gender: 'Perempuan',
-    wilayah: 'Jakarta Selatan',
-    arrival_date: '2026-11-19',
-    arrival_time: '10:30',
-    departure_date: '2026-11-22',
-    departure_time: '17:00',
-    transport_arrival: 'Pesawat Terbang',
-    transport_departure: 'Pesawat Terbang',
-    cloth_size: 'S',
-    medical_history: 'Tidak Ada',
-    phone_number: '081122334455',
-    notes: 'Siap bergabung piket di posko kesehatan panitia',
-    room_number: '',
-    room_name: '',
-    building: '',
-    created_at: new Date(Date.now() - 3600000 * 8).toISOString()
-  }
-];
+// Data Awal Murni (Kosong / 0 Peserta sampai ada pendaftaran baru)
+const INITIAL_DEMO_DATA = [];
 
 class PaskasDataService {
   constructor() {
@@ -212,10 +80,19 @@ class PaskasDataService {
       }
     }
 
-    // Inisialisasi data lokal jika masih kosong
-    if (!localStorage.getItem(STORAGE_KEYS.REGISTRATIONS)) {
-      localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(INITIAL_DEMO_DATA));
+    // Inisialisasi data lokal jika masih kosong atau bersihkan data dummy demo lama
+    const existing = localStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
+    if (!existing) {
+      localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify([]));
+    } else {
+      try {
+        const parsed = JSON.parse(existing);
+        if (Array.isArray(parsed) && parsed.some(p => p.registration_code === 'PKB-IND-2026-001' || p.full_name === 'Ustadz Ahmad Fauzi')) {
+          localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify([]));
+        }
+      } catch (e) {}
     }
+
     if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
     }
