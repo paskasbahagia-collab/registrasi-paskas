@@ -30,7 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=40.0">
+  <link rel="stylesheet" href="css/style.css?v=41.0">
 </head>
 <body>
 
@@ -2823,18 +2823,35 @@ CREATE TABLE IF NOT EXISTS registrations (
                 <div class="ticket-tpl-setting-grid" style="margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                   <div class="ticket-tpl-upload-box" style="background: #fdfbf7; padding: 18px; border-radius: var(--radius-md); border: 1.5px solid #e2dac9;">
                     <label class="form-label" style="font-size: 13px; font-weight: 700; color: #1a1815; margin-bottom: 8px; display: block;">
-                      <i class="fa-solid fa-plane-circle-check text-gold"></i> Template E-Tiket Resmi Munzalan Airlines
+                      <i class="fa-solid fa-plane-circle-check text-gold"></i> Template E-Tiket Kosongan (Background Canva)
                     </label>
                     <p style="font-size: 12px; color: #554d3f; line-height: 1.5; margin-bottom: 12px;">
-                      Desain tiket fisik/digital telah disesuaikan secara presisi dari desain resmi Canva (1024&times;331 px) lengkap dengan pesawat Boeing 747, peta dunia, watermark Paskas Bahagia, barcode presisi, serta tata letak data peserta yang otomatis terisi.
+                      Desain tiket dasar (1024&times;331 px). Sistem secara <strong>otomatis menempelkan data peserta</strong> (Nama, Tanggal, Jam, Kelompok, Kamar, & Daerah) ke template ini setiap kali pendaftaran baru masuk.
                     </p>
-                    <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #554d3f; margin-top: 15px;">
-                      <span id="ticketTemplateStatusBadge" class="settings-chip-badge" style="background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; font-size: 11px; padding: 6px 12px;">
+
+                    <!-- Thumbnail Template Preview -->
+                    <div style="background: #ffffff; border: 1px solid #d4c8b2; border-radius: 8px; padding: 6px; margin-bottom: 12px; text-align: center;">
+                      <img id="ticketTemplateThumbImg" src="images/boarding-pass-canva.png" alt="Template Canva Kosongan" style="width: 100%; max-height: 110px; object-fit: contain; border-radius: 4px; display: block; margin: 0 auto;">
+                    </div>
+
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: #554d3f; margin-bottom: 14px; flex-wrap: wrap;">
+                      <span id="ticketTemplateStatusBadge" class="settings-chip-badge" style="background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; font-size: 11px; padding: 5px 10px;">
                         <i class="fa-solid fa-circle-check"></i> Template Resmi Aktif
                       </span>
-                      <span id="ticketTemplateSourceLabel" style="font-family: monospace; font-size: 11px; color: #635a4d;">
+                      <span id="ticketTemplateSourceLabel" style="font-family: monospace; font-size: 11px; color: #635a4d; word-break: break-all;">
                         images/boarding-pass-canva.png
                       </span>
+                    </div>
+
+                    <!-- Tombol Aksi Upload & Reset -->
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                      <input type="file" id="cfg_ticketTemplateFile" accept="image/png,image/jpeg,image/webp" style="display: none;" onchange="handleTicketTemplateFileUpload(event)">
+                      <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('cfg_ticketTemplateFile').click()" style="background: #b45309; border: none; font-size: 12px; padding: 8px 14px;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Ganti Template (Upload PNG/JPG)
+                      </button>
+                      <button type="button" class="btn btn-sm btn-secondary" onclick="resetTicketTemplateImage()" style="font-size: 12px; padding: 8px 12px;">
+                        <i class="fa-solid fa-rotate-left"></i> Reset ke Bawaan
+                      </button>
                     </div>
                   </div>
 
@@ -3596,7 +3613,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=40.0"></script>
-  <script src="js/app.js?v=40.0"></script>
+  <script src="js/supabase-config.js?v=41.0"></script>
+  <script src="js/app.js?v=41.0"></script>
 </body>
 </html>

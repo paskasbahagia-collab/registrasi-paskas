@@ -3259,9 +3259,10 @@ function renderActiveTicket(record) {
 
   const ticketCard = document.getElementById('printableTicket');
 
-  // Always apply official Canva boarding pass template
+  // Apply boarding pass template (official Canva or customized upload)
   if (ticketCard) {
-    ticketCard.style.backgroundImage = "url('images/boarding-pass-canva.png?v=2.0')";
+    const tplImg = settings.ticket_template_image || 'images/boarding-pass-canva.png';
+    ticketCard.style.backgroundImage = `url('${tplImg}')`;
     ticketCard.style.backgroundSize = '100% 100%';
     ticketCard.style.backgroundPosition = 'center';
     ticketCard.style.backgroundRepeat = 'no-repeat';
@@ -6114,12 +6115,16 @@ function loadTicketTemplateSettings() {
   if (fromInp) fromInp.value = settings.ticket_route_from || 'RANTAUAN';
   if (toInp) toInp.value = settings.ticket_route_to || 'RUMAH';
 
-  const tplImg = settings.ticket_template_image || 'images/boarding-pass-template.png';
+  const tplImg = settings.ticket_template_image || 'images/boarding-pass-canva.png';
   if (urlInp) {
     urlInp.value = tplImg.startsWith('data:') ? '' : tplImg;
   }
   if (srcLabel) {
     srcLabel.textContent = tplImg.startsWith('data:') ? 'Custom Upload (Gambar Kosongan)' : tplImg;
+  }
+  const thumbImg = document.getElementById('ticketTemplateThumbImg');
+  if (thumbImg) {
+    thumbImg.src = tplImg;
   }
 
   if (subjInp) subjInp.value = settings.confirmation_email_subject || 'Konfirmasi Registrasi Peserta - Silaturahmi Akbar Paskas Bahagia';
@@ -6146,6 +6151,9 @@ async function handleTicketTemplateFileUpload(event) {
     const srcLabel = document.getElementById('ticketTemplateSourceLabel');
     if (srcLabel) srcLabel.textContent = `File: ${file.name} (Siap Disimpan)`;
 
+    const thumbImg = document.getElementById('ticketTemplateThumbImg');
+    if (thumbImg) thumbImg.src = customTicketTemplateBase64;
+
     const urlInp = document.getElementById('cfg_ticketTemplateUrl');
     if (urlInp) urlInp.value = '';
 
@@ -6157,6 +6165,8 @@ async function handleTicketTemplateFileUpload(event) {
       customTicketTemplateBase64 = e.target.result;
       const srcLabel = document.getElementById('ticketTemplateSourceLabel');
       if (srcLabel) srcLabel.textContent = `File: ${file.name}`;
+      const thumbImg = document.getElementById('ticketTemplateThumbImg');
+      if (thumbImg) thumbImg.src = customTicketTemplateBase64;
       renderTicketTemplateLivePreview();
       showToast('Gambar template kosongan berhasil dimuat!', 'success');
     };
@@ -6169,7 +6179,11 @@ function handleTicketTemplateUrlChange() {
   const urlInp = document.getElementById('cfg_ticketTemplateUrl');
   const srcLabel = document.getElementById('ticketTemplateSourceLabel');
   if (srcLabel && urlInp) {
-    srcLabel.textContent = urlInp.value.trim() || 'images/boarding-pass-template.png';
+    srcLabel.textContent = urlInp.value.trim() || 'images/boarding-pass-canva.png';
+  }
+  const thumbImg = document.getElementById('ticketTemplateThumbImg');
+  if (thumbImg && urlInp) {
+    thumbImg.src = urlInp.value.trim() || 'images/boarding-pass-canva.png';
   }
   renderTicketTemplateLivePreview();
 }
@@ -6177,13 +6191,20 @@ function handleTicketTemplateUrlChange() {
 function resetTicketTemplateImage() {
   customTicketTemplateBase64 = null;
   const urlInp = document.getElementById('cfg_ticketTemplateUrl');
-  if (urlInp) urlInp.value = 'images/boarding-pass-template.png';
+  if (urlInp) urlInp.value = 'images/boarding-pass-canva.png';
   const fileInp = document.getElementById('cfg_ticketTemplateFile');
   if (fileInp) fileInp.value = '';
   const srcLabel = document.getElementById('ticketTemplateSourceLabel');
-  if (srcLabel) srcLabel.textContent = 'images/boarding-pass-template.png';
+  if (srcLabel) srcLabel.textContent = 'images/boarding-pass-canva.png';
+  const thumbImg = document.getElementById('ticketTemplateThumbImg');
+  if (thumbImg) thumbImg.src = 'images/boarding-pass-canva.png';
+
+  window.dataService.saveSettings({
+    ticket_template_image: 'images/boarding-pass-canva.png'
+  });
+
   renderTicketTemplateLivePreview();
-  showToast('Gambar template dikembalikan ke default Munzalan Airlines.', 'info');
+  showToast('Gambar template dikembalikan ke default resmi Munzalan Airlines.', 'info');
 }
 
 function renderTicketTemplateLivePreview() {
@@ -6202,7 +6223,7 @@ function renderTicketTemplateLivePreview() {
   const toVal = (toInp?.value || 'RUMAH').trim();
 
   const settings = window.dataService.getSettings();
-  let targetImg = customTicketTemplateBase64 || urlInp?.value?.trim() || settings.ticket_template_image || 'images/boarding-pass-template.png';
+  let targetImg = customTicketTemplateBase64 || urlInp?.value?.trim() || settings.ticket_template_image || 'images/boarding-pass-canva.png';
 
   const elAirline = document.getElementById('prevBpAirlineText');
   if (elAirline) elAirline.textContent = airlineVal;
@@ -6216,7 +6237,7 @@ function renderTicketTemplateLivePreview() {
   const elTo = document.getElementById('prevBpRouteTo');
   if (elTo) elTo.textContent = toVal.toUpperCase();
 
-  prevCard.style.backgroundImage = "url('images/boarding-pass-canva.png?v=2.0')";
+  prevCard.style.backgroundImage = `url('${targetImg}')`;
   prevCard.style.backgroundSize = '100% 100%';
   prevCard.style.backgroundPosition = 'center';
   prevCard.style.backgroundRepeat = 'no-repeat';
@@ -6243,7 +6264,7 @@ function saveTicketTemplateSettings() {
   const bodyInp = document.getElementById('cfg_confirmationBody');
 
   const settings = window.dataService.getSettings();
-  let finalImg = customTicketTemplateBase64 || urlInp?.value?.trim() || settings.ticket_template_image || 'images/boarding-pass-template.png';
+  let finalImg = customTicketTemplateBase64 || urlInp?.value?.trim() || settings.ticket_template_image || 'images/boarding-pass-canva.png';
 
   window.dataService.saveSettings({
     ticket_template_image: finalImg,
