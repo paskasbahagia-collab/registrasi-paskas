@@ -2548,11 +2548,40 @@ function autoAllocateRoomAndGroup(gender = 'Laki-laki', isChild = false, guardia
                    String(gender).toLowerCase() === 'p';
   const targetGender = isAkhwat ? 'akhwat' : 'ikhwan';
 
-  // Master Rooms (Acak Kamar Sesuai Gender)
+  // Master Rooms (Alokasi Kamar Sesuai Gender & Kapasitas Kasur)
   const allRooms = (typeof getMasterRooms === 'function') ? getMasterRooms() : DEFAULT_ROOMS;
   const filteredRooms = allRooms.filter(r => r.gender_type === targetGender || r.gender_type === 'umum' || r.gender_type === 'campur');
   const poolRooms = filteredRooms.length > 0 ? filteredRooms : allRooms;
-  const pickedRoom = poolRooms[Math.floor(Math.random() * poolRooms.length)] || {
+
+  // Hitung keterisian kasur setiap kamar (termasuk anak-anak yang ikut ortu di kamar tersebut)
+  const combinedRegs = [
+    ...(typeof allRegistrations !== 'undefined' && Array.isArray(allRegistrations) ? allRegistrations : []),
+    ...(Array.isArray(contextBatch) ? contextBatch : [])
+  ];
+
+  const getOccupancy = (roomNum) => {
+    const numStr = String(roomNum).trim().toLowerCase();
+    return combinedRegs.filter(p => {
+      const pRoom = String(p.room_number || p.kamar || '').trim().toLowerCase();
+      if (pRoom === numStr) return true;
+      if (p.is_child && p.guardian_name) {
+        const parent = combinedRegs.find(a => a.full_name && a.full_name.trim().toLowerCase() === p.guardian_name.trim().toLowerCase());
+        if (parent && String(parent.room_number || parent.kamar).trim().toLowerCase() === numStr) {
+          return true;
+        }
+      }
+      return false;
+    }).length;
+  };
+
+  // Prioritaskan kamar yang kuotanya masih tersedia (anak tetap memotong kuota kasur)
+  const availableRooms = poolRooms.filter(r => {
+    const cap = parseInt(r.capacity, 10) || 4;
+    return getOccupancy(r.room_number) < cap;
+  });
+
+  const finalPool = availableRooms.length > 0 ? availableRooms : poolRooms;
+  const pickedRoom = finalPool[Math.floor(Math.random() * finalPool.length)] || {
     room_number: isAkhwat ? '04' : '01',
     room_name: isAkhwat ? 'Asrama Akhwat' : 'Asrama Ikhwan',
     building: 'Gedung Utama'
@@ -6058,7 +6087,14 @@ function renderSettingsRoomsTable(query = '') {
   tbody.innerHTML = filtered.map((item, displayIdx) => {
     const occupied = allRegs.filter(p => {
       const pRoom = String(p.room_number || p.kamar || '').trim().toLowerCase();
-      return pRoom === item.room_number.toLowerCase();
+      if (pRoom === item.room_number.toLowerCase()) return true;
+      if (p.is_child && p.guardian_name) {
+        const parent = allRegs.find(a => a.full_name && a.full_name.trim().toLowerCase() === p.guardian_name.trim().toLowerCase());
+        if (parent && String(parent.room_number || parent.kamar).trim().toLowerCase() === item.room_number.toLowerCase()) {
+          return true;
+        }
+      }
+      return false;
     }).length;
 
     const cap = parseInt(item.capacity, 10) || 1;
