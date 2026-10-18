@@ -70,8 +70,8 @@ const DEFAULT_DASHBOARD_CARDS = [
     title: 'Jadwal Acara',
     subtitle: 'Rangkaian 3 hari 2 malam silaturahmi penuh berkah',
     badge: '01 / 06',
-    coverImg: 'images/rocket-convention-hall-hero.jpg',
-    thumbImg: 'images/rocket-convention-hall-card.jpg',
+    coverImg: 'images/tugu-jogja-hero.jpg',
+    thumbImg: 'images/tugu-jogja-card.jpg',
     narration: `Pertemuan akbar ini dirancang khusus untuk mempererat tali persaudaraan antar relawan Paskas dari seluruh penjuru nusantara.
 
 Rangkaian Agenda Utama:
@@ -343,20 +343,13 @@ function loadStoredCards() {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        let hasFixedBlurry = false;
+        let needsSave = false;
         parsed.forEach((c, idx) => {
-          // Khusus kartu 1 (Jadwal Acara / Venue Rocket Hall):
-          // Jika gambar masih berupa dataURL hasil upload thumbnail google yang buram/pecah,
-          // atau link google maps kecil, otomatis upgrade ke aset 4K Ultra-HD lokal
-          if (idx === 0) {
-            const isDataUrl = typeof c.coverImg === 'string' && c.coverImg.startsWith('data:image/');
-            const isGoogleThumb = typeof c.coverImg === 'string' && (c.coverImg.includes('=w') || c.coverImg.includes('googleusercontent') || c.coverImg.includes('encrypted-tbn') || c.coverImg.includes('maps.google'));
-            const isOldUnsplash = typeof c.coverImg === 'string' && c.coverImg.includes('unsplash');
-            if (isDataUrl || isGoogleThumb || isOldUnsplash || !c.coverImg) {
-              c.coverImg = 'images/rocket-convention-hall-hero.jpg';
-              c.thumbImg = 'images/rocket-convention-hall-card.jpg';
-              hasFixedBlurry = true;
-            }
+          // Jika kartu 1 sempat ter-overwrite otomatis ke rocket hall, pulihkan ke Tugu Jogja
+          if (idx === 0 && (c.coverImg === 'images/rocket-convention-hall-hero.jpg' || c.coverImg === 'images/rocket-convention-hall.jpg')) {
+            c.coverImg = 'images/tugu-jogja-hero.jpg';
+            c.thumbImg = 'images/tugu-jogja-card.jpg';
+            needsSave = true;
           }
 
           c.coverImg = parseDirectImageUrl(c.coverImg, false);
@@ -365,7 +358,7 @@ function loadStoredCards() {
             c.narration = DEFAULT_DASHBOARD_CARDS[idx].narration || c.subtitle || '';
           }
         });
-        if (hasFixedBlurry) {
+        if (needsSave) {
           try {
             localStorage.setItem('paskas_custom_cards', JSON.stringify(parsed));
           } catch(e) {}
