@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Masukkan pengaturan default (Batas Pendaftaran, Status, Judul Acara)
+-- Masukkan / Perbarui pengaturan default (Batas Pendaftaran, Status, Judul Acara, Lokasi Jogja)
 INSERT INTO app_settings (setting_key, setting_value, description)
 VALUES 
     ('registration_deadline', '2026-12-31T23:59:59', 'Batas akhir waktu pengisian registrasi peserta'),
@@ -62,7 +62,19 @@ VALUES
     ('event_name', 'Silaturahmi Akbar Pasukan Amal Sholeh (PASKAS) Bahagia', 'Nama kegiatan agenda'),
     ('event_location', 'Rocket Convention Hall, Sleman, D.I. Yogyakarta', 'Lokasi utama acara'),
     ('event_date', '2026-11-10 s/d 2026-11-13', 'Tanggal pelaksanaan kegiatan')
-ON CONFLICT (setting_key) DO NOTHING;
+ON CONFLICT (setting_key) DO UPDATE 
+SET setting_value = EXCLUDED.setting_value,
+    description = EXCLUDED.description,
+    updated_at = NOW();
+
+-- Query pembaruan langsung (jika tabel app_settings sudah pernah terisi sebelumnya)
+UPDATE app_settings 
+SET setting_value = 'Rocket Convention Hall, Sleman, D.I. Yogyakarta', updated_at = NOW()
+WHERE setting_key = 'event_location';
+
+UPDATE app_settings 
+SET setting_value = '2026-11-10 s/d 2026-11-13', updated_at = NOW()
+WHERE setting_key = 'event_date';
 
 -- 3. Konfigurasi Row Level Security (RLS)
 -- Supaya aplikasi web frontend anonim dapat membaca & menambahkan data registrasi:
