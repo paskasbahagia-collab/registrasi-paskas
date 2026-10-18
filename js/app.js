@@ -2478,6 +2478,61 @@ function closeDuplicateModal() {
   if (modal) modal.classList.remove('active');
 }
 
+function autoAllocateRoomAndGroup(gender = 'Laki-laki', isChild = false, guardianName = '') {
+  // 1. Anak di bawah umur (< 15 th): Tidak masuk kelompok, kamar ikut ortu
+  if (isChild) {
+    let parentRoom = 'Ikut Ortu';
+    if (guardianName && typeof allRegistrations !== 'undefined' && Array.isArray(allRegistrations)) {
+      const parent = allRegistrations.find(a => 
+        a.full_name && a.full_name.trim().toLowerCase() === guardianName.trim().toLowerCase()
+      );
+      if (parent && (parent.room_number || parent.kamar)) {
+        parentRoom = parent.room_number || parent.kamar;
+      }
+    }
+    return {
+      group_name: '-',
+      group_code: '-',
+      room_number: parentRoom,
+      room_name: parentRoom === 'Ikut Ortu' ? 'Kamar Orang Tua' : `Kamar ${parentRoom}`,
+      building: 'Ikut Orang Tua'
+    };
+  }
+
+  // 2. Dewasa (Ikhwan vs Akhwat)
+  const isAkhwat = String(gender).toLowerCase().includes('perempuan') || 
+                   String(gender).toLowerCase().includes('akhwat') || 
+                   String(gender).toLowerCase() === 'p';
+  const targetGender = isAkhwat ? 'akhwat' : 'ikhwan';
+
+  // Master Rooms (Acak Kamar Sesuai Gender)
+  const allRooms = (typeof getMasterRooms === 'function') ? getMasterRooms() : DEFAULT_ROOMS;
+  const filteredRooms = allRooms.filter(r => r.gender_type === targetGender || r.gender_type === 'umum' || r.gender_type === 'campur');
+  const poolRooms = filteredRooms.length > 0 ? filteredRooms : allRooms;
+  const pickedRoom = poolRooms[Math.floor(Math.random() * poolRooms.length)] || {
+    room_number: isAkhwat ? '04' : '01',
+    room_name: isAkhwat ? 'Asrama Akhwat' : 'Asrama Ikhwan',
+    building: 'Gedung Utama'
+  };
+
+  // Master Groups (Acak Kelompok Sesuai Gender)
+  const allGroups = (typeof getMasterGroups === 'function') ? getMasterGroups() : DEFAULT_GROUPS;
+  const filteredGroups = allGroups.filter(g => g.gender_type === targetGender || g.gender_type === 'campur' || g.gender_type === 'umum');
+  const poolGroups = filteredGroups.length > 0 ? filteredGroups : allGroups;
+  const pickedGroup = poolGroups[Math.floor(Math.random() * poolGroups.length)] || {
+    group_code: isAkhwat ? 'B201' : 'A123',
+    group_name: isAkhwat ? 'Kafilah Khadijah' : 'Kafilah Al-Fatih'
+  };
+
+  return {
+    group_name: pickedGroup.group_name || pickedGroup.group_code || (isAkhwat ? 'B201' : 'A123'),
+    group_code: pickedGroup.group_code || pickedGroup.group_name || (isAkhwat ? 'B201' : 'A123'),
+    room_number: pickedRoom.room_number || (isAkhwat ? '04' : '01'),
+    room_name: pickedRoom.room_name || `Kamar ${pickedRoom.room_number}`,
+    building: pickedRoom.building || 'Gedung Utama'
+  };
+}
+
 function generateRegistrationCode(type = 'individu', index = 0) {
   const year = new Date().getFullYear();
   const prefix = type === 'kelompok' ? 'GRP' : 'IND';
@@ -2567,11 +2622,18 @@ async function handleIndividuFinalSubmit(e) {
     // Generate Nomor Registrasi Resmi Unik
     const regCode = generateRegistrationCode('individu');
 
+    // Auto-alokasi Kamar & Kelompok secara cerdas & acak sesuai gender
+    const alloc = autoAllocateRoomAndGroup(gender, isChild, document.getElementById('ind_guardianName')?.value.trim() || null);
+
     const registrationPayload = {
       registration_code: regCode,
       registration_type: 'individu',
-      group_name: '',
+      group_name: alloc.group_name,
+      group_code: alloc.group_code,
       group_leader_name: '',
+      room_number: alloc.room_number,
+      room_name: alloc.room_name,
+      building: alloc.building,
       full_name: fullName,
       age: age > 0 ? age : null,
       is_child: isChild,
@@ -2725,12 +2787,17 @@ function handleKelompokPreview(e) {
     const guardianName = (isChild && guardianSelect) ? guardianSelect.value.trim() : '';
 
     const code = generateRegistrationCode('kelompok', idx);
+    const alloc = autoAllocateRoomAndGroup(gender, isChild, guardianName);
 
     batchRecords.push({
       registration_code: code,
       registration_type: 'kelompok',
       group_name: groupName,
+      group_code: alloc.group_code,
       group_leader_name: groupLeader,
+      room_number: alloc.room_number,
+      room_name: alloc.room_name,
+      building: alloc.building,
       full_name: name,
       age: age > 0 ? age : null,
       is_child: isChild,
@@ -3304,11 +3371,20 @@ function renderActiveTicket(record) {
   // Deteksi status anak di bawah umur (< 15 th)
   const ageVal = parseInt(record.age, 10);
   const isChild = record.is_child || (!isNaN(ageVal) && ageVal > 0 && ageVal < 15);
+  const genderChar = (record.gender && record.gender.toLowerCase().startsWith('p')) ? 'P' : 'L';
 
   // Aturan Kelompok: Anak di bawah umur TIDAK masuk kelompok (kosong / '-')
-  const grpVal = isChild 
-    ? '-' 
-    : (record.group_name ? record.group_name.toUpperCase() : (record.registration_type === 'kelompok' ? 'KLOMPOK' : 'A123'));
+  let grpVal = '-';
+  if (!isChild) {
+    if (record.group_code) {
+      grpVal = String(record.group_code).toUpperCase();
+    } else if (record.group_name) {
+      grpVal = String(record.group_name).toUpperCase();
+    } else {
+      const alloc = autoAllocateRoomAndGroup(record.gender, false);
+      grpVal = alloc.group_code.toUpperCase();
+    }
+  }
   
   const elGroup = document.getElementById('ticketBpGroup');
   if (elGroup) elGroup.textContent = grpVal;
@@ -3324,7 +3400,12 @@ function renderActiveTicket(record) {
     }
   }
   if (!roomVal) {
-    roomVal = isChild ? 'Ikut Ortu' : '08';
+    if (isChild) {
+      roomVal = 'Ikut Ortu';
+    } else {
+      const alloc = autoAllocateRoomAndGroup(record.gender, false);
+      roomVal = alloc.room_number;
+    }
   }
 
   const elRoom = document.getElementById('ticketBpRoom');
@@ -3334,7 +3415,6 @@ function renderActiveTicket(record) {
   const elOriginCity = document.getElementById('ticketBpOriginCity');
   if (elOriginCity) elOriginCity.textContent = cityVal;
 
-  const genderChar = (record.gender && record.gender.toLowerCase().startsWith('p')) ? 'P' : 'L';
   const elGender = document.getElementById('ticketBpGenderCode');
   if (elGender) elGender.textContent = genderChar;
 
