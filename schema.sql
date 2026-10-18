@@ -61,7 +61,7 @@ VALUES
     ('is_registration_open', 'true', 'Status pendaftaran: true (buka) / false (tutup)'),
     ('event_name', 'Silaturahmi Akbar Pasukan Amal Sholeh (PASKAS) Bahagia', 'Nama kegiatan agenda'),
     ('event_location', 'Pondok Modern Munzalan / Convention Hall', 'Lokasi utama acara'),
-    ('event_date', '2026-11-20 s/d 2026-11-22', 'Tanggal pelaksanaan kegiatan')
+    ('event_date', '2026-11-10 s/d 2026-11-13', 'Tanggal pelaksanaan kegiatan')
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- 3. Konfigurasi Row Level Security (RLS)
