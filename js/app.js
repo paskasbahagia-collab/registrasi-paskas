@@ -2548,12 +2548,9 @@ function autoAllocateRoomAndGroup(gender = 'Laki-laki', isChild = false, guardia
 }
 
 function generateRegistrationCode(type = 'individu', index = 0) {
-  const year = new Date().getFullYear();
-  const prefix = type === 'kelompok' ? 'GRP' : 'IND';
   const existingCount = (allRegistrations ? allRegistrations.length : 0) + 1 + index;
   const seq = String(existingCount).padStart(3, '0');
-  const rand = Math.floor(100 + Math.random() * 900);
-  return `PKB-${prefix}-${year}-${seq}${rand}`;
+  return `PKB-${seq}`;
 }
 
 async function handleIndividuFinalSubmit(e) {
@@ -3451,11 +3448,16 @@ function renderActiveTicket(record) {
   // Stub Section: NIK / Nomor Registrasi Peserta, Kelompok, Kamar
   const elStubNik = document.getElementById('ticketBpStubNik');
   if (elStubNik) {
-    const rawVal = record.registration_code || record.nik || '-';
-    // Format agar pas presisi di kolom stub (misal: PKB-001568)
-    const shortCode = String(rawVal).replace(/PKB-(IND|GRP)-\d{4}-/, 'PKB-');
-    elStubNik.textContent = shortCode;
-    elStubNik.title = String(rawVal);
+    const rawVal = String(record.registration_code || record.nik || '001');
+    // Format simpel 3-digit (misal: PKB-001 -> 001) agar serasi dengan Kelompok (A123) dan Kamar (08)
+    const match = rawVal.match(/(\d+)/g);
+    let simpleNum = '001';
+    if (match && match.length > 0) {
+      const lastDigits = match[match.length - 1];
+      simpleNum = String(lastDigits).slice(-3).padStart(3, '0');
+    }
+    elStubNik.textContent = simpleNum;
+    elStubNik.title = `No. Registrasi: ${rawVal}`;
   }
 
   const elStubGroup = document.getElementById('ticketBpStubGroup');
@@ -3466,7 +3468,7 @@ function renderActiveTicket(record) {
 
   // Barcode Reg Code
   const elBarcode = document.getElementById('ticketBpBarcodeNumber');
-  if (elBarcode) elBarcode.textContent = record.registration_code || 'PKB-2026-0001';
+  if (elBarcode) elBarcode.textContent = record.registration_code || 'PKB-001';
 }
 
 function showTicketModal(recordOrBatch, initialIndex = 0) {
@@ -6416,7 +6418,10 @@ function renderTicketTemplateLivePreview() {
   if (elTo) elTo.textContent = toVal.toUpperCase();
 
   const elStubNik = document.getElementById('prevBpStubNik');
-  if (elStubNik) elStubNik.textContent = 'PKB-001568';
+  if (elStubNik) elStubNik.textContent = '001';
+
+  const elPrevBarcode = document.getElementById('prevBpBarcodeNumber');
+  if (elPrevBarcode) elPrevBarcode.textContent = 'PKB-001';
 
   prevCard.style.backgroundImage = `url('${targetImg}')`;
   prevCard.style.backgroundSize = '100% 100%';
