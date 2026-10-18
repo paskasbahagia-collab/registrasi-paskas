@@ -6415,6 +6415,9 @@ function renderTicketTemplateLivePreview() {
   const elTo = document.getElementById('prevBpRouteTo');
   if (elTo) elTo.textContent = toVal.toUpperCase();
 
+  const elStubNik = document.getElementById('prevBpStubNik');
+  if (elStubNik) elStubNik.textContent = 'PKB-001568';
+
   prevCard.style.backgroundImage = `url('${targetImg}')`;
   prevCard.style.backgroundSize = '100% 100%';
   prevCard.style.backgroundPosition = 'center';
