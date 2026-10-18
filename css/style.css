@@ -6307,8 +6307,9 @@ select.form-control optgroup {
 .boarding-pass-card .bp-charcoal-box .bp-charcoal-item:nth-child(2) {
   /* Kamar */
   position: absolute;
-  left: 69%;
+  left: 62%;
   top: 28%;
+  max-width: 38%;
 }
 
 .boarding-pass-card .bp-charcoal-box .bp-charcoal-item:nth-child(3) {

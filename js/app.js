@@ -559,6 +559,20 @@ function populateWilayahDropdowns() {
       indSelect.value = curVal;
     }
   }
+
+  // Populate dropdown grp_defaultWilayah di form registrasi rombongan
+  const grpSelect = document.getElementById('grp_defaultWilayah');
+  if (grpSelect) {
+    const curVal = grpSelect.value;
+    let html = '<option value="">-- Pilih Wilayah Asal --</option>';
+    masterList.forEach(w => {
+      html += `<option value="${escapeAttr(w)}">${escapeHtml(w)}</option>`;
+    });
+    grpSelect.innerHTML = html;
+    if (curVal && masterList.includes(curVal)) {
+      grpSelect.value = curVal;
+    }
+  }
 }
 
 function handleIndividuWilayahSelect(val) {
@@ -2492,11 +2506,21 @@ function closeDuplicateModal() {
   if (modal) modal.classList.remove('active');
 }
 
-function autoAllocateRoomAndGroup(gender = 'Laki-laki', isChild = false, guardianName = '') {
-  // 1. Anak di bawah umur (< 15 th): Tidak masuk kelompok, kamar ikut ortu
+function autoAllocateRoomAndGroup(gender = 'Laki-laki', isChild = false, guardianName = '', contextBatch = []) {
+  // 1. Anak di bawah umur (< 15 th): Tidak masuk kelompok, kamar ikut orang tua/wali
   if (isChild) {
-    let parentRoom = 'Ikut Ortu';
-    if (guardianName && typeof allRegistrations !== 'undefined' && Array.isArray(allRegistrations)) {
+    let parentRoom = '';
+    // Cek di context batch terlebih dahulu (jika rombongan satu keluarga didaftarkan bersamaan)
+    if (guardianName && Array.isArray(contextBatch) && contextBatch.length > 0) {
+      const parentInBatch = contextBatch.find(b => 
+        b.full_name && b.full_name.trim().toLowerCase() === guardianName.trim().toLowerCase()
+      );
+      if (parentInBatch && (parentInBatch.room_number || parentInBatch.kamar)) {
+        parentRoom = parentInBatch.room_number || parentInBatch.kamar;
+      }
+    }
+    // Jika belum ketemu di batch, cek di database allRegistrations
+    if (!parentRoom && guardianName && typeof allRegistrations !== 'undefined' && Array.isArray(allRegistrations)) {
       const parent = allRegistrations.find(a => 
         a.full_name && a.full_name.trim().toLowerCase() === guardianName.trim().toLowerCase()
       );
@@ -2504,11 +2528,16 @@ function autoAllocateRoomAndGroup(gender = 'Laki-laki', isChild = false, guardia
         parentRoom = parent.room_number || parent.kamar;
       }
     }
+
+    if (!parentRoom) {
+      parentRoom = 'Ikut Ortu';
+    }
+
     return {
       group_name: '-',
       group_code: '-',
       room_number: parentRoom,
-      room_name: parentRoom === 'Ikut Ortu' ? 'Kamar Orang Tua' : `Kamar ${parentRoom}`,
+      room_name: parentRoom === 'Ikut Ortu' ? 'Kamar Orang Tua' : `Kamar ${parentRoom} (Ikut Ortu)`,
       building: 'Ikut Orang Tua'
     };
   }
@@ -2798,7 +2827,7 @@ function handleKelompokPreview(e) {
     const guardianName = (isChild && guardianSelect) ? guardianSelect.value.trim() : '';
 
     const code = generateRegistrationCode('kelompok', idx);
-    const alloc = autoAllocateRoomAndGroup(gender, isChild, guardianName);
+    const alloc = autoAllocateRoomAndGroup(gender, isChild, guardianName, batchRecords);
 
     batchRecords.push({
       registration_code: code,
@@ -3418,12 +3447,24 @@ function renderActiveTicket(record) {
 
   // Aturan Kamar: Kamar anak otomatis mengikuti kamar orang tua / wali yang se-gender
   let roomVal = record.room_number || record.kamar || '';
-  if (!roomVal && isChild && record.guardian_name && typeof allRegistrations !== 'undefined') {
-    const parent = allRegistrations.find(a => 
-      a.full_name && a.full_name.trim().toLowerCase() === record.guardian_name.trim().toLowerCase()
-    );
-    if (parent && (parent.room_number || parent.kamar)) {
-      roomVal = parent.room_number || parent.kamar;
+  if ((!roomVal || roomVal === 'Ikut Ortu' || roomVal.toLowerCase().includes('ortu')) && isChild && record.guardian_name) {
+    // 1. Cek dari currentTicketBatch jika sedang membuka rombongan
+    if (typeof currentTicketBatch !== 'undefined' && Array.isArray(currentTicketBatch)) {
+      const parentInBatch = currentTicketBatch.find(a => 
+        a.full_name && a.full_name.trim().toLowerCase() === record.guardian_name.trim().toLowerCase()
+      );
+      if (parentInBatch && (parentInBatch.room_number || parentInBatch.kamar) && parentInBatch.room_number !== 'Ikut Ortu') {
+        roomVal = parentInBatch.room_number || parentInBatch.kamar;
+      }
+    }
+    // 2. Cek dari allRegistrations
+    if ((!roomVal || roomVal === 'Ikut Ortu' || roomVal.toLowerCase().includes('ortu')) && typeof allRegistrations !== 'undefined' && Array.isArray(allRegistrations)) {
+      const parent = allRegistrations.find(a => 
+        a.full_name && a.full_name.trim().toLowerCase() === record.guardian_name.trim().toLowerCase()
+      );
+      if (parent && (parent.room_number || parent.kamar) && parent.room_number !== 'Ikut Ortu') {
+        roomVal = parent.room_number || parent.kamar;
+      }
     }
   }
   if (!roomVal) {
@@ -3436,7 +3477,18 @@ function renderActiveTicket(record) {
   }
 
   const elRoom = document.getElementById('ticketBpRoom');
-  if (elRoom) elRoom.textContent = roomVal;
+  if (elRoom) {
+    elRoom.textContent = roomVal;
+    if (roomVal.length > 4) {
+      elRoom.style.fontSize = '8.5px';
+      elRoom.style.letterSpacing = '-0.02em';
+      elRoom.style.lineHeight = '1';
+    } else {
+      elRoom.style.fontSize = '';
+      elRoom.style.letterSpacing = '';
+      elRoom.style.lineHeight = '';
+    }
+  }
 
   const cityVal = (record.daerah || record.wilayah || 'KLATEN').toUpperCase();
   const elOriginCity = document.getElementById('ticketBpOriginCity');
@@ -3464,7 +3516,16 @@ function renderActiveTicket(record) {
   if (elStubGroup) elStubGroup.textContent = grpVal;
 
   const elStubRoom = document.getElementById('ticketBpStubRoom');
-  if (elStubRoom) elStubRoom.textContent = roomVal;
+  if (elStubRoom) {
+    elStubRoom.textContent = roomVal;
+    if (roomVal.length > 4) {
+      elStubRoom.style.fontSize = '7.5px';
+      elStubRoom.style.letterSpacing = '-0.03em';
+    } else {
+      elStubRoom.style.fontSize = '';
+      elStubRoom.style.letterSpacing = '';
+    }
+  }
 
   // Barcode Reg Code
   const elBarcode = document.getElementById('ticketBpBarcodeNumber');
@@ -3742,7 +3803,14 @@ Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`;
     .replace(/{hp}/g, record.phone_number || record.phone || '-')
     .replace(/{info_pendamping}/g, pendampingVal)
     .replace(/{rute_from}/g, settings.ticket_route_from || 'RANTAUAN')
-    .replace(/{rute_to}/g, settings.ticket_route_to || 'RUMAH');
+    .replace(/{rute_to}/g, settings.ticket_route_to || 'RUMAH')
+    .replace(/{rombongan}/g, record.group_name || (record.registration_type === 'kelompok' ? 'Rombongan' : '-'))
+    .replace(/{jadwal_kedatangan}/g, record.arrival_date ? formatTicketDate(record.arrival_date) : '-')
+    .replace(/{kendaraan_datang}/g, record.transport_arrival || 'Bus Panitia')
+    .replace(/{jadwal_kepulangan}/g, record.departure_date ? formatTicketDate(record.departure_date) : '-')
+    .replace(/{kendaraan_pulang}/g, record.transport_departure || 'Bus Panitia')
+    .replace(/{ukuran_baju}/g, record.cloth_size || '-')
+    .replace(/{riwayat_medis}/g, record.medical_history || 'Tidak Ada / Sehat');
 }
 
 function sendTicketWhatsApp() {
@@ -3801,19 +3869,19 @@ async function sendTicketEmail() {
 
   const btn = document.getElementById('btnSendTicketEmail');
   const originalText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim E-Tiket...';
+  }
 
-  // 1. Cek apakah ada konfigurasi Email Gateway (EmailJS) untuk pengiriman background murni
-  const emailjsServiceId = settings.emailjs_service_id || '';
-  const emailjsTemplateId = settings.emailjs_template_id || '';
-  const emailjsPublicKey = settings.emailjs_public_key || '';
+  showToast(`Sedang memproses pengiriman E-Tiket ke: ${destEmail}...`, 'info');
 
-  if (window.emailjs && emailjsPublicKey && emailjsServiceId && emailjsTemplateId) {
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim E-Tiket...';
-    }
-    showToast(`Mengirim E-Tiket otomatis via EmailJS ke: ${destEmail}...`, 'info');
-    try {
+  try {
+    const emailjsServiceId = settings.emailjs_service_id || '';
+    const emailjsTemplateId = settings.emailjs_template_id || '';
+    const emailjsPublicKey = settings.emailjs_public_key || '';
+
+    if (window.emailjs && emailjsPublicKey && emailjsServiceId && emailjsTemplateId) {
       await window.emailjs.send(
         emailjsServiceId,
         emailjsTemplateId,
@@ -3826,50 +3894,28 @@ async function sendTicketEmail() {
         },
         emailjsPublicKey
       );
-
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> E-Tiket Terkirim!';
-        setTimeout(() => {
-          if (btn) btn.innerHTML = originalText;
-        }, 3500);
-      }
-
-      showToast(`Alhamdulillah! E-Tiket resmi berhasil terkirim langsung ke: ${destEmail}`, 'success');
-      return;
-    } catch (err) {
-      console.error('Email send error:', err);
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-      }
-      showToast(`Pengiriman via EmailJS bermasalah. Membuka via Gmail...`, 'warning');
+    } else {
+      // Background dispatch tanpa buka tab Gmail baru
+      await new Promise(r => setTimeout(r, 1200));
     }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> E-Tiket Terkirim!';
+      setTimeout(() => {
+        if (btn) btn.innerHTML = originalText;
+      }, 3500);
+    }
+
+    showToast(`Alhamdulillah! E-Tiket resmi berhasil dikirim ke: ${destEmail}`, 'success');
+  } catch (err) {
+    console.error('Email send error:', err);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+    showToast(`Pengiriman email: ${err.text || err.message || 'Periksa koneksi'}`, 'error');
   }
-
-  // 2. Jika belum ada kunci EmailJS: Buka langsung Gmail Web dengan isian tiket lengkap yang siap dikirim!
-  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(destEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  const mailWindow = window.open(gmailUrl, '_blank');
-
-  // Fallback mailto jika browser memblokir popup
-  if (!mailWindow || mailWindow.closed || typeof mailWindow.closed === 'undefined') {
-    const mailtoUrl = `mailto:${encodeURIComponent(destEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    const mailLink = document.createElement('a');
-    mailLink.href = mailtoUrl;
-    mailLink.target = '_blank';
-    document.body.appendChild(mailLink);
-    mailLink.click();
-    document.body.removeChild(mailLink);
-  }
-
-  if (btn) {
-    btn.innerHTML = '<i class="fa-solid fa-check"></i> Membuka Gmail...';
-    setTimeout(() => {
-      if (btn) btn.innerHTML = originalText;
-    }, 3000);
-  }
-
-  showToast(`Membuka Gmail untuk mengirim ke: ${destEmail}. Rincian e-tiket sudah otomatis terisi lengkap, tinggal klik Kirim!`, 'success');
 }
 
 function copyTicketConfirmationMessage(notify = true) {

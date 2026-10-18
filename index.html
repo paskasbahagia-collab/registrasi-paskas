@@ -33,7 +33,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=49.0">
+  <link rel="stylesheet" href="css/style.css?v=51.0">
 </head>
 <body>
 
@@ -1119,7 +1119,9 @@
                 <div class="form-row col-4">
                   <div class="form-group">
                     <label class="form-label-xs">Wilayah</label>
-                    <input type="text" id="grp_defaultWilayah" list="wilayahList" class="form-control form-control-sm" placeholder="Contoh: Pontianak" required>
+                    <select id="grp_defaultWilayah" class="form-control form-control-sm" required>
+                      <option value="">-- Pilih Wilayah Asal --</option>
+                    </select>
                   </div>
                   <div class="form-group">
                     <label class="form-label-xs">Tgl Datang</label>
@@ -3353,8 +3355,8 @@ CREATE TABLE IF NOT EXISTS registrations (
           <button type="button" class="btn btn-sm btn-glass-cyan" id="btnNextGroupTicket" onclick="stepGroupTicket(1)" title="Tiket Anggota Berikutnya">
             Berikut <i class="fa-solid fa-chevron-right"></i>
           </button>
-          <button type="button" class="btn btn-sm btn-accent" id="btnDownloadAllGroup" onclick="downloadAllGroupTicketsOneByOne()" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 6px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);" title="Unduh semua tiket anggota rombongan satu per satu sebagai gambar PNG terpisah">
-            <i class="fa-solid fa-file-arrow-down"></i> Unduh Semua (1 per 1)
+          <button type="button" class="btn btn-sm btn-accent" id="btnDownloadAllGroup" onclick="downloadAllGroupTicketsOneByOne()" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 6px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);" title="Unduh semua tiket anggota rombongan sekaligus sebagai file gambar PNG">
+            <i class="fa-solid fa-file-arrow-down"></i> Unduh Semua Tiket (PNG)
           </button>
         </div>
       </div>
@@ -3468,12 +3470,9 @@ CREATE TABLE IF NOT EXISTS registrations (
       </div>
 
       <div class="bp-actions-bar" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.12);">
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div>
           <button type="button" class="btn btn-primary" onclick="sendTicketEmail()" id="btnSendTicketEmail" style="background: #0284c7; border: none; color: #ffffff; font-weight: 600; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
             <i class="fa-solid fa-envelope"></i> Kirim via Email
-          </button>
-          <button type="button" class="btn btn-primary" onclick="sendTicketWhatsApp()" id="btnSendTicketWa" style="background: #16a34a; border: none; color: #ffffff; font-weight: 600; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);">
-            <i class="fa-brands fa-whatsapp"></i> Kirim via WhatsApp
           </button>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -3643,7 +3642,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=49.0"></script>
-  <script src="js/app.js?v=49.0"></script>
+  <script src="js/supabase-config.js?v=51.0"></script>
+  <script src="js/app.js?v=51.0"></script>
 </body>
 </html>
