@@ -33,7 +33,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=48.0">
+  <link rel="stylesheet" href="css/style.css?v=49.0">
 </head>
 <body>
 
@@ -2923,6 +2923,30 @@ CREATE TABLE IF NOT EXISTS registrations (
                   <textarea id="cfg_confirmationBody" class="form-control" rows="10" style="font-family: monospace; font-size: 13px; line-height: 1.5;" placeholder="Tuliskan format narasi di sini..."></textarea>
                 </div>
 
+                <!-- Integrasi Email Gateway EmailJS (Opsional) -->
+                <div style="margin-top: 14px; padding: 12px 14px; background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25); border-radius: 8px;">
+                  <h5 style="margin: 0 0 6px 0; color: #38bdf8; font-size: 13px; font-weight: 700;">
+                    <i class="fa-solid fa-paper-plane"></i> Integrasi Pengiriman Email Otomatis (Opsional - EmailJS)
+                  </h5>
+                  <p style="font-size: 11.5px; color: #94a3b8; margin: 0 0 10px 0; line-height: 1.4;">
+                    Jika dikosongkan, tombol <em>Kirim via Email</em> akan membuka Gmail Web dengan subjek & rincian tiket sudah terisi otomatis (tinggal klik kirim). Jika ingin email terkirim 100% otomatis di latar belakang tanpa buka Gmail, hubungkan akun gratis <a href="https://www.emailjs.com" target="_blank" style="color: #38bdf8; text-decoration: underline;">emailjs.com</a>:
+                  </p>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                    <div>
+                      <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Service ID</label>
+                      <input type="text" id="cfg_emailjsServiceId" class="form-control" style="font-size: 12px;" placeholder="misal: service_abc123">
+                    </div>
+                    <div>
+                      <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Template ID</label>
+                      <input type="text" id="cfg_emailjsTemplateId" class="form-control" style="font-size: 12px;" placeholder="misal: template_xyz456">
+                    </div>
+                    <div>
+                      <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Public Key (User ID)</label>
+                      <input type="text" id="cfg_emailjsPublicKey" class="form-control" style="font-size: 12px;" placeholder="misal: aBcD1234_Key">
+                    </div>
+                  </div>
+                </div>
+
                 <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;">
                   <button type="button" class="btn btn-primary" onclick="saveTicketTemplateSettings()">
                     <i class="fa-solid fa-floppy-disk"></i> Simpan Pengaturan Template & Narasi
@@ -3444,9 +3468,12 @@ CREATE TABLE IF NOT EXISTS registrations (
       </div>
 
       <div class="bp-actions-bar" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.12);">
-        <div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button type="button" class="btn btn-primary" onclick="sendTicketEmail()" id="btnSendTicketEmail" style="background: #0284c7; border: none; color: #ffffff; font-weight: 600; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
             <i class="fa-solid fa-envelope"></i> Kirim via Email
+          </button>
+          <button type="button" class="btn btn-primary" onclick="sendTicketWhatsApp()" id="btnSendTicketWa" style="background: #16a34a; border: none; color: #ffffff; font-weight: 600; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);">
+            <i class="fa-brands fa-whatsapp"></i> Kirim via WhatsApp
           </button>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -3616,7 +3643,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=48.0"></script>
-  <script src="js/app.js?v=48.0"></script>
+  <script src="js/supabase-config.js?v=49.0"></script>
+  <script src="js/app.js?v=49.0"></script>
 </body>
 </html>

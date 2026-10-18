@@ -3796,21 +3796,24 @@ async function sendTicketEmail() {
   const subject = settings.confirmation_email_subject || `[E-TIKET RESMI] Silaturahmi Akbar Paskas Bahagia - ${currentTicketRecord.registration_code}`;
   const body = buildConfirmationMessage(currentTicketRecord);
 
+  // Selalu salin narasi ke clipboard peserta sebagai cadangan
+  copyTicketConfirmationMessage(false);
+
   const btn = document.getElementById('btnSendTicketEmail');
   const originalText = btn ? btn.innerHTML : '';
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim E-Tiket...';
-  }
 
-  showToast(`Sedang mengirim E-Tiket langsung ke: ${destEmail}...`, 'info');
+  // 1. Cek apakah ada konfigurasi Email Gateway (EmailJS) untuk pengiriman background murni
+  const emailjsServiceId = settings.emailjs_service_id || '';
+  const emailjsTemplateId = settings.emailjs_template_id || '';
+  const emailjsPublicKey = settings.emailjs_public_key || '';
 
-  try {
-    const emailjsServiceId = settings.emailjs_service_id || 'service_paskas';
-    const emailjsTemplateId = settings.emailjs_template_id || 'template_paskas';
-    const emailjsPublicKey = settings.emailjs_public_key || '';
-
-    if (window.emailjs && emailjsPublicKey) {
+  if (window.emailjs && emailjsPublicKey && emailjsServiceId && emailjsTemplateId) {
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim E-Tiket...';
+    }
+    showToast(`Mengirim E-Tiket otomatis via EmailJS ke: ${destEmail}...`, 'info');
+    try {
       await window.emailjs.send(
         emailjsServiceId,
         emailjsTemplateId,
@@ -3823,31 +3826,50 @@ async function sendTicketEmail() {
         },
         emailjsPublicKey
       );
-    } else {
-      // Direct background send simulation (tanpa buka tab Gmail / mailto)
-      await new Promise(r => setTimeout(r, 1400));
-    }
 
-    // Salin rincian ke clipboard peserta sebagai backup
-    copyTicketConfirmationMessage(false);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> E-Tiket Terkirim!';
+        setTimeout(() => {
+          if (btn) btn.innerHTML = originalText;
+        }, 3500);
+      }
 
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> E-Tiket Terkirim!';
-      setTimeout(() => {
-        if (btn) btn.innerHTML = originalText;
-      }, 3500);
+      showToast(`Alhamdulillah! E-Tiket resmi berhasil terkirim langsung ke: ${destEmail}`, 'success');
+      return;
+    } catch (err) {
+      console.error('Email send error:', err);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+      showToast(`Pengiriman via EmailJS bermasalah. Membuka via Gmail...`, 'warning');
     }
-
-    showToast(`Alhamdulillah! E-Tiket resmi berhasil terkirim langsung ke: ${destEmail}`, 'success');
-  } catch (err) {
-    console.error('Email send error:', err);
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-    }
-    showToast(`Gagal mengirim email: ${err.message || 'Periksa koneksi internet'}`, 'error');
   }
+
+  // 2. Jika belum ada kunci EmailJS: Buka langsung Gmail Web dengan isian tiket lengkap yang siap dikirim!
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(destEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const mailWindow = window.open(gmailUrl, '_blank');
+
+  // Fallback mailto jika browser memblokir popup
+  if (!mailWindow || mailWindow.closed || typeof mailWindow.closed === 'undefined') {
+    const mailtoUrl = `mailto:${encodeURIComponent(destEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const mailLink = document.createElement('a');
+    mailLink.href = mailtoUrl;
+    mailLink.target = '_blank';
+    document.body.appendChild(mailLink);
+    mailLink.click();
+    document.body.removeChild(mailLink);
+  }
+
+  if (btn) {
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Membuka Gmail...';
+    setTimeout(() => {
+      if (btn) btn.innerHTML = originalText;
+    }, 3000);
+  }
+
+  showToast(`Membuka Gmail untuk mengirim ke: ${destEmail}. Rincian e-tiket sudah otomatis terisi lengkap, tinggal klik Kirim!`, 'success');
 }
 
 function copyTicketConfirmationMessage(notify = true) {
@@ -6264,6 +6286,13 @@ function loadTicketTemplateSettings() {
   if (fromInp) fromInp.value = settings.ticket_route_from || 'RANTAUAN';
   if (toInp) toInp.value = settings.ticket_route_to || 'RUMAH';
 
+  const emServiceInp = document.getElementById('cfg_emailjsServiceId');
+  const emTemplateInp = document.getElementById('cfg_emailjsTemplateId');
+  const emPublicInp = document.getElementById('cfg_emailjsPublicKey');
+  if (emServiceInp) emServiceInp.value = settings.emailjs_service_id || '';
+  if (emTemplateInp) emTemplateInp.value = settings.emailjs_template_id || '';
+  if (emPublicInp) emPublicInp.value = settings.emailjs_public_key || '';
+
   const tplImg = getValidTicketTemplateUrl(settings.ticket_template_image);
   
   // Jika tersimpan format yang korup atau [object Object], perbaiki otomatis
@@ -6452,6 +6481,10 @@ function saveTicketTemplateSettings() {
   const settings = window.dataService.getSettings();
   let finalImg = customTicketTemplateBase64 || getValidTicketTemplateUrl(settings.ticket_template_image);
 
+  const emServiceInp = document.getElementById('cfg_emailjsServiceId');
+  const emTemplateInp = document.getElementById('cfg_emailjsTemplateId');
+  const emPublicInp = document.getElementById('cfg_emailjsPublicKey');
+
   window.dataService.saveSettings({
     ticket_template_image: finalImg,
     ticket_airline_name: airlineInp?.value?.trim() || 'MUNZALAN AIRLINES',
@@ -6459,7 +6492,10 @@ function saveTicketTemplateSettings() {
     ticket_route_from: fromInp?.value?.trim() || 'RANTAUAN',
     ticket_route_to: toInp?.value?.trim() || 'RUMAH',
     confirmation_email_subject: subjInp?.value?.trim() || '',
-    confirmation_email_body: bodyInp?.value || ''
+    confirmation_email_body: bodyInp?.value || '',
+    emailjs_service_id: emServiceInp?.value?.trim() || '',
+    emailjs_template_id: emTemplateInp?.value?.trim() || '',
+    emailjs_public_key: emPublicInp?.value?.trim() || ''
   });
 
   showToast('Pengaturan template tiket dan narasi berhasil disimpan!', 'success');
