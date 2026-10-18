@@ -3313,6 +3313,22 @@ function formatTicketDate(dateStr) {
 let currentTicketBatch = [];
 let currentTicketIndex = 0;
 
+function getValidTicketTemplateUrl(val) {
+  if (!val) return 'images/boarding-pass-canva.png';
+  if (typeof val === 'object' && val !== null) {
+    if (val.dataUrl && typeof val.dataUrl === 'string') return val.dataUrl;
+    return 'images/boarding-pass-canva.png';
+  }
+  if (typeof val === 'string') {
+    const s = val.trim();
+    if (!s || s === '[object Object]' || s.includes('[object')) {
+      return 'images/boarding-pass-canva.png';
+    }
+    return s;
+  }
+  return 'images/boarding-pass-canva.png';
+}
+
 function renderActiveTicket(record) {
   if (!record) return;
   currentTicketRecord = record;
@@ -3328,7 +3344,7 @@ function renderActiveTicket(record) {
 
   // Apply boarding pass template (official Canva or customized upload)
   if (ticketCard) {
-    const tplImg = settings.ticket_template_image || 'images/boarding-pass-canva.png';
+    const tplImg = getValidTicketTemplateUrl(settings.ticket_template_image);
     ticketCard.style.backgroundImage = `url('${tplImg}')`;
     ticketCard.style.backgroundSize = '100% 100%';
     ticketCard.style.backgroundPosition = 'center';
@@ -6185,7 +6201,6 @@ function loadTicketTemplateSettings() {
   const tagInp = document.getElementById('cfg_ticketEventTag');
   const fromInp = document.getElementById('cfg_ticketRouteFrom');
   const toInp = document.getElementById('cfg_ticketRouteTo');
-  const urlInp = document.getElementById('cfg_ticketTemplateUrl');
   const subjInp = document.getElementById('cfg_confirmationSubject');
   const bodyInp = document.getElementById('cfg_confirmationBody');
   const srcLabel = document.getElementById('ticketTemplateSourceLabel');
@@ -6195,16 +6210,34 @@ function loadTicketTemplateSettings() {
   if (fromInp) fromInp.value = settings.ticket_route_from || 'RANTAUAN';
   if (toInp) toInp.value = settings.ticket_route_to || 'RUMAH';
 
-  const tplImg = settings.ticket_template_image || 'images/boarding-pass-canva.png';
-  if (urlInp) {
-    urlInp.value = tplImg.startsWith('data:') ? '' : tplImg;
+  const tplImg = getValidTicketTemplateUrl(settings.ticket_template_image);
+  
+  // Jika tersimpan format yang korup atau [object Object], perbaiki otomatis
+  if (settings.ticket_template_image && (typeof settings.ticket_template_image === 'object' || String(settings.ticket_template_image).includes('[object'))) {
+    window.dataService.saveSettings({ ticket_template_image: tplImg });
   }
+
   if (srcLabel) {
-    srcLabel.textContent = tplImg.startsWith('data:') ? 'Custom Upload (Gambar Kosongan)' : tplImg;
+    srcLabel.textContent = tplImg.startsWith('data:') ? 'Custom Upload (Gambar Kosongan Aktif)' : tplImg;
   }
   const thumbImg = document.getElementById('ticketTemplateThumbImg');
   if (thumbImg) {
     thumbImg.src = tplImg;
+  }
+
+  const statusBadge = document.getElementById('ticketTemplateStatusBadge');
+  if (statusBadge) {
+    if (tplImg.startsWith('data:')) {
+      statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Template Kustom Aktif';
+      statusBadge.style.background = '#e0f2fe';
+      statusBadge.style.color = '#0369a1';
+      statusBadge.style.borderColor = '#bae6fd';
+    } else {
+      statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Template Resmi Aktif';
+      statusBadge.style.background = '#d1fae5';
+      statusBadge.style.color = '#065f46';
+      statusBadge.style.borderColor = '#a7f3d0';
+    }
   }
 
   if (subjInp) subjInp.value = settings.confirmation_email_subject || 'Konfirmasi Registrasi Peserta - Silaturahmi Akbar Paskas Bahagia';
@@ -6213,7 +6246,7 @@ function loadTicketTemplateSettings() {
   renderTicketTemplateLivePreview();
 }
 
-async function handleTicketTemplateFileUpload(event) {
+function handleTicketTemplateFileUpload(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
@@ -6222,36 +6255,44 @@ async function handleTicketTemplateFileUpload(event) {
     return;
   }
 
-  showToast('Memproses & mengoptimasi gambar kosongan...', 'info');
+  showToast('Memproses gambar template...', 'info');
 
-  try {
-    const compressed = await compressImageFile(file, 1400, 0.88);
-    customTicketTemplateBase64 = compressed;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64Data = e.target.result;
+    if (typeof base64Data !== 'string' || !base64Data.startsWith('data:image/')) {
+      showToast('Format file gambar tidak valid.', 'error');
+      return;
+    }
+
+    customTicketTemplateBase64 = base64Data;
 
     const srcLabel = document.getElementById('ticketTemplateSourceLabel');
-    if (srcLabel) srcLabel.textContent = `File: ${file.name} (Siap Disimpan)`;
+    if (srcLabel) srcLabel.textContent = `File: ${file.name} (Tersimpan & Aktif)`;
 
     const thumbImg = document.getElementById('ticketTemplateThumbImg');
-    if (thumbImg) thumbImg.src = customTicketTemplateBase64;
+    if (thumbImg) thumbImg.src = base64Data;
 
-    const urlInp = document.getElementById('cfg_ticketTemplateUrl');
-    if (urlInp) urlInp.value = '';
+    const statusBadge = document.getElementById('ticketTemplateStatusBadge');
+    if (statusBadge) {
+      statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Template Kustom Aktif';
+      statusBadge.style.background = '#e0f2fe';
+      statusBadge.style.color = '#0369a1';
+      statusBadge.style.borderColor = '#bae6fd';
+    }
+
+    // Auto-save setting agar langsung aktif permanen
+    window.dataService.saveSettings({
+      ticket_template_image: base64Data
+    });
 
     renderTicketTemplateLivePreview();
-    showToast('Gambar template kosongan berhasil dimuat ke pratinjau!', 'success');
-  } catch (err) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      customTicketTemplateBase64 = e.target.result;
-      const srcLabel = document.getElementById('ticketTemplateSourceLabel');
-      if (srcLabel) srcLabel.textContent = `File: ${file.name}`;
-      const thumbImg = document.getElementById('ticketTemplateThumbImg');
-      if (thumbImg) thumbImg.src = customTicketTemplateBase64;
-      renderTicketTemplateLivePreview();
-      showToast('Gambar template kosongan berhasil dimuat!', 'success');
-    };
-    reader.readAsDataURL(file);
-  }
+    showToast('Template kosongan berhasil diunggah & langsung aktif!', 'success');
+  };
+  reader.onerror = function() {
+    showToast('Gagal membaca file gambar.', 'error');
+  };
+  reader.readAsDataURL(file);
 }
 
 function handleTicketTemplateUrlChange() {
@@ -6270,14 +6311,20 @@ function handleTicketTemplateUrlChange() {
 
 function resetTicketTemplateImage() {
   customTicketTemplateBase64 = null;
-  const urlInp = document.getElementById('cfg_ticketTemplateUrl');
-  if (urlInp) urlInp.value = 'images/boarding-pass-canva.png';
   const fileInp = document.getElementById('cfg_ticketTemplateFile');
   if (fileInp) fileInp.value = '';
   const srcLabel = document.getElementById('ticketTemplateSourceLabel');
   if (srcLabel) srcLabel.textContent = 'images/boarding-pass-canva.png';
   const thumbImg = document.getElementById('ticketTemplateThumbImg');
   if (thumbImg) thumbImg.src = 'images/boarding-pass-canva.png';
+
+  const statusBadge = document.getElementById('ticketTemplateStatusBadge');
+  if (statusBadge) {
+    statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Template Resmi Aktif';
+    statusBadge.style.background = '#d1fae5';
+    statusBadge.style.color = '#065f46';
+    statusBadge.style.borderColor = '#a7f3d0';
+  }
 
   window.dataService.saveSettings({
     ticket_template_image: 'images/boarding-pass-canva.png'
@@ -6295,7 +6342,6 @@ function renderTicketTemplateLivePreview() {
   const tagInp = document.getElementById('cfg_ticketEventTag');
   const fromInp = document.getElementById('cfg_ticketRouteFrom');
   const toInp = document.getElementById('cfg_ticketRouteTo');
-  const urlInp = document.getElementById('cfg_ticketTemplateUrl');
 
   const airlineVal = (airlineInp?.value || 'MUNZALAN AIRLINES').trim();
   const tagVal = (tagInp?.value || 'KUMPUL KELUARGA').trim();
@@ -6303,7 +6349,7 @@ function renderTicketTemplateLivePreview() {
   const toVal = (toInp?.value || 'RUMAH').trim();
 
   const settings = window.dataService.getSettings();
-  let targetImg = customTicketTemplateBase64 || urlInp?.value?.trim() || settings.ticket_template_image || 'images/boarding-pass-canva.png';
+  let targetImg = customTicketTemplateBase64 || getValidTicketTemplateUrl(settings.ticket_template_image);
 
   const elAirline = document.getElementById('prevBpAirlineText');
   if (elAirline) elAirline.textContent = airlineVal;
@@ -6344,7 +6390,7 @@ function saveTicketTemplateSettings() {
   const bodyInp = document.getElementById('cfg_confirmationBody');
 
   const settings = window.dataService.getSettings();
-  let finalImg = customTicketTemplateBase64 || urlInp?.value?.trim() || settings.ticket_template_image || 'images/boarding-pass-canva.png';
+  let finalImg = customTicketTemplateBase64 || getValidTicketTemplateUrl(settings.ticket_template_image);
 
   window.dataService.saveSettings({
     ticket_template_image: finalImg,
