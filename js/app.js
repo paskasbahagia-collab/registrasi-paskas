@@ -3448,11 +3448,14 @@ function renderActiveTicket(record) {
   const elGender = document.getElementById('ticketBpGenderCode');
   if (elGender) elGender.textContent = genderChar;
 
-  // Stub Section: NIK, Kelompok, Kamar
+  // Stub Section: NIK / Nomor Registrasi Peserta, Kelompok, Kamar
   const elStubNik = document.getElementById('ticketBpStubNik');
   if (elStubNik) {
-    const rawNik = String(record.nik || '-');
-    elStubNik.textContent = rawNik.length > 8 ? rawNik.substring(0, 6) + '...' : rawNik;
+    const rawVal = record.registration_code || record.nik || '-';
+    // Format agar pas presisi di kolom stub (misal: PKB-001568)
+    const shortCode = String(rawVal).replace(/PKB-(IND|GRP)-\d{4}-/, 'PKB-');
+    elStubNik.textContent = shortCode;
+    elStubNik.title = String(rawVal);
   }
 
   const elStubGroup = document.getElementById('ticketBpStubGroup');
