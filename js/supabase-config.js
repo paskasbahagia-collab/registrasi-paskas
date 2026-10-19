@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
   registration_deadline: '2026-12-31T23:59:59',
   is_registration_open: 'true',
   closed_message: 'Mohon maaf, pendaftaran peserta Paskas Bahagia telah ditutup. Silakan hubungi narahubung panitia.',
+  event_headline: 'PASKAS BAHAGIA',
   event_name: 'Silaturahmi Akbar Pasukan Amal Sholeh (PASKAS) Bahagia',
   event_location: 'Rocket Convention Hall, Sleman, D.I. Yogyakarta',
   event_desc: 'Selamat datang di portal resmi registrasi peserta Silaturahmi Akbar Paskas Bahagia. Mari eratkan ukhuwah, satukan langkah perjuangan, dan hadirkan senyum bahagia untuk sesama.',

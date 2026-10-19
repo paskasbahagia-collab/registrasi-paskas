@@ -918,6 +918,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   renderDashboardCards();
+  applyEventInfoToUI();
   renderRegistrationPageContent();
   initCountdownTimer();
   updateDatabaseBadge();
@@ -5485,6 +5486,7 @@ function initSettingsPage(defaultTab = 'rekap') {
   const closedMsgInput = document.getElementById('cfg_closedMessage');
   const supabaseUrlInput = document.getElementById('cfg_supabaseUrl');
   const supabaseKeyInput = document.getElementById('cfg_supabaseKey');
+  const eventHeadlineInput = document.getElementById('cfg_eventHeadline');
   const eventNameInput = document.getElementById('cfg_eventName');
   const eventLocationInput = document.getElementById('cfg_eventLocation');
   const eventDescInput = document.getElementById('cfg_eventDesc');
@@ -5497,6 +5499,7 @@ function initSettingsPage(defaultTab = 'rekap') {
   if (supabaseUrlInput) supabaseUrlInput.value = credentials.url || '';
   if (supabaseKeyInput) supabaseKeyInput.value = credentials.key || '';
 
+  if (eventHeadlineInput) eventHeadlineInput.value = settings.event_headline || 'PASKAS BAHAGIA';
   if (eventNameInput) eventNameInput.value = settings.event_name || '';
   if (eventLocationInput) eventLocationInput.value = settings.event_location || '';
   if (eventDescInput) eventDescInput.value = settings.event_desc || '';
@@ -5875,21 +5878,61 @@ async function syncLocalToSupabase() {
   }
 }
 
+function formatHeroHeadline(text) {
+  if (!text) return 'PASKAS <span class="text-gradient">BAHAGIA</span>';
+  if (text.includes('<span') || text.includes('<br>')) {
+    return text;
+  }
+  const words = text.trim().split(/\s+/);
+  if (words.length <= 1) {
+    return `<span class="text-gradient">${text}</span>`;
+  }
+  const lastWord = words.pop();
+  return `${words.join(' ')} <span class="text-gradient">${lastWord}</span>`;
+}
+
+function applyEventInfoToUI(settings) {
+  try {
+    if (!settings && window.dataService) {
+      settings = window.dataService.getSettings();
+    }
+    if (!settings) return;
+
+    const heroHeadline = document.getElementById('heroMainHeadline');
+    if (heroHeadline && settings.event_headline) {
+      heroHeadline.innerHTML = formatHeroHeadline(settings.event_headline);
+    }
+
+    const heroDesc = document.getElementById('heroEventDesc');
+    if (heroDesc && settings.event_desc) {
+      heroDesc.textContent = settings.event_desc;
+    }
+  } catch (err) {
+    console.warn('Gagal memperbarui UI info acara:', err);
+  }
+}
+
 function saveEventInfoSettings() {
+  const headlineInput = document.getElementById('cfg_eventHeadline');
+  const headline = headlineInput ? headlineInput.value.trim() : 'PASKAS BAHAGIA';
   const name = document.getElementById('cfg_eventName').value.trim();
   const loc = document.getElementById('cfg_eventLocation').value.trim();
   const desc = document.getElementById('cfg_eventDesc').value.trim();
 
   window.dataService.saveSettings({
+    event_headline: headline,
     event_name: name,
     event_location: loc,
     event_desc: desc
   });
 
-  const heroDesc = document.getElementById('heroEventDesc');
-  if (heroDesc) heroDesc.textContent = desc;
+  applyEventInfoToUI({
+    event_headline: headline,
+    event_name: name,
+    event_desc: desc
+  });
 
-  showToast('Info acara berhasil diperbarui!', 'success');
+  showToast('Info acara & headline berhasil diperbarui!', 'success');
 }
 
 // ===================================================================
