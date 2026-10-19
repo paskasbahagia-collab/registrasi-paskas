@@ -5097,10 +5097,12 @@ select.form-control optgroup {
   line-height: 1.1;
 }
 
-.pillar-unit {
+.pillar-unit,
+.pillar-lead-metric-box .pillar-unit {
   font-size: 16px;
   font-weight: 800;
-  color: #f7d070 !important;
+  color: #fbbf24 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .pillar-lead-sub {
@@ -7653,7 +7655,7 @@ body.page-settings-active .navbar .mobile-toggle {
 
 .settings-panels-container .help-text,
 .settings-panels-container .form-hint,
-.settings-panels-container small {
+.settings-panels-container small:not(.pillar-unit) {
   color: #635a4d !important;
 }
 
