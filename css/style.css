@@ -9395,6 +9395,256 @@ input:checked + .slider:before {
     width: 100% !important;
     justify-content: center !important;
   }
+
+  /* ============================================================
+     ADMIN TOP META ROW: SUSUN RAPI DI HP
+     ============================================================ */
+  .mag-top-meta-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding-bottom: 16px !important;
+  }
+
+  .mag-meta-left {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .mag-kicker-title {
+    width: 100% !important;
+    font-size: 13px !important;
+    margin-bottom: 2px !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  .mag-meta-sep {
+    display: none !important;
+  }
+
+  .mag-status-mini-pill {
+    font-size: 10.5px !important;
+    padding: 3px 8px !important;
+  }
+
+  .mag-meta-right {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .btn-mag-top-action {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 8px 10px !important;
+    font-size: 11.5px !important;
+    text-align: center !important;
+  }
+
+  /* ============================================================
+     REKAPITULASI: BADGE & TITLE TIDAK KEPOTONG DI HP
+     ============================================================ */
+  .editorial-top-badge {
+    flex-wrap: wrap !important;
+    max-width: 100% !important;
+    padding: 6px 12px !important;
+    border-radius: 12px !important;
+    font-size: 10.5px !important;
+    gap: 4px 8px !important;
+  }
+
+  .editorial-badge-sep {
+    display: none !important;
+  }
+
+  .editorial-badge-text {
+    font-size: 11px !important;
+  }
+
+  .editorial-badge-sub {
+    font-size: 10px !important;
+    opacity: 0.85 !important;
+  }
+
+  .editorial-main-title {
+    font-size: 24px !important;
+    line-height: 1.2 !important;
+  }
+
+  /* ============================================================
+     PENGATURAN TIKET, KAMAR & WILAYAH: SUSUN ATAS-BAWAH DI HP
+     ============================================================ */
+  .ticket-tpl-setting-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .settings-wilayah-add-box {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .settings-wilayah-add-box .input-with-icon,
+  .settings-wilayah-add-box .form-control,
+  .settings-wilayah-add-box button {
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .settings-wilayah-table-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .settings-wilayah-table-toolbar .input-with-icon,
+  .settings-wilayah-table-toolbar button {
+    max-width: 100% !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Transform Tabel Kamar, Kelompok & Wilayah menjadi Mobile Card */
+  .settings-wilayah-scroll-wrap {
+    max-height: 460px !important;
+    overflow-x: visible !important;
+  }
+
+  .settings-wilayah-table {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .settings-wilayah-table thead {
+    display: none !important;
+  }
+
+  .settings-wilayah-table tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .settings-wilayah-table tbody tr {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e0d8cb !important;
+    border-radius: 14px !important;
+    padding: 14px !important;
+    box-shadow: 0 4px 12px rgba(60, 45, 20, 0.05) !important;
+    position: relative !important;
+    gap: 8px 12px !important;
+    align-items: center !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .settings-wilayah-table td {
+    padding: 2px 0 !important;
+    border: none !important;
+    text-align: left !important;
+  }
+
+  /* Kolom nomor urut kecil di kiri atas */
+  .settings-wilayah-table td:nth-child(1) {
+    order: 1;
+    flex: 0 0 auto;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #8a6a24;
+    background: #fdf6e7;
+    border: 1px solid #e2cf9b;
+    border-radius: 6px;
+    padding: 2px 8px !important;
+  }
+
+  /* Nama Gedung / Nama Kelompok */
+  .settings-wilayah-table td:nth-child(2) {
+    order: 2;
+    flex: 1 1 auto;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #1a1815;
+  }
+
+  /* Badge Gender / Khusus */
+  .settings-wilayah-table td:nth-child(3),
+  .settings-wilayah-table td:nth-child(5) {
+    order: 3;
+    flex: 0 0 auto;
+  }
+
+  /* Nama Kamar / Tenda & Info Tambahan */
+  .settings-wilayah-table td:nth-child(4) {
+    order: 4;
+    flex: 1 1 100%;
+    font-size: 13px;
+    font-weight: 600;
+    color: #383228;
+    background: #f9f7f2;
+    padding: 6px 10px !important;
+    border-radius: 6px;
+  }
+
+  /* Kapasitas & Status Terisi */
+  .settings-wilayah-table td:nth-child(6),
+  .settings-wilayah-table td:nth-child(7) {
+    order: 5;
+    flex: 1 1 45%;
+    font-size: 12px;
+  }
+
+  /* Tombol Aksi (Edit & Hapus) di bawah */
+  .settings-wilayah-table td:last-child {
+    order: 6;
+    flex: 0 0 100%;
+    margin-top: 6px;
+    padding-top: 10px !important;
+    border-top: 1px dashed #e4ddd0 !important;
+  }
+
+  .settings-wilayah-table td:last-child > div {
+    display: flex !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .settings-wilayah-table td:last-child .btn {
+    flex: 1 1 50% !important;
+    justify-content: center !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+  }
+
+  /* ============================================================
+     LIVE PREVIEW TIKET: SCALED FIT KE LAYAR HP
+     ============================================================ */
+  .settings-ticket-preview-viewport {
+    width: 100% !important;
+    overflow-x: hidden !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    padding: 6px 0 !important;
+    height: 120px !important;
+  }
+
+  #settingsLivePreviewTicket {
+    transform-origin: top center !important;
+    transform: scale(0.38) !important;
+    margin: 0 auto !important;
+  }
 }
 
 
@@ -9415,6 +9665,24 @@ input:checked + .slider:before {
 
   .time-number {
     font-size: 17px;
+  }
+
+  .settings-ticket-preview-viewport {
+    height: 105px !important;
+  }
+
+  #settingsLivePreviewTicket {
+    transform: scale(0.33) !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .settings-ticket-preview-viewport {
+    height: 95px !important;
+  }
+
+  #settingsLivePreviewTicket {
+    transform: scale(0.29) !important;
   }
 }
 
