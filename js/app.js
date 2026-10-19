@@ -5913,14 +5913,36 @@ function applyEventInfoToUI(settings) {
     }
     if (!settings) return;
 
+    // 1. Headline Utama Dashboard
     const heroHeadline = document.getElementById('heroMainHeadline');
     if (heroHeadline && settings.event_headline) {
       heroHeadline.innerHTML = formatHeroHeadline(settings.event_headline);
     }
 
+    // 2. Deskripsi Singkat Dashboard
     const heroDesc = document.getElementById('heroEventDesc');
     if (heroDesc && settings.event_desc) {
       heroDesc.textContent = settings.event_desc;
+    }
+
+    // 3. Badge Info Acara & Lokasi di Atas Headline Dashboard
+    const heroBadge = document.getElementById('heroEventBadge');
+    if (heroBadge) {
+      const name = (settings.event_name || '').trim();
+      const loc = (settings.event_location || '').trim();
+      if (name && loc) {
+        heroBadge.textContent = `${name.toUpperCase()} • ${loc.toUpperCase()}`;
+      } else if (name) {
+        heroBadge.textContent = name.toUpperCase();
+      } else if (loc) {
+        heroBadge.textContent = loc.toUpperCase();
+      }
+    }
+
+    // 4. Sinkronkan ke Info Lokasi di Halaman Registrasi
+    if (settings.event_location) {
+      const regLoc = document.getElementById('regLocationDisplay');
+      if (regLoc) regLoc.textContent = settings.event_location;
     }
   } catch (err) {
     console.warn('Gagal memperbarui UI info acara:', err);
@@ -5944,6 +5966,7 @@ function saveEventInfoSettings() {
   applyEventInfoToUI({
     event_headline: headline,
     event_name: name,
+    event_location: loc,
     event_desc: desc
   });
 
