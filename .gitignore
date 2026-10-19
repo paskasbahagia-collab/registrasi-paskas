@@ -5,3 +5,4 @@ node_modules/
 *.tmp
 images/paskas-munas-hero-hd.jpg
 serve.ps1
+*.backup.jpg
