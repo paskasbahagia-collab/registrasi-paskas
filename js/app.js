@@ -3948,20 +3948,26 @@ async function sendTicketEmail() {
         },
         emailjsPublicKey
       );
+      showToast(`Alhamdulillah! E-Tiket resmi berhasil dikirim ke: ${destEmail}`, 'success');
     } else {
-      // Background dispatch tanpa buka tab Gmail baru
-      await new Promise(r => setTimeout(r, 1200));
+      // Fallback Nyata & Pasti Berfungsi: Buka Gmail Web dengan email tujuan, subjek & narasi tiket otomatis terisi
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(destEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      const mailtoUrl = `mailto:${encodeURIComponent(destEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      const win = window.open(gmailUrl, '_blank');
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        window.location.href = mailtoUrl;
+      }
+      showToast(`Membuka email untuk dikirimkan ke: ${destEmail}`, 'success');
     }
 
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> E-Tiket Terkirim!';
+      btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Siap Dikirim!';
       setTimeout(() => {
         if (btn) btn.innerHTML = originalText;
       }, 3500);
     }
-
-    showToast(`Alhamdulillah! E-Tiket resmi berhasil dikirim ke: ${destEmail}`, 'success');
   } catch (err) {
     console.error('Email send error:', err);
     if (btn) {
