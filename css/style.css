@@ -8937,26 +8937,30 @@ input:checked + .slider:before {
 
 @media (max-width: 1160px) {
   .hero-content-container {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 40px;
-    padding: 85px 24px 36px;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 36px !important;
+    padding: 85px 24px 36px !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .hero-left-column {
-    max-width: 100%;
-    width: 100%;
+    max-width: 100% !important;
+    width: 100% !important;
   }
 
   .hero-headline {
-    font-size: 46px;
+    font-size: 42px;
   }
 
   .hero-right-column {
     flex: 1 1 auto;
-    width: 100%;
-    max-width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     margin-left: 0;
+    overflow: hidden;
   }
 
   .carousel-section-header,
@@ -8984,40 +8988,141 @@ input:checked + .slider:before {
 
 @media (max-width: 820px) {
   .cards-carousel-viewport {
-    width: calc(100% - 92px);
+    width: calc(100% - 88px);
   }
   .info-card-thumb {
-    flex: 0 0 210px;
-    width: 210px;
-    height: 330px;
+    flex: 0 0 205px;
+    width: 205px;
+    height: 320px;
   }
   .btn-carousel-side {
-    width: 40px;
-    height: 40px;
-    flex: 0 0 40px;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
     font-size: 14px;
   }
 }
 
 @media (max-width: 768px) {
+  .nav-container {
+    padding: 10px 16px;
+  }
+
+  .brand-logo-img {
+    height: 44px;
+    max-width: 52px;
+  }
+
+  .brand-title {
+    font-size: 16px;
+  }
+
+  .brand-sub {
+    font-size: 9.5px;
+  }
+
   .nav-right-group, .nav-menu, .nav-actions {
-    display: none;
+    display: none !important;
   }
 
   .mobile-toggle {
-    display: block;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    color: #ffffff;
+    cursor: pointer;
   }
 
   .mobile-nav-drawer.active {
     display: flex;
   }
 
+  .hero-content-container {
+    padding: 72px 16px 28px !important;
+    gap: 30px !important;
+  }
+
   .hero-headline {
-    font-size: 34px;
+    font-size: 30px;
+    line-height: 1.15;
   }
 
   .hero-description {
-    font-size: 14.5px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .hero-badge {
+    font-size: 11px;
+    padding: 5px 14px;
+  }
+
+  .countdown-card {
+    max-width: 100%;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+  }
+
+  .countdown-grid {
+    gap: 6px;
+  }
+
+  .time-number {
+    font-size: 19px;
+  }
+
+  .time-label {
+    font-size: 9.5px;
+  }
+
+  .hero-action-group {
+    width: 100%;
+  }
+
+  .hero-action-group .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .hero-right-column {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden;
+  }
+
+  .carousel-section-header {
+    padding: 0 4px;
+    margin-bottom: 10px;
+  }
+
+  .carousel-stage-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .cards-carousel-viewport {
+    width: calc(100% - 76px);
+    max-width: 100%;
+    padding: 6px 2px 14px;
+  }
+
+  .info-card-thumb {
+    flex: 0 0 190px;
+    width: 190px;
+    height: 300px;
+  }
+
+  .btn-carousel-side {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    font-size: 13px;
   }
 
   .form-card-container {
@@ -9032,14 +9137,6 @@ input:checked + .slider:before {
 
   .metrics-grid {
     grid-template-columns: 1fr;
-  }
-
-  .countdown-grid {
-    gap: 4px;
-  }
-
-  .time-number {
-    font-size: 20px;
   }
 
   .rekap-header-bar {
@@ -9079,3 +9176,24 @@ input:checked + .slider:before {
     font-size: 22px;
   }
 }
+
+@media (max-width: 480px) {
+  .hero-headline {
+    font-size: 27px;
+  }
+
+  .cards-carousel-viewport {
+    width: calc(100% - 70px);
+  }
+
+  .info-card-thumb {
+    flex: 0 0 175px;
+    width: 175px;
+    height: 280px;
+  }
+
+  .time-number {
+    font-size: 17px;
+  }
+}
+
