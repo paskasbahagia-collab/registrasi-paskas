@@ -5438,6 +5438,10 @@ select.form-control optgroup {
 }
 
 @media (max-width: 960px) {
+  .chart-focused-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
   .gender-type-charts-split {
     grid-template-columns: 1fr;
   }
