@@ -7540,20 +7540,39 @@ body.page-settings-active .navbar .mobile-toggle {
 
 @media (max-width: 768px) {
   .mag-cover-hero {
-    padding: 28px 18px;
+    padding: 24px 16px;
   }
   .mag-giant-didot-title {
-    font-size: 44px;
+    font-size: 36px;
   }
-  .mag-works-cards-grid {
-    grid-template-columns: 1fr;
+  .mag-works-cards-grid,
+  .mag-works-cards-grid.mag-2-columns {
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+  }
+  .mag-work-card {
+    padding: 16px 16px 20px !important;
+  }
+  .mag-work-title {
+    font-size: 20px !important;
   }
   .mag-selected-works-strip,
   .mag-services-process-strip {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+  .mag-works-strip-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .mag-works-divider-line {
+    display: none;
   }
 }
+
 
 /* ===================================================================
    4. GAMBAR 3: SETTINGS PANELS CONTAINER (Option 2 Warm Theme)
@@ -9175,7 +9194,209 @@ input:checked + .slider:before {
   .settings-main-title {
     font-size: 22px;
   }
+
+  /* ============================================================
+     ROMBONGAN: MOBILE CARD VIEW (OPSI 1)
+     ============================================================ */
+  .group-table-card-wrap .table-responsive {
+    overflow-x: visible !important;
+  }
+
+  .table-compact-members {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .table-compact-members thead {
+    display: none !important;
+  }
+
+  .table-compact-members tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    width: 100% !important;
+  }
+
+  .table-compact-members tbody tr.member-card {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    background: #ffffff !important;
+    border: 1.5px solid #dcd4c3 !important;
+    border-radius: 16px !important;
+    padding: 16px 14px 14px 14px !important;
+    box-shadow: 0 4px 14px rgba(35, 66, 51, 0.06) !important;
+    position: relative !important;
+    gap: 10px 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Header Card: Nomor Peserta & Tombol Hapus */
+  .table-compact-members td:nth-child(1) {
+    order: 1 !important;
+    flex: 0 0 auto !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .table-compact-members td:nth-child(1)::after {
+    content: 'Peserta Rombongan';
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 13.5px;
+    color: #234233;
+  }
+
+  .table-compact-members td:nth-child(8) {
+    order: 2 !important;
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .table-compact-members td:nth-child(8) .btn-remove-row-sm {
+    width: 32px !important;
+    height: 32px !important;
+    background: #fee2e2 !important;
+    color: #dc2626 !important;
+    border: 1px solid #fca5a5 !important;
+    border-radius: 8px !important;
+  }
+
+  /* Nama Lengkap: Full width */
+  .table-compact-members td:nth-child(2) {
+    order: 3 !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    padding: 4px 0 0 0 !important;
+  }
+
+  .table-compact-members td:nth-child(2)::before {
+    content: 'Nama Lengkap Peserta *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* Usia & Gender bersebelahan */
+  .table-compact-members td:nth-child(3) {
+    order: 4 !important;
+    flex: 0 0 35% !important;
+    max-width: 35% !important;
+    padding: 0 6px 0 0 !important;
+  }
+
+  .table-compact-members td:nth-child(3)::before {
+    content: 'Usia *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .table-compact-members td:nth-child(4) {
+    order: 5 !important;
+    flex: 0 0 65% !important;
+    max-width: 65% !important;
+    padding: 0 !important;
+  }
+
+  .table-compact-members td:nth-child(4)::before {
+    content: 'Jenis Kelamin *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* Ukuran Baju */
+  .table-compact-members td:nth-child(5) {
+    order: 6 !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .table-compact-members td:nth-child(5)::before {
+    content: 'Ukuran Baju *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* Riwayat Medis */
+  .table-compact-members td:nth-child(6) {
+    order: 7 !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .table-compact-members td:nth-child(6)::before {
+    content: 'Riwayat Medis / Penyakit (Opsional)';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* No HP */
+  .table-compact-members td:nth-child(7) {
+    order: 8 !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .table-compact-members td:nth-child(7)::before {
+    content: 'No. WhatsApp / HP (Opsional)';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* Tombol aksi rombongan di HP */
+  .table-bottom-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .table-bottom-actions button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .form-footer {
+    flex-direction: column-reverse !important;
+    gap: 12px !important;
+  }
+
+  .form-footer button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
 }
+
 
 @media (max-width: 480px) {
   .hero-headline {
