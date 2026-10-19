@@ -917,6 +917,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       bg1.style.backgroundImage = `url('${parseDirectImageUrl(DASHBOARD_CARDS[0].coverImg)}')`;
     }
   }
+  // Sinkronisasi data pengaturan dari Supabase jika terhubung
+  if (window.dataService && window.dataService.syncSettingsFromSupabase) {
+    try {
+      await window.dataService.syncSettingsFromSupabase();
+    } catch (e) {
+      console.warn('Sync settings on load:', e);
+    }
+  }
+
   renderDashboardCards();
   applyEventInfoToUI();
   renderRegistrationPageContent();

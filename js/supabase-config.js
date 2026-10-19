@@ -10,7 +10,7 @@
 // KREDENSIAL DEFAULT CLOUD SUPABASE (Otomatis Aktif Saat Deploy Vercel)
 // ===================================================================
 const DEFAULT_SUPABASE_URL = 'https://cyqtyobzhqzmelmmpbdb.supabase.co'; // Project URL Supabase
-const DEFAULT_SUPABASE_KEY = ''; // Tempelkan Project API Key (anon/publishable) di sini
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_B5TyssfXopumAzcLVGOQSw_GaHtGm5V'; // Project Publishable Key
 
 const STORAGE_KEYS = {
   SUPABASE_URL: 'paskas_supabase_url',
@@ -100,12 +100,43 @@ class PaskasDataService {
   }
 
   /**
+   * Status koneksi aktif Supabase
+   */
+  isSupabaseConfigured() {
+    return Boolean(this.isSupabaseConnected && this.supabaseClient);
+  }
+
+  /**
+   * Sinkronisasi pengaturan cloud Supabase ke localStorage
+   */
+  async syncSettingsFromSupabase() {
+    if (!this.isSupabaseConnected || !this.supabaseClient) return null;
+    try {
+      const { data, error } = await this.supabaseClient.from('app_settings').select('*');
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const cloudSettings = {};
+        data.forEach(row => {
+          if (row.setting_key) cloudSettings[row.setting_key] = row.setting_value;
+        });
+        const merged = { ...this.getSettings(), ...cloudSettings };
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(merged));
+        return merged;
+      }
+    } catch (e) {
+      console.warn('Gagal membaca app_settings dari Supabase:', e);
+    }
+    return null;
+  }
+
+  /**
    * Mengambil kredensial yang tersimpan
    */
   getCredentials() {
+    const localUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL);
+    const localKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY);
     return {
-      url: localStorage.getItem(STORAGE_KEYS.SUPABASE_URL) || DEFAULT_SUPABASE_URL || '',
-      key: localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY) || DEFAULT_SUPABASE_KEY || ''
+      url: (localUrl && localUrl.trim() !== '') ? localUrl.trim() : (DEFAULT_SUPABASE_URL || ''),
+      key: (localKey && localKey.trim() !== '') ? localKey.trim() : (DEFAULT_SUPABASE_KEY || '')
     };
   }
 
