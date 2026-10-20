@@ -2480,6 +2480,17 @@ CREATE TABLE IF NOT EXISTS registrations (
                     </button>
                   </div>
                 </div>
+
+                <!-- Preview Strip Indikator Hasil Tiket -->
+                <div id="cfg_roomGroupPreviewStrip" style="margin-top: 14px; padding: 10px 16px; border-radius: 8px; background: #f0fdf4; border: 1px dashed #a7f3d0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                  <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px;">
+                    <span style="color: #475569; font-weight: 600;"><i class="fa-solid fa-ticket text-cyan"></i> Tampilan di Boarding Pass:</span>
+                    <span id="cfg_roomGroupTicketPreviewSim" style="font-family: monospace; font-size: 13px; font-weight: 700;">KELOMPOK: [A123] &bull; KAMAR: [08]</span>
+                  </div>
+                  <button type="button" onclick="switchSettingsCategory('tampilan'); switchSettingsTab('ticket-template');" class="btn btn-link btn-xs" style="font-size: 12px; color: #0284c7; text-decoration: underline; font-weight: 700; cursor: pointer; border: none; background: transparent; padding: 0;">
+                    Lihat Live Preview Tiket <i class="fa-solid fa-arrow-right"></i>
+                  </button>
+                </div>
               </div>
 
               <!-- Card 1: Pengaturan Master Gedung, Kamar & Kapasitas -->
@@ -3009,13 +3020,23 @@ CREATE TABLE IF NOT EXISTS registrations (
 
               <!-- Card 3: Live Preview Boarding Pass di Pengaturan -->
               <div class="settings-card-item" style="margin-top: 20px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                  <h4 class="settings-item-title" style="margin: 0;">
-                    <i class="fa-solid fa-eye text-cyan"></i> Pratinjau Tampilan Tiket (Live Preview)
-                  </h4>
-                  <span style="font-size: 12px; color: #94a3b8;">
-                    Data simulasi otomatis ter-update sesuai setelan Anda
-                  </span>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <h4 class="settings-item-title" style="margin: 0;">
+                      <i class="fa-solid fa-eye text-cyan"></i> Pratinjau Tampilan Tiket (Live Preview)
+                    </h4>
+                    <span id="prevTicketAllocStatusPill" class="settings-chip-badge" style="font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 999px;">
+                      <!-- Diisi via JS -->
+                    </span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="btnQuickToggleAllocFromPreview" onclick="toggleRoomGroupAllocation()" class="btn btn-secondary btn-sm" style="padding: 5px 12px; font-size: 12px; border-radius: 999px; font-weight: 600; cursor: pointer;">
+                      <!-- Diisi via JS -->
+                    </button>
+                    <span style="font-size: 12px; color: #94a3b8;">
+                      Data simulasi otomatis ter-update
+                    </span>
+                  </div>
                 </div>
 
                 <div class="settings-ticket-preview-viewport" style="overflow-x: auto; padding: 15px 0;">
@@ -3695,7 +3716,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=66.0"></script>
-  <script src="js/app.js?v=66.0"></script>
+  <script src="js/supabase-config.js?v=67.0"></script>
+  <script src="js/app.js?v=67.0"></script>
 </body>
 </html>

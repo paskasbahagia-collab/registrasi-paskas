@@ -6584,6 +6584,30 @@ function updateRoomGroupControlUI() {
     btn.innerHTML = '<i class="fa-solid fa-play"></i> Buka / Aktifkan Pembagian';
     btn.title = 'Klik untuk mengaktifkan kembali pembagian kamar & kelompok';
   }
+
+  // Update strip indikator tampilan di tiket
+  const strip = document.getElementById('cfg_roomGroupPreviewStrip');
+  const sim = document.getElementById('cfg_roomGroupTicketPreviewSim');
+  if (sim) {
+    if (isEnabled) {
+      sim.innerHTML = '<span style="color:#059669; font-weight:800;">KELOMPOK: [A123]</span> &bull; <span style="color:#059669; font-weight:800;">KAMAR: [08]</span> <small style="color:#64748b; font-weight:normal;">(Otomatis Terisi)</small>';
+      if (strip) {
+        strip.style.background = '#f0fdf4';
+        strip.style.borderColor = '#a7f3d0';
+      }
+    } else {
+      sim.innerHTML = '<span style="color:#dc2626; font-weight:800;">KELOMPOK: [-]</span> &bull; <span style="color:#dc2626; font-weight:800;">KAMAR: [-]</span> <small style="color:#dc2626; font-weight:700;">(Terkunci / Ditutup)</small>';
+      if (strip) {
+        strip.style.background = '#fef2f2';
+        strip.style.borderColor = '#fca5a5';
+      }
+    }
+  }
+
+  // Otomatis sinkronkan dan update Pratinjau Tampilan Tiket (Live Preview)
+  if (typeof renderTicketTemplateLivePreview === 'function') {
+    renderTicketTemplateLivePreview();
+  }
 }
 
 async function toggleRoomGroupAllocation() {
@@ -6804,6 +6828,65 @@ function renderTicketTemplateLivePreview() {
 
   const elPrevBarcode = document.getElementById('prevBpBarcodeNumber');
   if (elPrevBarcode) elPrevBarcode.textContent = 'PKB-001';
+
+  // Sinkronisasi status pembagian kamar & kelompok ke Live Preview
+  const isAllocActive = isRoomGroupAllocationEnabled();
+
+  const elGroup = document.getElementById('prevBpGroup');
+  if (elGroup) {
+    elGroup.textContent = isAllocActive ? 'A123' : '-';
+    elGroup.style.color = isAllocActive ? '#ffffff' : '#fca5a5';
+  }
+
+  const elRoom = document.getElementById('prevBpRoom');
+  if (elRoom) {
+    elRoom.textContent = isAllocActive ? '08' : '-';
+    elRoom.style.color = isAllocActive ? '#ffffff' : '#fca5a5';
+  }
+
+  const elStubGroup = document.getElementById('prevBpStubGroup');
+  if (elStubGroup) {
+    elStubGroup.textContent = isAllocActive ? 'A123' : '-';
+    elStubGroup.style.color = isAllocActive ? '#ffffff' : '#fca5a5';
+  }
+
+  const elStubRoom = document.getElementById('prevBpStubRoom');
+  if (elStubRoom) {
+    elStubRoom.textContent = isAllocActive ? '08' : '-';
+    elStubRoom.style.color = isAllocActive ? '#ffffff' : '#fca5a5';
+  }
+
+  const pill = document.getElementById('prevTicketAllocStatusPill');
+  if (pill) {
+    if (!isAllocActive) {
+      pill.style.background = '#fef2f2';
+      pill.style.color = '#dc2626';
+      pill.style.border = '1px solid #fca5a5';
+      pill.innerHTML = '<i class="fa-solid fa-lock"></i> Terkunci: Kelompok &amp; Kamar Ditutup (-)';
+    } else {
+      pill.style.background = '#ecfdf5';
+      pill.style.color = '#065f46';
+      pill.style.border = '1px solid #a7f3d0';
+      pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Aktif: Kelompok &amp; Kamar Dibagi Otomatis';
+    }
+  }
+
+  const btnQuick = document.getElementById('btnQuickToggleAllocFromPreview');
+  if (btnQuick) {
+    if (!isAllocActive) {
+      btnQuick.innerHTML = '<i class="fa-solid fa-play" style="color: #059669;"></i> Buka / Aktifkan Pembagian';
+      btnQuick.title = 'Klik untuk mengaktifkan kembali pembagian kamar & kelompok';
+      btnQuick.style.background = '#ecfdf5';
+      btnQuick.style.color = '#065f46';
+      btnQuick.style.border = '1px solid #a7f3d0';
+    } else {
+      btnQuick.innerHTML = '<i class="fa-solid fa-lock" style="color: #dc2626;"></i> Kunci / Close Pembagian (-)';
+      btnQuick.title = 'Klik untuk mengunci pembagian kamar & kelompok (tiket akan menampilkan tanda -)';
+      btnQuick.style.background = '#fef2f2';
+      btnQuick.style.color = '#991b1b';
+      btnQuick.style.border = '1px solid #fecaca';
+    }
+  }
 
   prevCard.style.backgroundImage = `url('${targetImg}')`;
   prevCard.style.backgroundSize = '100% 100%';
