@@ -3710,6 +3710,7 @@ function addGroupMemberCard(opts = {}) {
     <td>
       <input type="text" class="form-control form-control-sm grp-member-name" 
              placeholder="Nama lengkap peserta" value="${escapeHtml(initialName)}" 
+             maxlength="100"
              oninput="syncAllGroupGuardians(); clearSingleGroupMemberWarning(${memberId});" 
              onblur="checkSingleGroupMemberDuplicate(${memberId})" required>
       <div class="grp-dup-warning-wrap" id="dupWarningWrap-${memberId}" style="display: none; margin-top: 5px;"></div>
@@ -3755,17 +3756,19 @@ function addGroupMemberCard(opts = {}) {
     </td>
     <td>
       <input type="text" class="form-control form-control-sm grp-member-med" 
-             placeholder="Asma / Alergi / Sehat" value="${escapeHtml(initialMed)}">
+             placeholder="Asma / Alergi / Sehat" value="${escapeHtml(initialMed)}" maxlength="200">
     </td>
     <td>
       <input type="tel" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm grp-member-phone" 
              placeholder="08xxxxxxxx" value="${escapeHtml(initialPhone)}"
+             maxlength="16"
              onblur="checkSingleGroupMemberDuplicate(${memberId})"
              oninput="this.value = this.value.replace(/[^0-9]/g, ''); clearSingleGroupMemberWarning(${memberId});">
     </td>
     <td>
       <input type="tel" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm grp-member-emergency" 
              placeholder="08xxxxxxxx" value="${escapeHtml(initialEmergency)}"
+             maxlength="16"
              oninput="this.value = this.value.replace(/[^0-9]/g, '');" title="Nomor HP darurat / keluarga">
     </td>
     <td style="text-align: center; vertical-align: middle;">
@@ -6216,6 +6219,39 @@ async function verifyAdminPassword(entered) {
   return false;
 }
 
+// ===================================================================
+// PROTEKSI BRUTE FORCE LOGIN ADMIN (Maks 5x salah, Kunci 60 detik)
+// ===================================================================
+const ADMIN_MAX_ATTEMPTS = 5;
+const ADMIN_LOCKOUT_MS = 60 * 1000;
+
+function getAdminLockoutRemaining() {
+  const lockoutUntil = parseInt(sessionStorage.getItem('paskas_admin_lockout_until') || '0', 10);
+  const now = Date.now();
+  if (now < lockoutUntil) {
+    return Math.ceil((lockoutUntil - now) / 1000);
+  }
+  return 0;
+}
+
+function getAdminFailedAttempts() {
+  return parseInt(sessionStorage.getItem('paskas_admin_failed_attempts') || '0', 10);
+}
+
+function recordAdminFailedAttempt() {
+  const current = getAdminFailedAttempts() + 1;
+  sessionStorage.setItem('paskas_admin_failed_attempts', String(current));
+  if (current >= ADMIN_MAX_ATTEMPTS) {
+    sessionStorage.setItem('paskas_admin_lockout_until', String(Date.now() + ADMIN_LOCKOUT_MS));
+  }
+  return current;
+}
+
+function resetAdminFailedAttempts() {
+  sessionStorage.removeItem('paskas_admin_failed_attempts');
+  sessionStorage.removeItem('paskas_admin_lockout_until');
+}
+
 function openSettingsWithAuth(targetTab = 'rekap') {
   pendingAuthTargetTab = targetTab;
   if (isAdminLoggedIn) {
@@ -6230,7 +6266,16 @@ function openSettingsWithAuth(targetTab = 'rekap') {
   const errEl = document.getElementById('adminAuthError');
   const card = modal?.querySelector('.modal-auth-green-card, .modal-auth-sleek-card, .modal-auth-card');
 
-  if (errEl) errEl.style.display = 'none';
+  const remainingLock = getAdminLockoutRemaining();
+  if (remainingLock > 0) {
+    if (errEl) {
+      errEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Akses dikunci sementara karena 5x salah. Tunggu <strong>${remainingLock} detik</strong>.`;
+      errEl.style.display = 'flex';
+    }
+  } else {
+    if (errEl) errEl.style.display = 'none';
+  }
+
   if (card) card.classList.remove('shake-animation');
   if (input) {
     input.value = '';
@@ -6239,7 +6284,7 @@ function openSettingsWithAuth(targetTab = 'rekap') {
   if (modal) modal.classList.add('active');
 
   setTimeout(() => {
-    if (input) input.focus();
+    if (input && remainingLock === 0) input.focus();
   }, 120);
 }
 
@@ -6249,14 +6294,25 @@ function closeAdminAuthModal() {
 }
 
 async function submitAdminPassword() {
+  const remainingLock = getAdminLockoutRemaining();
   const input = document.getElementById('adminPasswordInput');
   const errEl = document.getElementById('adminAuthError');
   const card = document.querySelector('#adminAuthModal .modal-auth-green-card, #adminAuthModal .modal-auth-sleek-card, #adminAuthModal .modal-auth-card');
-  const entered = (input?.value || '').trim();
 
+  if (remainingLock > 0) {
+    if (errEl) {
+      errEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Terlalu banyak percobaan gagal. Mohon tunggu <strong>${remainingLock} detik</strong>.`;
+      errEl.style.display = 'flex';
+    }
+    showToast(`Akses admin dikunci sementara. Mohon tunggu ${remainingLock} detik.`, 'warning');
+    return;
+  }
+
+  const entered = (input?.value || '').trim();
   const isValid = await verifyAdminPassword(entered);
 
   if (isValid) {
+    resetAdminFailedAttempts();
     isAdminLoggedIn = true;
     closeAdminAuthModal();
     navigateTo('settings');
@@ -6264,7 +6320,18 @@ async function submitAdminPassword() {
     switchSettingsTab(cleanTab);
     showToast('Akses administrator berhasil diverifikasi!', 'success');
   } else {
-    if (errEl) errEl.style.display = 'flex';
+    const failedCount = recordAdminFailedAttempt();
+    const remaining = ADMIN_MAX_ATTEMPTS - failedCount;
+
+    if (errEl) {
+      if (failedCount >= ADMIN_MAX_ATTEMPTS) {
+        errEl.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Batas 5x percobaan terlampaui. Akses dikunci selama <strong>60 detik</strong>.`;
+      } else {
+        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Sisa kesempatan: <strong>${remaining} kali</strong>.`;
+      }
+      errEl.style.display = 'flex';
+    }
+
     if (card) {
       card.classList.remove('shake-animation');
       void card.offsetWidth; // force reflow
@@ -6273,6 +6340,10 @@ async function submitAdminPassword() {
     if (input) {
       input.select();
       input.focus();
+    }
+
+    if (failedCount >= ADMIN_MAX_ATTEMPTS) {
+      showToast('Akses admin terkunci selama 60 detik karena 5x kesalahan kata sandi.', 'error');
     }
   }
 }
