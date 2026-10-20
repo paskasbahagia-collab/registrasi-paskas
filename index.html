@@ -33,7 +33,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=73.0">
+  <link rel="stylesheet" href="css/style.css?v=74.0">
 </head>
 <body>
 
@@ -499,6 +499,11 @@
               <!-- A. FORM REGISTRASI INDIVIDU                         -->
               <!-- =================================================== -->
               <form id="formIndividu" class="registration-form" style="display: none;" onsubmit="handleIndividuFinalSubmit(event)">
+                <!-- Anti-bot honeypot field -->
+                <div style="display:none !important; position:absolute; left:-9999px; top:-9999px;" aria-hidden="true">
+                  <label for="ind_hp_fax">Biarkan kolom ini kosong</label>
+                  <input type="text" id="ind_hp_fax" name="hp_fax" tabindex="-1" autocomplete="off">
+                </div>
             
                 <!-- Multi-Step Wizard Progress Stepper -->
                 <div class="wizard-stepper-wrap" id="indWizardStepper">
@@ -1134,6 +1139,11 @@
           <!-- B. FORM REGISTRASI KELOMPOK / ROMBONGAN             -->
           <!-- =================================================== -->
           <form id="formKelompok" class="registration-form" style="display: none;" onsubmit="handleKelompokPreview(event)">
+            <!-- Anti-bot honeypot field -->
+            <div style="display:none !important; position:absolute; left:-9999px; top:-9999px;" aria-hidden="true">
+              <label for="grp_hp_fax">Biarkan kolom ini kosong</label>
+              <input type="text" id="grp_hp_fax" name="hp_fax" tabindex="-1" autocomplete="off">
+            </div>
             
             <div class="group-header-card">
               <div class="group-card-icon">
@@ -3969,7 +3979,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=73.0"></script>
-  <script src="js/app.js?v=73.0"></script>
+  <script src="js/supabase-config.js?v=74.0"></script>
+  <script src="js/app.js?v=74.0"></script>
 </body>
 </html>

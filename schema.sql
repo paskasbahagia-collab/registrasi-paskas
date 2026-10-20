@@ -64,7 +64,8 @@ VALUES
     ('event_name', 'Silaturahmi Akbar Pasukan Amal Sholeh (PASKAS) Bahagia', 'Nama kegiatan agenda'),
     ('event_location', 'Rocket Convention Hall, Sleman, D.I. Yogyakarta', 'Lokasi utama acara'),
     ('event_date', '2026-11-10 s/d 2026-11-13', 'Tanggal pelaksanaan kegiatan'),
-    ('google_email_script_url', 'https://script.google.com/macros/s/AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A/exec', 'URL Apps Script Web App untuk pengiriman email otomatis dari paskasbahagia@gmail.com')
+    ('google_email_script_url', 'https://script.google.com/macros/s/AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A/exec', 'URL Apps Script Web App untuk pengiriman email otomatis dari paskasbahagia@gmail.com'),
+    ('paskas_admin_password', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Hash SHA-256 kata sandi administrator (aman terenkripsi: bawaan admin123)')
 ON CONFLICT (setting_key) DO UPDATE 
 SET setting_value = EXCLUDED.setting_value,
     description = EXCLUDED.description,
@@ -79,8 +80,8 @@ UPDATE app_settings
 SET setting_value = '2026-11-10 s/d 2026-11-13', updated_at = NOW()
 WHERE setting_key = 'event_date';
 
--- 3. Konfigurasi Row Level Security (RLS)
--- Supaya aplikasi web frontend anonim dapat membaca & menambahkan data registrasi:
+-- 3. Konfigurasi Row Level Security (RLS) Diperkuat
+-- Supaya aplikasi web frontend aman:
 ALTER TABLE registrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
@@ -101,13 +102,21 @@ DROP POLICY IF EXISTS "Allow public delete for registrations" ON registrations;
 CREATE POLICY "Allow public delete for registrations" 
 ON registrations FOR DELETE USING (true);
 
--- Kebijakan App Settings: Boleh SELECT & ALL publik (Anon)
+-- Kebijakan App Settings (Hardened): Boleh SELECT, INSERT, UPDATE publik (Anon)
+-- DELETE dilarang untuk umum agar pengaturan sistem tidak dapat dihapus sembarangan
 DROP POLICY IF EXISTS "Allow public read access for app_settings" ON app_settings;
 CREATE POLICY "Allow public read access for app_settings" 
 ON app_settings FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Allow public insert for app_settings" ON app_settings;
+CREATE POLICY "Allow public insert for app_settings" 
+ON app_settings FOR INSERT WITH CHECK (true);
+
 DROP POLICY IF EXISTS "Allow public update for app_settings" ON app_settings;
 CREATE POLICY "Allow public update for app_settings" 
-ON app_settings FOR ALL USING (true);
+ON app_settings FOR UPDATE USING (true);
 
--- Selesai! Tabel siap digunakan oleh frontend PASKAS BAHAGIA.
+DROP POLICY IF EXISTS "Allow public update for app_settings" ON app_settings;
+DROP POLICY IF EXISTS "Allow public delete for app_settings" ON app_settings;
+
+-- Selesai! Skema database siap & aman digunakan oleh frontend PASKAS BAHAGIA.

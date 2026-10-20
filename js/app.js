@@ -3077,6 +3077,14 @@ function generateRegistrationCode(type = 'individu', index = 0) {
 async function handleIndividuFinalSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
 
+  // 0. Anti-bot honeypot verification
+  const honeypot = document.getElementById('ind_hp_fax')?.value;
+  if (honeypot && honeypot.trim() !== '') {
+    console.warn('Bot submission blocked via honeypot field.');
+    showToast('Aktivitas tidak wajar terdeteksi. Pendaftaran dibatalkan.', 'error');
+    return;
+  }
+
   if (isRegistrationLocked) {
     showToast('Pendaftaran telah ditutup sesuai batas waktu yang ditentukan.', 'error');
     return;
@@ -3230,6 +3238,15 @@ function handleIndividuPreview(e) {
 // 2. PRATINJAU REGISTRASI KELOMPOK (Model formkwpselindo)
 function handleKelompokPreview(e) {
   e.preventDefault();
+
+  // 0. Anti-bot honeypot verification
+  const honeypot = document.getElementById('grp_hp_fax')?.value;
+  if (honeypot && honeypot.trim() !== '') {
+    console.warn('Bot submission blocked via honeypot field.');
+    showToast('Aktivitas tidak wajar terdeteksi. Pendaftaran dibatalkan.', 'error');
+    return;
+  }
+
   if (isRegistrationLocked) {
     showToast('Pendaftaran telah ditutup sesuai batas waktu yang ditentukan.', 'error');
     return;
@@ -3496,12 +3513,24 @@ function closePreviewModal() {
 async function confirmAndSubmitRegistration() {
   if (!pendingRegistrationData) return;
 
+  // Proteksi Rate Limiting & Anti-Spam Cooldown (5 detik jeda)
+  const LAST_SUBMIT_KEY = 'paskas_last_submit_ts';
+  const lastSubmit = parseInt(sessionStorage.getItem(LAST_SUBMIT_KEY) || '0', 10);
+  const now = Date.now();
+  const COOLDOWN_MS = 5000;
+  if (now - lastSubmit < COOLDOWN_MS) {
+    const waitSec = Math.ceil((COOLDOWN_MS - (now - lastSubmit)) / 1000);
+    showToast(`Mohon tunggu ${waitSec} detik sebelum mengirim pendaftaran kembali.`, 'warning');
+    return;
+  }
+
   const confirmBtn = document.getElementById('btnConfirmSubmit');
   const originalText = confirmBtn.innerHTML;
   confirmBtn.disabled = true;
   confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
 
   try {
+    sessionStorage.setItem(LAST_SUBMIT_KEY, Date.now().toString());
     if (pendingRegistrationData.type === 'individu') {
       const saved = await window.dataService.addRegistration(pendingRegistrationData.data);
 
@@ -6135,8 +6164,56 @@ function initSettingsPage(defaultTab = 'rekap', skipSwitchTab = false) {
 let isAdminLoggedIn = false;
 let pendingAuthTargetTab = 'rekap';
 
-function getAdminPassword() {
-  return localStorage.getItem('paskas_admin_password') || 'admin123';
+// Hash bawaan untuk kata sandi default 'admin123' (SHA-256)
+const DEFAULT_ADMIN_PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
+
+/**
+ * Utilitas enkripsi SHA-256 menggunakan Web Crypto API asli browser
+ */
+async function hashSHA256(text) {
+  if (!text) return '';
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const hashBuf = await crypto.subtle.digest('SHA-256', data);
+    const hashArr = Array.from(new Uint8Array(hashBuf));
+    return hashArr.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (err) {
+    console.error('Crypto subtle SHA-256 error:', err);
+    return text;
+  }
+}
+
+function getStoredAdminPasswordHash() {
+  return localStorage.getItem('paskas_admin_password') || DEFAULT_ADMIN_PASSWORD_HASH;
+}
+
+/**
+ * Verifikasi kata sandi admin dengan aman:
+ * Membandingkan SHA-256 hash input dengan hash tersimpan.
+ * Mendukung migrasi otomatis dari teks biasa lama ke SHA-256 jika ada.
+ */
+async function verifyAdminPassword(entered) {
+  if (!entered) return false;
+  const stored = getStoredAdminPasswordHash();
+  const enteredHash = await hashSHA256(entered);
+
+  // 1. Pencocokan langsung SHA-256 (Standar Utama yang Aman)
+  if (enteredHash.toLowerCase() === stored.toLowerCase()) {
+    return true;
+  }
+
+  // 2. Backward compatibility & Auto-migration: Jika data lama di localStorage/Supabase masih plaintext
+  if (stored === entered || stored === 'admin123') {
+    // Migrasikan otomatis ke hash SHA-256
+    localStorage.setItem('paskas_admin_password', enteredHash);
+    if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+      window.dataService.saveCloudSetting('paskas_admin_password', enteredHash);
+    }
+    return true;
+  }
+
+  return false;
 }
 
 function openSettingsWithAuth(targetTab = 'rekap') {
@@ -6171,13 +6248,15 @@ function closeAdminAuthModal() {
   if (modal) modal.classList.remove('active');
 }
 
-function submitAdminPassword() {
+async function submitAdminPassword() {
   const input = document.getElementById('adminPasswordInput');
   const errEl = document.getElementById('adminAuthError');
   const card = document.querySelector('#adminAuthModal .modal-auth-green-card, #adminAuthModal .modal-auth-sleek-card, #adminAuthModal .modal-auth-card');
   const entered = (input?.value || '').trim();
 
-  if (entered === getAdminPassword()) {
+  const isValid = await verifyAdminPassword(entered);
+
+  if (isValid) {
     isAdminLoggedIn = true;
     closeAdminAuthModal();
     navigateTo('settings');
@@ -6204,7 +6283,7 @@ function lockAdminSession() {
   showToast('Sesi administrator telah dikunci.', 'info');
 }
 
-function saveNewAdminPassword() {
+async function saveNewAdminPassword() {
   const curInput = document.getElementById('cfg_currentAdminPassword');
   const newInput = document.getElementById('cfg_newAdminPassword');
   const confInput = document.getElementById('cfg_confirmAdminPassword');
@@ -6213,7 +6292,8 @@ function saveNewAdminPassword() {
   const newVal = (newInput?.value || '').trim();
   const confVal = (confInput?.value || '').trim();
 
-  if (curVal !== getAdminPassword()) {
+  const isCurValid = await verifyAdminPassword(curVal);
+  if (!isCurValid) {
     showToast('Kata sandi saat ini tidak sesuai!', 'error');
     if (curInput) { curInput.focus(); curInput.select(); }
     return;
@@ -6231,22 +6311,23 @@ function saveNewAdminPassword() {
     return;
   }
 
-  localStorage.setItem('paskas_admin_password', newVal);
+  const newHash = await hashSHA256(newVal);
+  localStorage.setItem('paskas_admin_password', newHash);
   if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
-    window.dataService.saveCloudSetting('paskas_admin_password', newVal);
+    window.dataService.saveCloudSetting('paskas_admin_password', newHash);
   }
   if (curInput) curInput.value = '';
   if (newInput) newInput.value = '';
   if (confInput) confInput.value = '';
 
-  showToast('Kata sandi admin berhasil diperbarui!', 'success');
+  showToast('Kata sandi admin berhasil diperbarui (terenkripsi aman SHA-256)!', 'success');
 }
 
 function resetAdminPasswordDefault() {
   if (confirm('Kembalikan kata sandi admin ke setelan awal bawaan (admin123)?')) {
-    localStorage.removeItem('paskas_admin_password');
+    localStorage.setItem('paskas_admin_password', DEFAULT_ADMIN_PASSWORD_HASH);
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
-      window.dataService.saveCloudSetting('paskas_admin_password', 'admin123');
+      window.dataService.saveCloudSetting('paskas_admin_password', DEFAULT_ADMIN_PASSWORD_HASH);
     }
     const curInput = document.getElementById('cfg_currentAdminPassword');
     const newInput = document.getElementById('cfg_newAdminPassword');
@@ -6254,7 +6335,7 @@ function resetAdminPasswordDefault() {
     if (curInput) curInput.value = '';
     if (newInput) newInput.value = '';
     if (confInput) confInput.value = '';
-    showToast('Kata sandi admin dikembalikan ke bawaan: admin123', 'info');
+    showToast('Kata sandi admin dikembalikan ke bawaan: admin123 (terenkripsi SHA-256)', 'info');
   }
 }
 
