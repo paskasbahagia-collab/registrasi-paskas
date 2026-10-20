@@ -6005,8 +6005,17 @@ function renderRekapWilayahSummaryTable(sortedList, totalOrang, male, female, in
 }
 
 // ===================================================================
-// 8. DATA EXPORTS (EXCEL & CSV)
+// 8. DATA EXPORTS (EXCEL & CSV) - TERLINDUNGI DARI FORMULA INJECTION
 // ===================================================================
+function sanitizeSpreadsheetValue(val) {
+  if (val === null || val === undefined) return '';
+  const str = String(val);
+  if (/^[=\+\-@\t\r]/.test(str)) {
+    return "'" + str;
+  }
+  return str;
+}
+
 function exportToExcel() {
   if (!window.XLSX) {
     showToast('Pustaka Excel sedang dimuat, coba sebentar lagi.', 'error');
@@ -6015,31 +6024,31 @@ function exportToExcel() {
 
   const exportData = filteredRegistrations.map((item, idx) => ({
     'No': idx + 1,
-    'Kode Tiket': item.registration_code,
-    'Tipe Registrasi': item.registration_type,
-    'Nama Kelompok': item.group_name || '-',
-    'Koordinator Kelompok': item.group_leader_name || '-',
-    'Nama Peserta': item.full_name,
+    'Kode Tiket': sanitizeSpreadsheetValue(item.registration_code),
+    'Tipe Registrasi': sanitizeSpreadsheetValue(item.registration_type),
+    'Nama Kelompok': sanitizeSpreadsheetValue(item.group_name || '-'),
+    'Koordinator Kelompok': sanitizeSpreadsheetValue(item.group_leader_name || '-'),
+    'Nama Peserta': sanitizeSpreadsheetValue(item.full_name),
     'Usia': item.age ? `${item.age} Th` : '-',
     'Kategori Usia': (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
-    'Orang Tua / Wali': item.guardian_name || '-',
-    'Gedung / Asrama': item.building || '-',
-    'Kamar / Tenda': item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-'),
-    'Jenis Kelamin': item.gender,
-    'Wilayah': item.wilayah,
-    'Daerah': item.daerah || '-',
-    'Email': item.email || '-',
-    'No WhatsApp': item.phone_number || '-',
-    'No HP Darurat': item.emergency_phone || '-',
-    'Tgl Kedatangan': item.arrival_date,
-    'Jam Kedatangan': item.arrival_time,
-    'Transport Berangkat': item.transport_arrival,
-    'Tgl Kepulangan': item.departure_date,
-    'Jam Kepulangan': item.departure_time,
-    'Transport Pulang': item.transport_departure,
-    'Ukuran Baju': item.cloth_size,
-    'Riwayat Medis': item.medical_history || 'Tidak Ada',
-    'Catatan': item.notes || '-'
+    'Orang Tua / Wali': sanitizeSpreadsheetValue(item.guardian_name || '-'),
+    'Gedung / Asrama': sanitizeSpreadsheetValue(item.building || '-'),
+    'Kamar / Tenda': sanitizeSpreadsheetValue(item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-')),
+    'Jenis Kelamin': sanitizeSpreadsheetValue(item.gender),
+    'Wilayah': sanitizeSpreadsheetValue(item.wilayah),
+    'Daerah': sanitizeSpreadsheetValue(item.daerah || '-'),
+    'Email': sanitizeSpreadsheetValue(item.email || '-'),
+    'No WhatsApp': sanitizeSpreadsheetValue(item.phone_number || '-'),
+    'No HP Darurat': sanitizeSpreadsheetValue(item.emergency_phone || '-'),
+    'Tgl Kedatangan': sanitizeSpreadsheetValue(item.arrival_date),
+    'Jam Kedatangan': sanitizeSpreadsheetValue(item.arrival_time),
+    'Transport Berangkat': sanitizeSpreadsheetValue(item.transport_arrival),
+    'Tgl Kepulangan': sanitizeSpreadsheetValue(item.departure_date),
+    'Jam Kepulangan': sanitizeSpreadsheetValue(item.departure_time),
+    'Transport Pulang': sanitizeSpreadsheetValue(item.transport_departure),
+    'Ukuran Baju': sanitizeSpreadsheetValue(item.cloth_size),
+    'Riwayat Medis': sanitizeSpreadsheetValue(item.medical_history || 'Tidak Ada'),
+    'Catatan': sanitizeSpreadsheetValue(item.notes || '-')
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -6048,7 +6057,7 @@ function exportToExcel() {
   
   const dateStr = new Date().toISOString().split('T')[0];
   XLSX.writeFile(workbook, `Rekap_Peserta_Paskas_Bahagia_${dateStr}.xlsx`);
-  showToast('File Excel berhasil diunduh!', 'success');
+  showToast('File Excel berhasil diunduh (terlindungi formula injection)!', 'success');
 }
 
 function exportToCSV() {
@@ -6314,6 +6323,7 @@ async function submitAdminPassword() {
   if (isValid) {
     resetAdminFailedAttempts();
     isAdminLoggedIn = true;
+    if (typeof resetAdminInactivityTimer === 'function') resetAdminInactivityTimer();
     closeAdminAuthModal();
     navigateTo('settings');
     const cleanTab = (pendingAuthTargetTab || 'rekap').replace('tab-', '');
@@ -6350,6 +6360,7 @@ async function submitAdminPassword() {
 
 function lockAdminSession() {
   isAdminLoggedIn = false;
+  if (typeof clearAdminInactivityTimer === 'function') clearAdminInactivityTimer();
   navigateTo('dashboard');
   showToast('Sesi administrator telah dikunci.', 'info');
 }
@@ -9110,4 +9121,110 @@ function interactHangingPhoto(photoEl) {
     photoEl.classList.remove('is-ringing');
   }, 1350);
 }
+
+// ===================================================================
+// AUTO-LOCK SESI ADMIN (15 Menit Inactivity Timeout)
+// ===================================================================
+let adminInactivityTimer = null;
+const ADMIN_INACTIVITY_LIMIT_MS = 15 * 60 * 1000; // 15 menit
+
+function resetAdminInactivityTimer() {
+  if (adminInactivityTimer) clearTimeout(adminInactivityTimer);
+  if (!isAdminLoggedIn) return;
+
+  adminInactivityTimer = setTimeout(() => {
+    if (isAdminLoggedIn) {
+      lockAdminSession();
+      showToast('Sesi administrator telah dikunci otomatis karena tidak ada aktivitas selama 15 menit.', 'warning');
+    }
+  }, ADMIN_INACTIVITY_LIMIT_MS);
+}
+
+function clearAdminInactivityTimer() {
+  if (adminInactivityTimer) {
+    clearTimeout(adminInactivityTimer);
+    adminInactivityTimer = null;
+  }
+}
+
+function initAdminActivityTracker() {
+  const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+  events.forEach(evt => {
+    window.addEventListener(evt, () => {
+      if (isAdminLoggedIn) resetAdminInactivityTimer();
+    }, { passive: true });
+  });
+}
+
+// ===================================================================
+// PROTEKSI ANTI-INSPECT GUARD (Anti-F12, Anti-Right Click, Anti-DevTools)
+// ===================================================================
+function initAntiInspectGuard() {
+  // 1. Blokir Klik Kanan (Context Menu)
+  document.addEventListener('contextmenu', function(e) {
+    // Jika admin terverifikasi sedang login, beri keleluasaan
+    if (isAdminLoggedIn) return;
+
+    e.preventDefault();
+    showToast('Klik kanan dinonaktifkan demi kenyamanan & keamanan sistem.', 'info');
+    return false;
+  }, false);
+
+  // 2. Blokir Shortcut DevTools (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U)
+  document.addEventListener('keydown', function(e) {
+    if (isAdminLoggedIn) return;
+
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+    const isShift = e.shiftKey;
+    const key = e.key ? e.key.toLowerCase() : '';
+    const code = e.keyCode || e.which;
+
+    // F12
+    if (key === 'f12' || code === 123) {
+      e.preventDefault();
+      e.stopPropagation();
+      showToast('Akses Developer Tools (F12) dinonaktifkan.', 'warning');
+      return false;
+    }
+
+    // Ctrl+Shift+I (Inspector) / Ctrl+Shift+J (Console) / Ctrl+Shift+C (Inspect Element)
+    if (isCtrlOrCmd && isShift && (key === 'i' || key === 'j' || key === 'c' || code === 73 || code === 74 || code === 67)) {
+      e.preventDefault();
+      e.stopPropagation();
+      showToast('Akses Developer Tools dinonaktifkan.', 'warning');
+      return false;
+    }
+
+    // Ctrl+U (View Source)
+    if (isCtrlOrCmd && (key === 'u' || code === 85)) {
+      e.preventDefault();
+      e.stopPropagation();
+      showToast('Fitur View Source dinonaktifkan.', 'warning');
+      return false;
+    }
+
+    // Ctrl+S (Save Page)
+    if (isCtrlOrCmd && (key === 's' || code === 83)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, false);
+
+  // 3. Kebersihan Console Log di Lingkungan Produksi
+  try {
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      const banner = () => {
+        console.clear();
+        console.log('%cSTOP!', 'color: red; font-size: 32px; font-weight: bold;');
+        console.log('%cArea ini adalah konsol peramban web resmi Registrasi PASKAS BAHAGIA. Seluruh aktivitas dan perubahan tidak sah dipantau sistem.', 'color: #38bdf8; font-size: 13px;');
+      };
+      banner();
+    }
+  } catch (err) {}
+}
+
+// Inisialisasi perlindungan otomatis saat skrip dimuat
+initAdminActivityTracker();
+initAntiInspectGuard();
 
