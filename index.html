@@ -3554,13 +3554,18 @@ CREATE TABLE IF NOT EXISTS registrations (
         <!-- Injected via JS -->
       </div>
 
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeAttendeeModal()">
-          Tutup
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <button type="button" class="btn" id="btnAttendeeDelete" onclick="deleteFromAttendeeDetail()" style="background: rgba(220, 38, 38, 0.12); color: #dc2626; border: 1.5px solid rgba(220, 38, 38, 0.35); font-weight: 700; border-radius: 8px; padding: 9px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+          <i class="fa-regular fa-trash-can"></i> Hapus Peserta
         </button>
-        <button class="btn btn-primary" id="btnAttendeePrintTicket" onclick="printFromAttendeeDetail()">
-          <i class="fa-solid fa-ticket"></i> Cetak E-Tiket
-        </button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" onclick="closeAttendeeModal()">
+            Tutup
+          </button>
+          <button class="btn btn-primary" id="btnAttendeePrintTicket" onclick="printFromAttendeeDetail()">
+            <i class="fa-solid fa-ticket"></i> Cetak E-Tiket
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -3690,7 +3695,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=65.0"></script>
-  <script src="js/app.js?v=65.0"></script>
+  <script src="js/supabase-config.js?v=66.0"></script>
+  <script src="js/app.js?v=66.0"></script>
 </body>
 </html>

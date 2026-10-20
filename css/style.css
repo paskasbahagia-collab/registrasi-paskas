@@ -5777,6 +5777,7 @@ select.form-control optgroup {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  min-width: 116px;
 }
 
 .btn-table-action {
@@ -5798,6 +5799,12 @@ select.form-control optgroup {
   background: #1e4620;
   color: #ffffff;
   border-color: #1e4620;
+}
+
+.btn-table-action.delete {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .btn-table-action.delete:hover {

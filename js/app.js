@@ -4474,7 +4474,7 @@ function renderRekapTable() {
             <button class="btn-table-action" onclick="showSingleTicketFromTable('${item.id}')" title="Lihat & Unduh E-Tiket (Boarding Pass)" style="color: #38bdf8;">
               <i class="fa-solid fa-ticket"></i>
             </button>
-            <button class="btn-table-action delete" onclick="confirmDeleteAttendee('${item.id}', '${item.full_name}')" title="Hapus Data">
+            <button class="btn-table-action delete" onclick="confirmDeleteAttendee('${item.id}', '${(item.full_name || '').replace(/'/g, "\\'")}', '${item.registration_code}')" title="Hapus Data">
               <i class="fa-regular fa-trash-can"></i>
             </button>
           </div>
@@ -4760,10 +4760,25 @@ function printFromAttendeeDetail() {
   }
 }
 
-async function confirmDeleteAttendee(id, name) {
-  if (confirm(`Apakah Anda yakin ingin menghapus data peserta "${name}"?`)) {
-    await window.dataService.deleteRegistration(id);
-    showToast(`Data peserta "${name}" telah dihapus.`, 'info');
+async function confirmDeleteAttendee(id, name, registrationCode = null) {
+  if (confirm(`Apakah Anda yakin ingin menghapus data peserta "${name}" secara permanen?`)) {
+    if (!registrationCode) {
+      const found = allRegistrations.find(a => String(a.id) === String(id));
+      if (found) registrationCode = found.registration_code;
+    }
+    await window.dataService.deleteRegistration(id, registrationCode);
+    showToast(`Data peserta "${name}" telah dihapus permanen.`, 'info');
+    await loadAndRenderRegistrations();
+  }
+}
+
+async function deleteFromAttendeeDetail() {
+  if (!currentViewingAttendee) return;
+  const { id, full_name, registration_code } = currentViewingAttendee;
+  if (confirm(`Apakah Anda yakin ingin menghapus data peserta "${full_name}" (${registration_code}) secara permanen?`)) {
+    closeAttendeeModal();
+    await window.dataService.deleteRegistration(id, registration_code);
+    showToast(`Data peserta "${full_name}" telah dihapus permanen.`, 'info');
     await loadAndRenderRegistrations();
   }
 }

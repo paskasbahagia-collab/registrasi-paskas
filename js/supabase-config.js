@@ -16,7 +16,8 @@ const STORAGE_KEYS = {
   SUPABASE_URL: 'paskas_supabase_url',
   SUPABASE_KEY: 'paskas_supabase_key',
   REGISTRATIONS: 'paskas_registrations_data',
-  SETTINGS: 'paskas_app_settings'
+  SETTINGS: 'paskas_app_settings',
+  DELETED_CODES: 'paskas_deleted_registration_codes'
 };
 
 // Default Settings Awal
@@ -271,11 +272,37 @@ class PaskasDataService {
     return clean;
   }
 
+  getDeletedCodes() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.DELETED_CODES);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  recordDeletedCode(code) {
+    if (!code) return;
+    try {
+      const list = this.getDeletedCodes();
+      if (!list.includes(code)) {
+        list.push(code);
+        if (list.length > 500) list.shift();
+        localStorage.setItem(STORAGE_KEYS.DELETED_CODES, JSON.stringify(list));
+      }
+    } catch (e) {
+      console.warn('Gagal record deleted code:', e);
+    }
+  }
+
   /**
    * Mengambil semua pendaftaran peserta (Sinkron Cloud Supabase & Local)
    */
   async getRegistrations() {
     let cloudList = null;
+    const deletedCodes = new Set(this.getDeletedCodes());
+
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
         const { data, error } = await this.supabaseClient
@@ -301,32 +328,62 @@ class PaskasDataService {
     }
 
     if (cloudList !== null) {
-      // Periksa apakah ada pendaftaran di lokal yang belum sempat ter-upload ke Supabase
-      const cloudCodes = new Set(cloudList.map(r => r.registration_code));
-      const unSynced = local.filter(r => r && r.registration_code && !cloudCodes.has(r.registration_code));
+      // 1. Bersihkan jika masih ada row di Supabase yang sudah tercatat dihapus
+      if (deletedCodes.size > 0) {
+        const toClean = cloudList.filter(r => deletedCodes.has(r.registration_code));
+        if (toClean.length > 0) {
+          for (const item of toClean) {
+            try {
+              await this.supabaseClient
+                .from('registrations')
+                .delete()
+                .eq('registration_code', item.registration_code);
+            } catch (delErr) {
+              console.warn('Gagal purge deleted code di Supabase:', delErr);
+            }
+          }
+          cloudList = cloudList.filter(r => !deletedCodes.has(r.registration_code));
+        }
+      }
 
-      if (unSynced.length > 0) {
+      // 2. Hanya upload peserta yang benar-benar didaftarkan saat offline (_is_offline_pending === true)
+      // JANGAN PERNAH re-upload data lokal biasa karena data yang hilang di cloud adalah data yang TELAH DIHAPUS!
+      const pendingOffline = local.filter(r => 
+        r && 
+        r.registration_code && 
+        r._is_offline_pending === true && 
+        !deletedCodes.has(r.registration_code)
+      );
+
+      if (pendingOffline.length > 0) {
         try {
-          const cleanUnsynced = unSynced.map(r => this.sanitizeRegistrationPayload(r));
+          const cleanUnsynced = pendingOffline.map(r => {
+            const clean = this.sanitizeRegistrationPayload(r);
+            delete clean._is_offline_pending;
+            return clean;
+          });
           const { data: savedRows, error: upErr } = await this.supabaseClient
             .from('registrations')
             .insert(cleanUnsynced)
             .select();
           if (!upErr && savedRows && savedRows.length > 0) {
             cloudList = [...savedRows, ...cloudList];
-          } else {
-            cloudList = [...unSynced, ...cloudList];
           }
         } catch (syncErr) {
-          console.warn('Gagal sync data lokal tertinggal ke Supabase:', syncErr);
-          cloudList = [...unSynced, ...cloudList];
+          console.warn('Gagal sync data offline pending ke Supabase:', syncErr);
         }
       }
 
+      // Supabase adalah SUMBER KEBENARAN UTAMA (Single Source of Truth).
+      // Update LocalStorage agar persis sama dengan Supabase.
       localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cloudList));
       return cloudList;
     }
 
+    // Jika sedang offline (Supabase tidak dapat dijangkau), gunakan LocalStorage
+    if (deletedCodes.size > 0) {
+      local = local.filter(r => !deletedCodes.has(r.registration_code));
+    }
     return local;
   }
 
@@ -356,10 +413,14 @@ class PaskasDataService {
 
         if (data && data[0]) {
           newRecord.id = data[0].id;
+          newRecord._is_offline_pending = false;
         }
       } catch (err) {
         console.warn('Gagal simpan ke Supabase, simpan lokal sebagai cadangan:', err);
+        newRecord._is_offline_pending = true;
       }
+    } else {
+      newRecord._is_offline_pending = true;
     }
 
     // Simpan ke LocalStorage sebagai backup instan
@@ -398,12 +459,18 @@ class PaskasDataService {
 
         if (data && Array.isArray(data)) {
           data.forEach((row, idx) => {
-            if (stampedList[idx]) stampedList[idx].id = row.id;
+            if (stampedList[idx]) {
+              stampedList[idx].id = row.id;
+              stampedList[idx]._is_offline_pending = false;
+            }
           });
         }
       } catch (err) {
         console.warn('Gagal batch insert ke Supabase, simpan lokal sebagai cadangan:', err);
+        stampedList.forEach(item => { item._is_offline_pending = true; });
       }
+    } else {
+      stampedList.forEach(item => { item._is_offline_pending = true; });
     }
 
     const current = await this.getLocalRegistrations();
@@ -445,19 +512,55 @@ class PaskasDataService {
   }
 
   /**
-   * Menghapus pendaftaran berdasarkan ID di Supabase & LocalStorage
+   * Menghapus pendaftaran secara tuntas berdasarkan ID & Kode Tiket di Supabase & LocalStorage
    */
-  async deleteRegistration(id) {
+  async deleteRegistration(id, registrationCode = null) {
+    let codeToDelete = registrationCode;
+    let idToDelete = id;
+
+    // Cari dari data lokal jika salah satu belum diketahui
+    const current = this.getLocalRegistrations();
+    const target = current.find(item => 
+      (idToDelete && String(item.id) === String(idToDelete)) || 
+      (codeToDelete && item.registration_code === codeToDelete)
+    );
+
+    if (target) {
+      if (!codeToDelete) codeToDelete = target.registration_code;
+      if (!idToDelete) idToDelete = target.id;
+    }
+
+    // Catat ke daftar tombstone deleted codes agar tidak pernah dibangkitkan lagi
+    if (codeToDelete) {
+      this.recordDeletedCode(codeToDelete);
+    }
+
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
-        await this.supabaseClient.from('registrations').delete().eq('id', id);
+        if (codeToDelete) {
+          const { error: errCode } = await this.supabaseClient
+            .from('registrations')
+            .delete()
+            .eq('registration_code', codeToDelete);
+          if (errCode) console.warn('Supabase delete by code error:', errCode);
+        }
+        if (idToDelete) {
+          const { error: errId } = await this.supabaseClient
+            .from('registrations')
+            .delete()
+            .eq('id', idToDelete);
+          if (errId) console.warn('Supabase delete by id error:', errId);
+        }
       } catch (err) {
         console.warn('Gagal delete di Supabase:', err);
       }
     }
 
-    const current = await this.getLocalRegistrations();
-    const filtered = current.filter(item => String(item.id) !== String(id));
+    const filtered = current.filter(item => {
+      if (codeToDelete && item.registration_code === codeToDelete) return false;
+      if (idToDelete && String(item.id) === String(idToDelete)) return false;
+      return true;
+    });
     localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(filtered));
     return true;
   }
@@ -475,7 +578,7 @@ class PaskasDataService {
   }
 
   /**
-   * Sinkronisasi data lokal ke Supabase
+   * Sinkronisasi data lokal ke Supabase (Aman, tidak mere-insert data yang dihapus)
    */
   async syncLocalToSupabase() {
     if (!this.isSupabaseConnected || !this.supabaseClient) {
@@ -483,14 +586,23 @@ class PaskasDataService {
     }
 
     const localData = this.getLocalRegistrations();
-    if (!localData.length) {
-      return { count: 0, message: 'Tidak ada data lokal untuk disinkronkan.' };
+    const deletedCodes = new Set(this.getDeletedCodes());
+
+    // Filter hanya data yang sah dan belum pernah dihapus
+    const validData = localData.filter(item => 
+      item && 
+      item.registration_code && 
+      !deletedCodes.has(item.registration_code)
+    );
+
+    if (!validData.length) {
+      return { count: 0, message: 'Tidak ada data lokal valid untuk disinkronkan.' };
     }
 
     // Ambil data tanpa ID auto-increment lokal agar tidak konflik primary key
-    const cleanedData = localData.map(item => {
-      const { id, ...rest } = item;
-      return rest;
+    const cleanedData = validData.map(item => {
+      const { id, _is_offline_pending, ...rest } = item;
+      return this.sanitizeRegistrationPayload(rest);
     });
 
     const { data, error } = await this.supabaseClient
