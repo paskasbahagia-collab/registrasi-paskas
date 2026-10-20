@@ -338,17 +338,9 @@ Saluran Narahubung Resmi:
 
 const CARDS_SCHEMA_VERSION = 'v40_tugu_jogja';
 
-// Inisialisasi kartu dinamis (disimpan di browser agar user bisa tambah/edit langsung)
+// Inisialisasi kartu dinamis (disimpan di browser & Supabase cloud)
 function loadStoredCards() {
   try {
-    const currentVer = localStorage.getItem('paskas_cards_ver');
-    if (currentVer !== CARDS_SCHEMA_VERSION) {
-      // Pembersihan otomatis satu kali untuk kartu lama yang menduplikasi rocket hall di kartu 1
-      localStorage.removeItem('paskas_custom_cards');
-      localStorage.setItem('paskas_cards_ver', CARDS_SCHEMA_VERSION);
-      return JSON.parse(JSON.stringify(DEFAULT_DASHBOARD_CARDS));
-    }
-
     const saved = localStorage.getItem('paskas_custom_cards');
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -532,6 +524,9 @@ function saveMasterWilayahList(list) {
   try {
     const cleanList = Array.isArray(list) ? list.filter(w => typeof w === 'string' && w.trim()) : [];
     localStorage.setItem('paskas_master_wilayah', JSON.stringify(cleanList));
+    if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+      window.dataService.saveCloudSetting('paskas_master_wilayah', cleanList);
+    }
   } catch (e) {
     console.error('Error saving master wilayah:', e);
   }
@@ -911,18 +906,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Settings cleanup error:', e);
   }
 
-  if (DASHBOARD_CARDS && DASHBOARD_CARDS[0] && DASHBOARD_CARDS[0].coverImg) {
-    const bg1 = document.getElementById('heroBg1');
-    if (bg1) {
-      bg1.style.backgroundImage = `url('${parseDirectImageUrl(DASHBOARD_CARDS[0].coverImg)}')`;
-    }
-  }
   // Sinkronisasi data pengaturan dari Supabase jika terhubung
   if (window.dataService && window.dataService.syncSettingsFromSupabase) {
     try {
       await window.dataService.syncSettingsFromSupabase();
     } catch (e) {
       console.warn('Sync settings on load:', e);
+    }
+  }
+
+  // Muat ulang kartu dan konten registrasi setelah sinkronisasi dari Supabase
+  DASHBOARD_CARDS = loadStoredCards();
+  REGISTRATION_CONTENT = loadRegistrationContent();
+
+  if (DASHBOARD_CARDS && DASHBOARD_CARDS[0] && DASHBOARD_CARDS[0].coverImg) {
+    const bg1 = document.getElementById('heroBg1');
+    if (bg1) {
+      bg1.style.backgroundImage = `url('${parseDirectImageUrl(DASHBOARD_CARDS[0].coverImg)}')`;
     }
   }
 
@@ -935,6 +935,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Inisialisasi Master Wilayah (Dropdown & Settings)
   initMasterWilayah();
+
+  // Inisialisasi input Pengaturan dengan data Cloud Supabase
+  initSettingsPage();
 
   // Load Registrations & Metrics
   await loadAndRenderRegistrations();
@@ -5642,6 +5645,9 @@ function saveNewAdminPassword() {
   }
 
   localStorage.setItem('paskas_admin_password', newVal);
+  if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+    window.dataService.saveCloudSetting('paskas_admin_password', newVal);
+  }
   if (curInput) curInput.value = '';
   if (newInput) newInput.value = '';
   if (confInput) confInput.value = '';
@@ -5652,6 +5658,9 @@ function saveNewAdminPassword() {
 function resetAdminPasswordDefault() {
   if (confirm('Kembalikan kata sandi admin ke setelan awal bawaan (admin123)?')) {
     localStorage.removeItem('paskas_admin_password');
+    if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+      window.dataService.saveCloudSetting('paskas_admin_password', 'admin123');
+    }
     const curInput = document.getElementById('cfg_currentAdminPassword');
     const newInput = document.getElementById('cfg_newAdminPassword');
     const confInput = document.getElementById('cfg_confirmAdminPassword');
@@ -5949,14 +5958,14 @@ function applyEventInfoToUI(settings) {
   }
 }
 
-function saveEventInfoSettings() {
+async function saveEventInfoSettings() {
   const headlineInput = document.getElementById('cfg_eventHeadline');
   const headline = headlineInput ? headlineInput.value.trim() : 'PASKAS BAHAGIA';
   const name = document.getElementById('cfg_eventName').value.trim();
   const loc = document.getElementById('cfg_eventLocation').value.trim();
   const desc = document.getElementById('cfg_eventDesc').value.trim();
 
-  window.dataService.saveSettings({
+  await window.dataService.saveSettings({
     event_headline: headline,
     event_name: name,
     event_location: loc,
@@ -5970,7 +5979,7 @@ function saveEventInfoSettings() {
     event_desc: desc
   });
 
-  showToast('Info acara & headline berhasil diperbarui!', 'success');
+  showToast('Info acara & headline berhasil disimpan permanen ke Supabase!', 'success');
 }
 
 // ===================================================================
@@ -6009,6 +6018,9 @@ function getMasterRooms() {
 
 function saveMasterRooms(rooms) {
   localStorage.setItem('paskas_rooms_data', JSON.stringify(rooms));
+  if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+    window.dataService.saveCloudSetting('paskas_rooms_data', rooms);
+  }
   renderSettingsRoomsTable();
 }
 
@@ -6261,6 +6273,9 @@ function getMasterGroups() {
 
 function saveMasterGroups(groups) {
   localStorage.setItem('paskas_groups_data', JSON.stringify(groups));
+  if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+    window.dataService.saveCloudSetting('paskas_groups_data', groups);
+  }
   renderSettingsGroupsTable();
 }
 
@@ -6927,6 +6942,9 @@ function saveCardsFromSettings() {
 
   try {
     localStorage.setItem('paskas_custom_cards', JSON.stringify(DASHBOARD_CARDS));
+    if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+      window.dataService.saveCloudSetting('paskas_custom_cards', DASHBOARD_CARDS);
+    }
   } catch (e) {
     console.warn('Gagal menyimpan kartu custom:', e);
   }
@@ -7167,6 +7185,9 @@ function saveRegistrationContent() {
 
   try {
     localStorage.setItem('paskas_reg_content', JSON.stringify(REGISTRATION_CONTENT));
+    if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+      window.dataService.saveCloudSetting('paskas_reg_content', REGISTRATION_CONTENT);
+    }
   } catch (e) {
     console.warn('Gagal menyimpan paskas_reg_content:', e);
     showToast('Penyimpanan lokal penuh. Coba gunakan link URL gambar.', 'error');

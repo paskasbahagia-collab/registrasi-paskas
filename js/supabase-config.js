@@ -116,7 +116,35 @@ class PaskasDataService {
       if (!error && Array.isArray(data) && data.length > 0) {
         const cloudSettings = {};
         data.forEach(row => {
-          if (row.setting_key) cloudSettings[row.setting_key] = row.setting_value;
+          if (!row.setting_key) return;
+          cloudSettings[row.setting_key] = row.setting_value;
+
+          // Sinkronisasi data struktur khusus ke LocalStorage jika tersimpan di Supabase
+          if (row.setting_key === 'paskas_rooms_data' || row.setting_key === 'master_rooms') {
+            try {
+              if (row.setting_value) localStorage.setItem('paskas_rooms_data', row.setting_value);
+            } catch (e) {}
+          } else if (row.setting_key === 'paskas_groups_data' || row.setting_key === 'master_groups') {
+            try {
+              if (row.setting_value) localStorage.setItem('paskas_groups_data', row.setting_value);
+            } catch (e) {}
+          } else if (row.setting_key === 'paskas_master_wilayah' || row.setting_key === 'master_wilayah') {
+            try {
+              if (row.setting_value) localStorage.setItem('paskas_master_wilayah', row.setting_value);
+            } catch (e) {}
+          } else if (row.setting_key === 'paskas_custom_cards' || row.setting_key === 'dashboard_cards') {
+            try {
+              if (row.setting_value) localStorage.setItem('paskas_custom_cards', row.setting_value);
+            } catch (e) {}
+          } else if (row.setting_key === 'paskas_reg_content' || row.setting_key === 'reg_content') {
+            try {
+              if (row.setting_value) localStorage.setItem('paskas_reg_content', row.setting_value);
+            } catch (e) {}
+          } else if (row.setting_key === 'paskas_admin_password') {
+            try {
+              if (row.setting_value) localStorage.setItem('paskas_admin_password', row.setting_value);
+            } catch (e) {}
+          }
         });
         const merged = { ...this.getSettings(), ...cloudSettings };
         localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(merged));
@@ -183,9 +211,62 @@ class PaskasDataService {
   }
 
   /**
-   * Mengambil semua pendaftaran peserta
+   * Kolom resmi yang terdaftar di tabel Supabase registrations
+   */
+  getValidRegistrationColumns() {
+    return new Set([
+      'id',
+      'registration_code',
+      'registration_type',
+      'group_name',
+      'group_leader_name',
+      'full_name',
+      'gender',
+      'wilayah',
+      'email',
+      'phone_number',
+      'emergency_phone',
+      'arrival_date',
+      'arrival_time',
+      'departure_date',
+      'departure_time',
+      'transport_arrival',
+      'transport_departure',
+      'cloth_size',
+      'medical_history',
+      'notes',
+      'created_at',
+      'updated_at',
+      'daerah',
+      'age',
+      'is_child',
+      'building',
+      'room_number',
+      'room_name',
+      'guardian_name'
+    ]);
+  }
+
+  /**
+   * Bersihkan object peserta agar hanya mengirimkan kolom yang dikenali oleh Supabase
+   */
+  sanitizeRegistrationPayload(record) {
+    if (!record || typeof record !== 'object') return {};
+    const validCols = this.getValidRegistrationColumns();
+    const clean = {};
+    for (const [key, val] of Object.entries(record)) {
+      if (validCols.has(key)) {
+        clean[key] = val;
+      }
+    }
+    return clean;
+  }
+
+  /**
+   * Mengambil semua pendaftaran peserta (Sinkron Cloud Supabase & Local)
    */
   async getRegistrations() {
+    let cloudList = null;
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
         const { data, error } = await this.supabaseClient
@@ -194,26 +275,54 @@ class PaskasDataService {
           .order('created_at', { ascending: false });
 
         if (!error && Array.isArray(data)) {
-          // Sync backup ke lokal
-          localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(data));
-          return data;
+          cloudList = data;
         }
       } catch (e) {
         console.warn('Gagal query Supabase, membaca dari LocalStorage:', e);
       }
     }
 
-    // Fallback: LocalStorage
+    let local = [];
     try {
-      const local = localStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
-      return local ? JSON.parse(local) : [];
+      const raw = localStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
+      local = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(local)) local = [];
     } catch {
-      return [];
+      local = [];
     }
+
+    if (cloudList !== null) {
+      // Periksa apakah ada pendaftaran di lokal yang belum sempat ter-upload ke Supabase
+      const cloudCodes = new Set(cloudList.map(r => r.registration_code));
+      const unSynced = local.filter(r => r && r.registration_code && !cloudCodes.has(r.registration_code));
+
+      if (unSynced.length > 0) {
+        try {
+          const cleanUnsynced = unSynced.map(r => this.sanitizeRegistrationPayload(r));
+          const { data: savedRows, error: upErr } = await this.supabaseClient
+            .from('registrations')
+            .insert(cleanUnsynced)
+            .select();
+          if (!upErr && savedRows && savedRows.length > 0) {
+            cloudList = [...savedRows, ...cloudList];
+          } else {
+            cloudList = [...unSynced, ...cloudList];
+          }
+        } catch (syncErr) {
+          console.warn('Gagal sync data lokal tertinggal ke Supabase:', syncErr);
+          cloudList = [...unSynced, ...cloudList];
+        }
+      }
+
+      localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cloudList));
+      return cloudList;
+    }
+
+    return local;
   }
 
   /**
-   * Menyimpan satu peserta baru (Individu)
+   * Menyimpan satu peserta baru (Individu) langsung ke Supabase
    */
   async addRegistration(record) {
     const now = new Date().toISOString();
@@ -225,22 +334,14 @@ class PaskasDataService {
 
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
-        let insertData = { ...newRecord };
-        let { data, error } = await this.supabaseClient
+        const insertData = this.sanitizeRegistrationPayload(newRecord);
+        const { data, error } = await this.supabaseClient
           .from('registrations')
           .insert([insertData])
           .select();
 
-        if (error && (String(error.message).includes('daerah') || error.code === 'PGRST204' || error.code === '42703')) {
-          const fallback = { ...insertData };
-          delete fallback.daerah;
-          const retryRes = await this.supabaseClient
-            .from('registrations')
-            .insert([fallback])
-            .select();
-          if (retryRes.error) throw retryRes.error;
-          data = retryRes.data;
-        } else if (error) {
+        if (error) {
+          console.warn('Supabase insert registration error:', error);
           throw error;
         }
 
@@ -248,11 +349,11 @@ class PaskasDataService {
           newRecord.id = data[0].id;
         }
       } catch (err) {
-        console.warn('Gagal simpan ke Supabase, simpan lokal:', err);
+        console.warn('Gagal simpan ke Supabase, simpan lokal sebagai cadangan:', err);
       }
     }
 
-    // Simpan ke LocalStorage juga
+    // Simpan ke LocalStorage sebagai backup instan
     const current = await this.getLocalRegistrations();
     if (!newRecord.id) {
       newRecord.id = Date.now();
@@ -263,7 +364,7 @@ class PaskasDataService {
   }
 
   /**
-   * Menyimpan banyak peserta sekaligus (Kelompok/Rombongan)
+   * Menyimpan banyak peserta sekaligus (Kelompok/Rombongan) ke Supabase
    */
   async addBatchRegistrations(recordsList) {
     const now = new Date().toISOString();
@@ -275,14 +376,24 @@ class PaskasDataService {
 
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
+        const cleanList = stampedList.map(item => this.sanitizeRegistrationPayload(item));
         const { data, error } = await this.supabaseClient
           .from('registrations')
-          .insert(stampedList)
+          .insert(cleanList)
           .select();
 
-        if (error) throw error;
+        if (error) {
+          console.warn('Supabase batch insert error:', error);
+          throw error;
+        }
+
+        if (data && Array.isArray(data)) {
+          data.forEach((row, idx) => {
+            if (stampedList[idx]) stampedList[idx].id = row.id;
+          });
+        }
       } catch (err) {
-        console.warn('Gagal batch insert ke Supabase, simpan lokal:', err);
+        console.warn('Gagal batch insert ke Supabase, simpan lokal sebagai cadangan:', err);
       }
     }
 
@@ -300,7 +411,7 @@ class PaskasDataService {
    */
   async updateRegistration(id, updates) {
     const now = new Date().toISOString();
-    const cleanUpdates = { ...updates, updated_at: now };
+    const cleanUpdates = this.sanitizeRegistrationPayload({ ...updates, updated_at: now });
 
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
@@ -316,7 +427,7 @@ class PaskasDataService {
     const current = await this.getLocalRegistrations();
     const updated = current.map(item => {
       if (String(item.id) === String(id)) {
-        return { ...item, ...cleanUpdates };
+        return { ...item, ...updates, updated_at: now };
       }
       return item;
     });
@@ -325,7 +436,7 @@ class PaskasDataService {
   }
 
   /**
-   * Menghapus pendaftaran berdasarkan ID
+   * Menghapus pendaftaran berdasarkan ID di Supabase & LocalStorage
    */
   async deleteRegistration(id) {
     if (this.isSupabaseConnected && this.supabaseClient) {
@@ -402,7 +513,7 @@ class PaskasDataService {
     }
   }
 
-  saveSettings(newSettings) {
+  async saveSettings(newSettings) {
     const current = this.getSettings();
     if (newSettings && newSettings.ticket_template_image) {
       if (typeof newSettings.ticket_template_image !== 'string' || 
@@ -419,16 +530,42 @@ class PaskasDataService {
       try {
         const rows = Object.entries(updated).map(([key, val]) => ({
           setting_key: key,
-          setting_value: String(val),
+          setting_value: typeof val === 'object' ? JSON.stringify(val) : String(val),
           updated_at: new Date().toISOString()
         }));
-        this.supabaseClient.from('app_settings').upsert(rows, { onConflict: 'setting_key' }).then();
+        const { error } = await this.supabaseClient.from('app_settings').upsert(rows, { onConflict: 'setting_key' });
+        if (error) console.warn('Gagal upsert app_settings ke Supabase:', error);
       } catch (e) {
         console.warn('Gagal update settings di Supabase:', e);
       }
     }
 
     return updated;
+  }
+
+  /**
+   * Menyimpan data objek/array/string langsung ke Supabase app_settings & localStorage
+   */
+  async saveCloudSetting(key, value) {
+    const stringVal = typeof value === 'string' ? value : JSON.stringify(value);
+    try {
+      localStorage.setItem(key, stringVal);
+    } catch (e) {}
+
+    if (this.isSupabaseConnected && this.supabaseClient) {
+      try {
+        const { error } = await this.supabaseClient.from('app_settings').upsert([
+          {
+            setting_key: key,
+            setting_value: stringVal,
+            updated_at: new Date().toISOString()
+          }
+        ], { onConflict: 'setting_key' });
+        if (error) console.warn(`Supabase upsert ${key} error:`, error);
+      } catch (err) {
+        console.warn(`Gagal simpan ${key} ke Supabase:`, err);
+      }
+    }
   }
 }
 
