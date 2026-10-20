@@ -7529,14 +7529,24 @@ body.page-settings-active .navbar .mobile-toggle {
 /* Responsive adjustments for Magazine Editorial Theme */
 @media (max-width: 1024px) {
   .mag-cover-hero {
-    padding: 36px 30px;
-  }
-  .mag-portrait-frame {
-    margin-bottom: -30px;
+    padding: 36px 30px 0 !important;
   }
   .mag-hero-split-grid {
     grid-template-columns: 1fr;
-    gap: 36px;
+    gap: 28px;
+    margin-bottom: 0 !important;
+  }
+  .mag-hero-portrait-col {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  .mag-portrait-frame {
+    margin-bottom: 0 !important;
+  }
+  .mag-portrait-img {
+    display: block !important;
+    vertical-align: bottom !important;
+    margin-bottom: 0 !important;
   }
   .mag-works-cards-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -7554,10 +7564,24 @@ body.page-settings-active .navbar .mobile-toggle {
 
 @media (max-width: 768px) {
   .mag-cover-hero {
-    padding: 24px 16px;
+    padding: 24px 16px 0 !important;
+  }
+  .mag-hero-split-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-bottom: 0 !important;
+  }
+  .mag-hero-portrait-col {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
   }
   .mag-portrait-frame {
-    margin-bottom: -16px;
+    margin-bottom: 0 !important;
+  }
+  .mag-portrait-img {
+    display: block !important;
+    vertical-align: bottom !important;
+    margin-bottom: 0 !important;
   }
   .mag-giant-didot-title {
     font-size: 36px;
