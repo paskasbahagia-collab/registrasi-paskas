@@ -3069,8 +3069,36 @@ function autoAllocateRoomAndGroup(gender = 'Laki-laki', isChild = false, guardia
 }
 
 function generateRegistrationCode(type = 'individu', index = 0) {
-  const existingCount = (allRegistrations ? allRegistrations.length : 0) + 1 + index;
-  const seq = String(existingCount).padStart(3, '0');
+  let maxSeq = 0;
+  const list = Array.isArray(allRegistrations) ? allRegistrations : [];
+  list.forEach(r => {
+    if (r && r.registration_code) {
+      const match = String(r.registration_code).match(/PKB-(\d+)/i);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxSeq) maxSeq = num;
+      }
+    }
+  });
+
+  try {
+    const raw = localStorage.getItem('paskas_registrations');
+    const local = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(local)) {
+      local.forEach(r => {
+        if (r && r.registration_code) {
+          const match = String(r.registration_code).match(/PKB-(\d+)/i);
+          if (match && match[1]) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxSeq) maxSeq = num;
+          }
+        }
+      });
+    }
+  } catch (e) {}
+
+  const nextSeq = maxSeq + 1 + index;
+  const seq = String(nextSeq).padStart(3, '0');
   return `PKB-${seq}`;
 }
 
@@ -4331,13 +4359,9 @@ function closeTicketModal() {
     return;
   }
 
-  // Anggap selesai pendaftaran baru dan arahkan langsung ke halaman dashboard (atau rekap jika admin)
-  if (typeof isAdminLoggedIn !== 'undefined' && isAdminLoggedIn) {
-    navigateTo('rekap');
-  } else {
-    resetToSelectionScreen();
-    navigateTo('dashboard');
-  }
+  // Anggap selesai pendaftaran baru dan arahkan langsung ke halaman dashboard
+  resetToSelectionScreen();
+  navigateTo('dashboard');
 }
 
 function printTicketOnly() {

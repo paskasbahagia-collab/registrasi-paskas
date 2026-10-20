@@ -310,6 +310,16 @@ class PaskasDataService {
     }
   }
 
+  removeDeletedCode(code) {
+    if (!code) return;
+    try {
+      const list = this.getDeletedCodes().filter(c => c !== code);
+      localStorage.setItem(STORAGE_KEYS.DELETED_CODES, JSON.stringify(list));
+    } catch (e) {
+      console.warn('Gagal remove deleted code:', e);
+    }
+  }
+
   /**
    * Mengambil semua pendaftaran peserta (Sinkron Cloud Supabase & Local)
    */
@@ -342,23 +352,13 @@ class PaskasDataService {
     }
 
     if (cloudList !== null) {
-      // 1. Bersihkan jika masih ada row di Supabase yang sudah tercatat dihapus
-      if (deletedCodes.size > 0) {
-        const toClean = cloudList.filter(r => deletedCodes.has(r.registration_code));
-        if (toClean.length > 0) {
-          for (const item of toClean) {
-            try {
-              await this.supabaseClient
-                .from('registrations')
-                .delete()
-                .eq('registration_code', item.registration_code);
-            } catch (delErr) {
-              console.warn('Gagal purge deleted code di Supabase:', delErr);
-            }
-          }
-          cloudList = cloudList.filter(r => !deletedCodes.has(r.registration_code));
+      // 1. Jika data ada di cloud Supabase, bersihkan tombstone lokal jika kode tersebut aktif di cloud
+      cloudList.forEach(r => {
+        if (r && r.registration_code && deletedCodes.has(r.registration_code)) {
+          this.removeDeletedCode(r.registration_code);
+          deletedCodes.delete(r.registration_code);
         }
-      }
+      });
 
       // 2. Gabungkan data lokal yang belum tersinkron ke cloud (dan bukan data yang sengaja dihapus)
       const cloudCodes = new Set(cloudList.map(r => r.registration_code));
@@ -409,6 +409,9 @@ class PaskasDataService {
    * Menyimpan satu peserta baru (Individu) langsung ke Supabase
    */
   async addRegistration(record) {
+    if (record && record.registration_code) {
+      this.removeDeletedCode(record.registration_code);
+    }
     const now = new Date().toISOString();
     const newRecord = {
       ...record,
@@ -455,6 +458,13 @@ class PaskasDataService {
    * Menyimpan banyak peserta sekaligus (Kelompok/Rombongan) ke Supabase
    */
   async addBatchRegistrations(recordsList) {
+    if (Array.isArray(recordsList)) {
+      recordsList.forEach(r => {
+        if (r && r.registration_code) {
+          this.removeDeletedCode(r.registration_code);
+        }
+      });
+    }
     const now = new Date().toISOString();
     const stampedList = recordsList.map((item, idx) => ({
       ...item,
