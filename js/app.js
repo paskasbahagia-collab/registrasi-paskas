@@ -459,31 +459,13 @@ let chartGenderAllInstance = null;
 // MASTER WILAYAH / ASAL DAERAH KAFILAH
 // ===================================================================
 const DEFAULT_MASTER_WILAYAH = [
-  'Pontianak',
-  'Kubu Raya',
-  'Singkawang',
-  'Sambas',
-  'Mempawah',
-  'Ketapang',
-  'Sanggau',
-  'Sintang',
-  'Sekadau',
-  'Melawi',
-  'Kapuas Hulu',
-  'Bengkayang',
-  'Landak',
-  'Kayong Utara',
-  'Jakarta',
-  'Bandung',
-  'Surabaya',
-  'Semarang',
-  'Yogyakarta',
-  'Medan',
-  'Palembang',
-  'Makassar',
-  'Banjarmasin',
-  'Balikpapan',
-  'Samarinda'
+  'Ibt',
+  '3 J',
+  'Barat Jawa',
+  'Sumatera 1',
+  'Sumatera 2',
+  'Kalimantan 1',
+  'Kalimantan 2'
 ];
 
 function escapeAttr(str) {
@@ -506,16 +488,14 @@ function getMasterWilayahList() {
     const raw = localStorage.getItem('paskas_master_wilayah');
     if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.filter(w => typeof w === 'string' && w.trim());
       }
     }
   } catch (e) {
     console.error('Error loading master wilayah:', e);
   }
-  const defaults = [...DEFAULT_MASTER_WILAYAH];
-  saveMasterWilayahList(defaults);
-  return defaults;
+  return [...DEFAULT_MASTER_WILAYAH];
 }
 
 function saveMasterWilayahList(list) {
@@ -961,6 +941,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderRegistrationPageContent();
       renderAnnouncementUI();
       initCountdownTimer();
+      initMasterWilayah();
     } catch (e) {
       console.warn('Sync settings on load:', e);
     }
@@ -1647,6 +1628,7 @@ function navigateTo(pageId) {
 
   // If going to registration page, reset to show start button initially
   if (pageId === 'registration') {
+    populateWilayahDropdowns();
     const storyGrid = document.getElementById('storyContentGrid');
     const ctaWrap = document.getElementById('regisCtaWrapper');
     const promptBox = document.getElementById('regTypePromptBox');
@@ -1888,6 +1870,7 @@ function resetToSelectionScreen() {
 }
 
 function handleRegistrationTypeSelect(type) {
+  populateWilayahDropdowns();
   const formCard = document.getElementById('regFormCardContainer');
   const guidelines = document.getElementById('guidelines-container');
   const indForm = document.getElementById('formIndividu');
