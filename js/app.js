@@ -916,8 +916,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Muat ulang kartu dan konten registrasi setelah sinkronisasi dari Supabase
-  DASHBOARD_CARDS = loadStoredCards();
-  REGISTRATION_CONTENT = loadRegistrationContent();
+  try {
+    DASHBOARD_CARDS = loadStoredCards();
+    REGISTRATION_CONTENT = loadStoredRegistrationContent();
+  } catch (errCards) {
+    console.warn('Gagal memuat kartu/konten tersimpan:', errCards);
+  }
 
   if (DASHBOARD_CARDS && DASHBOARD_CARDS[0] && DASHBOARD_CARDS[0].coverImg) {
     const bg1 = document.getElementById('heroBg1');
@@ -936,8 +940,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Inisialisasi Master Wilayah (Dropdown & Settings)
   initMasterWilayah();
 
-  // Inisialisasi input Pengaturan dengan data Cloud Supabase
-  initSettingsPage();
+  // Inisialisasi input Pengaturan dengan data Cloud Supabase (tanpa berpindah tab)
+  try {
+    initSettingsPage('rekap', true);
+  } catch (errSettings) {
+    console.warn('Gagal inisialisasi form pengaturan:', errSettings);
+  }
 
   // Load Registrations & Metrics
   await loadAndRenderRegistrations();
@@ -5494,7 +5502,7 @@ function exportToCSV() {
 // ===================================================================
 // 9. SETTINGS PAGE (DEADLINE, SUPABASE, EVENT INFO & CARDS)
 // ===================================================================
-function initSettingsPage(defaultTab = 'rekap') {
+function initSettingsPage(defaultTab = 'rekap', skipSwitchTab = false) {
   const settings = window.dataService.getSettings();
   const credentials = window.dataService.getCredentials();
 
@@ -5538,8 +5546,10 @@ function initSettingsPage(defaultTab = 'rekap') {
     magDb.textContent = isCloud ? 'Cloud Supabase' : 'Lokal Aktif';
   }
 
-  const cleanTab = (defaultTab || 'rekap').replace('tab-', '');
-  switchSettingsTab(cleanTab);
+  if (!skipSwitchTab) {
+    const cleanTab = (defaultTab || 'rekap').replace('tab-', '');
+    switchSettingsTab(cleanTab);
+  }
 }
 
 // ===================================================================
