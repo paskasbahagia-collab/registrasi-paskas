@@ -2746,6 +2746,65 @@ CREATE TABLE IF NOT EXISTS registrations (
                   </button>
                 </div>
               </div>
+
+              <!-- Card Khusus: Model Desain Kaos & Seragam (Ikhwan & Akhwat) -->
+              <div class="settings-card-item" style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 10px;">
+                  <h4 class="settings-item-title" style="margin: 0;">
+                    <i class="fa-solid fa-shirt text-gold"></i> Model Desain Kaos &amp; Seragam (Ikhwan &amp; Akhwat)
+                  </h4>
+                  <span class="settings-chip-badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; font-size: 11.5px;">
+                    <i class="fa-solid fa-circle-check"></i> 2 Model Aktif
+                  </span>
+                </div>
+                <p class="settings-item-desc">
+                  Atur dan ganti gambar desain baju kaos resmi yang dibagikan untuk peserta Ikhwan (Laki-laki) dan Akhwat (Perempuan). Gambar ini otomatis ditampilkan pada halaman detail "Seragam &amp; Kit" di dashboard beranda.
+                </p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+                  <!-- Box Ikhwan -->
+                  <div style="background: #ffffff; border: 1.5px solid #e2cf9b; border-radius: 12px; padding: 14px; display: flex; gap: 14px; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                    <img id="cfg_uniformIkhwanThumb" src="images/seragam-ikhwan.jpg" alt="Preview Ikhwan" style="width: 85px; height: 85px; border-radius: 10px; object-fit: cover; border: 1px solid #cbd5e1; flex-shrink: 0; background: #0b1120;" onerror="this.src='images/seragam-ikhwan.jpg'">
+                    <div style="flex: 1;">
+                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                        <span class="badge-gender-ikhwan" style="font-size: 10.5px; padding: 2px 8px;"><i class="fa-solid fa-mars"></i> Ikhwan</span>
+                        <strong style="font-size: 13px; color: #1a1815;">Model Kaos Pria</strong>
+                      </div>
+                      <div style="font-size: 11.5px; color: #64748b; line-height: 1.4;">Lengan pendek, katun combed 24s. Format: PNG / JPG.</div>
+                      <div style="margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                        <label class="btn btn-outline-cyan btn-xs" style="cursor: pointer; padding: 4px 10px; font-size: 11px; border-radius: 6px; margin: 0; display: inline-flex; align-items: center; gap: 4px;">
+                          <i class="fa-solid fa-upload"></i> Upload Desain
+                          <input type="file" accept="image/*" style="display: none;" onchange="handleUniformImageUpload(event, 'ikhwan')">
+                        </label>
+                        <button type="button" class="btn btn-secondary btn-xs" onclick="openUniformImageLightbox(document.getElementById('cfg_uniformIkhwanThumb').src, 'Model Seragam Ikhwan')" style="padding: 4px 8px; font-size: 11px; border-radius: 6px;" title="Lihat ukuran besar">
+                          <i class="fa-solid fa-eye"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Box Akhwat -->
+                  <div style="background: #ffffff; border: 1.5px solid #e2cf9b; border-radius: 12px; padding: 14px; display: flex; gap: 14px; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                    <img id="cfg_uniformAkhwatThumb" src="images/seragam-akhwat.jpg" alt="Preview Akhwat" style="width: 85px; height: 85px; border-radius: 10px; object-fit: cover; border: 1px solid #cbd5e1; flex-shrink: 0; background: #0b1120;" onerror="this.src='images/seragam-akhwat.jpg'">
+                    <div style="flex: 1;">
+                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                        <span class="badge-gender-akhwat" style="font-size: 10.5px; padding: 2px 8px;"><i class="fa-solid fa-venus"></i> Akhwat</span>
+                        <strong style="font-size: 13px; color: #1a1815;">Model Tunik Wanita</strong>
+                      </div>
+                      <div style="font-size: 11.5px; color: #64748b; line-height: 1.4;">Lengan panjang syar'i, katun combed 24s. Format: PNG / JPG.</div>
+                      <div style="margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                        <label class="btn btn-outline-cyan btn-xs" style="cursor: pointer; padding: 4px 10px; font-size: 11px; border-radius: 6px; margin: 0; display: inline-flex; align-items: center; gap: 4px;">
+                          <i class="fa-solid fa-upload"></i> Upload Desain
+                          <input type="file" accept="image/*" style="display: none;" onchange="handleUniformImageUpload(event, 'akhwat')">
+                        </label>
+                        <button type="button" class="btn btn-secondary btn-xs" onclick="openUniformImageLightbox(document.getElementById('cfg_uniformAkhwatThumb').src, 'Model Seragam Akhwat')" style="padding: 4px 8px; font-size: 11px; border-radius: 6px;" title="Lihat ukuran besar">
+                          <i class="fa-solid fa-eye"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Tab 4: Info Kegiatan & Kelola Kartu -->
@@ -3712,11 +3771,37 @@ CREATE TABLE IF NOT EXISTS registrations (
     </div>
   </div>
 
+  <!-- ======================================================= -->
+  <!-- MODAL: LIGHTBOX ZOOM MODEL DESAIN SERAGAM (IKHWAN / AKHWAT) -->
+  <!-- ======================================================= -->
+  <div class="uniform-lightbox-backdrop" id="uniformLightboxModal" onclick="closeUniformImageLightbox(event)">
+    <div class="uniform-lightbox-card" onclick="event.stopPropagation()">
+      <div class="uniform-lightbox-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <i class="fa-solid fa-shirt text-gold"></i>
+          <h4 id="uniformLightboxTitle" style="margin: 0; font-size: 15px; color: #ffffff;">Model Seragam</h4>
+        </div>
+        <button type="button" class="btn-close-modal-sm" onclick="closeUniformImageLightbox()" title="Tutup">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="uniform-lightbox-img-wrap">
+        <img id="uniformLightboxImg" src="" alt="Pratinjau Seragam">
+      </div>
+      <div style="padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border-top: 1px solid rgba(255,255,255,0.08);">
+        <span style="font-size: 12px; color: #94a3b8;">Desain Resmi Paskas Bahagia Silaturahmi Akbar</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeUniformImageLightbox()">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=67.0"></script>
-  <script src="js/app.js?v=67.0"></script>
+  <script src="js/supabase-config.js?v=68.0"></script>
+  <script src="js/app.js?v=68.0"></script>
 </body>
 </html>
