@@ -5011,17 +5011,17 @@ function renderRekapTable() {
     const isChild = ageVal !== null && ageVal < 15;
     const ageDisplay = ageVal !== null 
       ? (isChild 
-          ? `<span class="badge-age-child" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; background: rgba(245, 158, 11, 0.18); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; border-radius: 999px; font-size: 11px; font-weight: 800;"><i class="fa-solid fa-child"></i> ${ageVal} th</span>`
-          : `<span style="font-size: 12.5px; font-weight: 600; color: #cbd5e1;">${ageVal} th</span>`)
+          ? `<span class="badge-age-child" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #b45309; border-radius: 999px; font-size: 11px; font-weight: 800;"><i class="fa-solid fa-child"></i> ${ageVal} th</span>`
+          : `<span style="font-size: 13px; font-weight: 700; color: #1e293b;">${ageVal} th</span>`)
       : `<span style="color: #64748b;">-</span>`;
 
     return `
       <tr>
-        <td style="color: #94a3b8; font-weight: 600;">${rowNo}</td>
+        <td style="color: #475569; font-weight: 700; text-align: center;">${rowNo}</td>
         <td><span class="badge-table-code">${item.registration_code}</span></td>
         <td>
-          <strong style="color: #ffffff; display: block;">${item.full_name}</strong>
-          ${item.group_name ? `<small style="color: #fbbf24;"><i class="fa-solid fa-users"></i> ${item.group_name}</small>` : '<small style="color: #64748b;">Individu</small>'}
+          <strong style="color: #0f172a; font-size: 14.5px; font-weight: 800; display: block; letter-spacing: -0.01em;">${escapeHtml(item.full_name)}</strong>
+          ${item.group_name ? `<small style="color: #b45309; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;"><i class="fa-solid fa-users"></i> ${escapeHtml(item.group_name)}</small>` : '<small style="color: #64748b; font-weight: 600; margin-top: 3px; display: block;">Individu</small>'}
         </td>
         <td>
           <span class="${isMale ? 'badge-gender-l' : 'badge-gender-p'}">
@@ -5030,12 +5030,12 @@ function renderRekapTable() {
         </td>
         <td style="text-align: center;">${ageDisplay}</td>
         <td>
-          <i class="fa-solid fa-location-dot" style="color: #fbbf24; font-size: 11px;"></i> ${escapeHtml(item.wilayah)}
-          ${item.daerah ? `<br><small style="color: #94a3b8;"><i class="fa-solid fa-city" style="font-size: 9px;"></i> ${escapeHtml(item.daerah)}</small>` : ''}
+          <strong style="color: #0f172a; font-weight: 700;"><i class="fa-solid fa-location-dot" style="color: #d97706; font-size: 11px;"></i> ${escapeHtml(item.wilayah)}</strong>
+          ${item.daerah ? `<br><small style="color: #64748b; font-weight: 600;"><i class="fa-solid fa-city" style="font-size: 9px;"></i> ${escapeHtml(item.daerah)}</small>` : ''}
         </td>
-        <td>${item.arrival_date} <br><small style="color: #64748b;">${item.arrival_time || '10:00'}</small></td>
-        <td>${item.departure_date} <br><small style="color: #64748b;">${item.departure_time || '16:00'}</small></td>
-        <td>${item.transport_arrival}</td>
+        <td><span style="color: #1e293b; font-weight: 600;">${escapeHtml(item.arrival_date)}</span> <br><small style="color: #64748b;">${escapeHtml(item.arrival_time || '10:00')}</small></td>
+        <td><span style="color: #1e293b; font-weight: 600;">${escapeHtml(item.departure_date)}</span> <br><small style="color: #64748b;">${escapeHtml(item.departure_time || '16:00')}</small></td>
+        <td><span style="color: #1e293b; font-weight: 600;">${escapeHtml(item.transport_arrival)}</span></td>
         <td><span class="badge-size">${item.cloth_size}</span></td>
         <td>
           ${isSpecialMed 
