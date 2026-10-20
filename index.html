@@ -61,6 +61,11 @@
             <i class="fa-solid fa-user-plus"></i>
             <span>Registrasi</span>
           </button>
+          <button class="nav-link" data-page="rekap" onclick="navigateTo('rekap')" title="Rekapitulasi Data Peserta Terdaftar">
+            <i class="fa-solid fa-table-list"></i>
+            <span>Rekap Data</span>
+            <span class="nav-badge" id="rekapBadgeCount">0</span>
+          </button>
         </nav>
 
         <!-- Tombol Pengaturan di Pojok Kanan (Khusus Admin Ber-Password) -->
@@ -82,6 +87,9 @@
       </button>
       <button class="mobile-link" onclick="navigateTo('registration'); toggleMobileNav();">
         <i class="fa-solid fa-user-plus"></i> Registrasi Peserta
+      </button>
+      <button class="mobile-link" onclick="navigateTo('rekap'); toggleMobileNav();">
+        <i class="fa-solid fa-table-list"></i> Rekap Data Peserta
       </button>
       <button class="mobile-link" onclick="openSettingsWithAuth(); toggleMobileNav();">
         <i class="fa-solid fa-gear"></i> Pengaturan (Admin)
@@ -2444,6 +2452,36 @@ CREATE TABLE IF NOT EXISTS registrations (
 
             <!-- Tab: Kamar, Gedung & Kelompok Peserta -->
             <div class="settings-tab-panel" id="settingsPanel-kamar-kelompok">
+              <!-- Banner Kontrol Fitur Pembagian Kamar & Kelompok Otomatis -->
+              <div class="settings-card-item" id="cfg_roomGroupControlCard" style="margin-bottom: 20px; border-left: 5px solid #10b981; background: #ffffff; padding: 18px 22px; border-radius: var(--radius-md); box-shadow: 0 2px 10px rgba(0,0,0,0.04);">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+                  <div style="display: flex; align-items: flex-start; gap: 14px; max-width: 680px;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; font-size: 22px; color: #059669; flex-shrink: 0;">
+                      <i class="fa-solid fa-hotel" id="cfg_roomGroupIcon"></i>
+                    </div>
+                    <div>
+                      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+                        <h4 class="settings-item-title" style="margin: 0; font-size: 15.5px; font-weight: 800; color: #1a1815;">
+                          Fitur Pembagian Kamar &amp; Kelompok Otomatis
+                        </h4>
+                        <span id="cfg_roomGroupStatusBadge" class="settings-chip-badge" style="font-weight: 800; font-size: 11.5px; padding: 4px 10px; border-radius: 999px;">
+                          <!-- Diisi via JS -->
+                        </span>
+                      </div>
+                      <p id="cfg_roomGroupStatusDesc" class="settings-item-desc" style="margin: 0; font-size: 13px; line-height: 1.5; color: #554d3f;">
+                        <!-- Diisi via JS -->
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" id="btnToggleRoomGroupAllocation" onclick="toggleRoomGroupAllocation()" class="btn" style="min-width: 175px; font-weight: 700; font-size: 13px; padding: 10px 18px; border-radius: 999px; transition: all 0.25s ease;">
+                      <!-- Diisi via JS -->
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <!-- Card 1: Pengaturan Master Gedung, Kamar & Kapasitas -->
               <div class="settings-card-item">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 10px;">
@@ -3652,7 +3690,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=64.0"></script>
-  <script src="js/app.js?v=64.0"></script>
+  <script src="js/supabase-config.js?v=65.0"></script>
+  <script src="js/app.js?v=65.0"></script>
 </body>
 </html>

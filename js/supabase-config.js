@@ -23,6 +23,7 @@ const STORAGE_KEYS = {
 const DEFAULT_SETTINGS = {
   registration_deadline: '2026-12-31T23:59:59',
   is_registration_open: 'true',
+  is_room_group_enabled: 'true',
   closed_message: 'Mohon maaf, pendaftaran peserta Paskas Bahagia telah ditutup. Silakan hubungi narahubung panitia.',
   event_headline: 'PASKAS BAHAGIA',
   event_name: 'Silaturahmi Akbar Pasukan Amal Sholeh (PASKAS) Bahagia',
@@ -88,8 +89,11 @@ class PaskasDataService {
     } else {
       try {
         const parsed = JSON.parse(existing);
-        if (Array.isArray(parsed) && parsed.some(p => p.registration_code === 'PKB-IND-2026-001' || p.full_name === 'Ustadz Ahmad Fauzi')) {
-          localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify([]));
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(p => p && p.registration_code !== 'PKB-IND-2026-001' && p.full_name !== 'Ustadz Ahmad Fauzi');
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cleaned));
+          }
         }
       } catch (e) {}
     }
@@ -143,6 +147,10 @@ class PaskasDataService {
           } else if (row.setting_key === 'paskas_admin_password') {
             try {
               if (row.setting_value) localStorage.setItem('paskas_admin_password', row.setting_value);
+            } catch (e) {}
+          } else if (row.setting_key === 'is_room_group_enabled' || row.setting_key === 'paskas_room_group_enabled') {
+            try {
+              if (row.setting_value) localStorage.setItem('paskas_room_group_enabled', row.setting_value);
             } catch (e) {}
           }
         });
@@ -243,7 +251,8 @@ class PaskasDataService {
       'building',
       'room_number',
       'room_name',
-      'guardian_name'
+      'guardian_name',
+      'group_code'
     ]);
   }
 

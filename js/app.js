@@ -2527,7 +2527,29 @@ function closeDuplicateModal() {
   if (modal) modal.classList.remove('active');
 }
 
+function isRoomGroupAllocationEnabled() {
+  const localVal = localStorage.getItem('paskas_room_group_enabled');
+  if (localVal !== null) {
+    return localVal !== 'false';
+  }
+  const settings = (window.dataService && typeof window.dataService.getSettings === 'function') 
+    ? window.dataService.getSettings() 
+    : {};
+  return settings.is_room_group_enabled !== 'false' && settings.is_room_group_enabled !== false;
+}
+
 function autoAllocateRoomAndGroup(gender = 'Laki-laki', isChild = false, guardianName = '', contextBatch = []) {
+  // Jika fitur pembagian kamar & kelompok di-close/dinonaktifkan oleh panitia:
+  if (!isRoomGroupAllocationEnabled()) {
+    return {
+      group_name: '-',
+      group_code: '-',
+      room_number: '-',
+      room_name: '-',
+      building: '-'
+    };
+  }
+
   // 1. Anak di bawah umur (< 15 th): Tidak masuk kelompok, kamar ikut orang tua/wali
   if (isChild) {
     let parentRoom = '';
@@ -3494,50 +3516,55 @@ function renderActiveTicket(record) {
   const isChild = record.is_child || (!isNaN(ageVal) && ageVal > 0 && ageVal < 15);
   const genderChar = (record.gender && record.gender.toLowerCase().startsWith('p')) ? 'P' : 'L';
 
-  // Aturan Kelompok: Anak di bawah umur TIDAK masuk kelompok (kosong / '-')
+  const isAllocActive = isRoomGroupAllocationEnabled();
+
+  // Aturan Kelompok: Jika fitur pembagian di-close ATAU peserta anak-anak -> Tampil strip '-'
   let grpVal = '-';
-  if (!isChild) {
-    if (record.group_code) {
+  if (isAllocActive && !isChild) {
+    if (record.group_code && record.group_code !== '-') {
       grpVal = String(record.group_code).toUpperCase();
-    } else if (record.group_name) {
+    } else if (record.group_name && record.group_name !== '-') {
       grpVal = String(record.group_name).toUpperCase();
     } else {
       const alloc = autoAllocateRoomAndGroup(record.gender, false);
-      grpVal = alloc.group_code.toUpperCase();
+      grpVal = (alloc.group_code && alloc.group_code !== '-') ? alloc.group_code.toUpperCase() : '-';
     }
   }
   
   const elGroup = document.getElementById('ticketBpGroup');
   if (elGroup) elGroup.textContent = grpVal;
 
-  // Aturan Kamar: Kamar anak otomatis mengikuti kamar orang tua / wali yang se-gender
-  let roomVal = record.room_number || record.kamar || '';
-  if ((!roomVal || roomVal === 'Ikut Ortu' || roomVal.toLowerCase().includes('ortu')) && isChild && record.guardian_name) {
-    // 1. Cek dari currentTicketBatch jika sedang membuka rombongan
-    if (typeof currentTicketBatch !== 'undefined' && Array.isArray(currentTicketBatch)) {
-      const parentInBatch = currentTicketBatch.find(a => 
-        a.full_name && a.full_name.trim().toLowerCase() === record.guardian_name.trim().toLowerCase()
-      );
-      if (parentInBatch && (parentInBatch.room_number || parentInBatch.kamar) && parentInBatch.room_number !== 'Ikut Ortu') {
-        roomVal = parentInBatch.room_number || parentInBatch.kamar;
+  // Aturan Kamar: Jika fitur pembagian di-close -> Tampil strip '-', jika aktif alokasikan sesuai kamar/orang tua
+  let roomVal = '-';
+  if (isAllocActive) {
+    roomVal = record.room_number || record.kamar || '';
+    if ((!roomVal || roomVal === 'Ikut Ortu' || roomVal.toLowerCase().includes('ortu')) && isChild && record.guardian_name) {
+      // 1. Cek dari currentTicketBatch jika sedang membuka rombongan
+      if (typeof currentTicketBatch !== 'undefined' && Array.isArray(currentTicketBatch)) {
+        const parentInBatch = currentTicketBatch.find(a => 
+          a.full_name && a.full_name.trim().toLowerCase() === record.guardian_name.trim().toLowerCase()
+        );
+        if (parentInBatch && (parentInBatch.room_number || parentInBatch.kamar) && parentInBatch.room_number !== 'Ikut Ortu') {
+          roomVal = parentInBatch.room_number || parentInBatch.kamar;
+        }
+      }
+      // 2. Cek dari allRegistrations
+      if ((!roomVal || roomVal === 'Ikut Ortu' || roomVal.toLowerCase().includes('ortu')) && typeof allRegistrations !== 'undefined' && Array.isArray(allRegistrations)) {
+        const parent = allRegistrations.find(a => 
+          a.full_name && a.full_name.trim().toLowerCase() === record.guardian_name.trim().toLowerCase()
+        );
+        if (parent && (parent.room_number || parent.kamar) && parent.room_number !== 'Ikut Ortu') {
+          roomVal = parent.room_number || parent.kamar;
+        }
       }
     }
-    // 2. Cek dari allRegistrations
-    if ((!roomVal || roomVal === 'Ikut Ortu' || roomVal.toLowerCase().includes('ortu')) && typeof allRegistrations !== 'undefined' && Array.isArray(allRegistrations)) {
-      const parent = allRegistrations.find(a => 
-        a.full_name && a.full_name.trim().toLowerCase() === record.guardian_name.trim().toLowerCase()
-      );
-      if (parent && (parent.room_number || parent.kamar) && parent.room_number !== 'Ikut Ortu') {
-        roomVal = parent.room_number || parent.kamar;
+    if (!roomVal || roomVal === '-') {
+      if (isChild) {
+        roomVal = 'Ikut Ortu';
+      } else {
+        const alloc = autoAllocateRoomAndGroup(record.gender, false);
+        roomVal = (alloc.room_number && alloc.room_number !== '-') ? alloc.room_number : '-';
       }
-    }
-  }
-  if (!roomVal) {
-    if (isChild) {
-      roomVal = 'Ikut Ortu';
-    } else {
-      const alloc = autoAllocateRoomAndGroup(record.gender, false);
-      roomVal = alloc.room_number;
     }
   }
 
@@ -3832,19 +3859,22 @@ Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`;
   const returnDate = formatTicketDate(record.departure_date || record.return_date || '2026-11-14');
   const arrivalTime = record.arrival_time ? record.arrival_time : (record.arrival_date ? formatTicketDate(record.arrival_date) : '15:00 AM');
   const ageVal = parseInt(record.age, 10);
-  const isChild = record.is_child || (!isNaN(ageVal) && ageVal > 0 && ageVal < 15);
-  const grpVal = isChild ? '-' : (record.group_name || (record.registration_type === 'kelompok' ? 'Kelompok' : 'Reguler'));
+  const isAllocActive = isRoomGroupAllocationEnabled();
+  const grpVal = (!isAllocActive || isChild) ? '-' : (record.group_name || (record.registration_type === 'kelompok' ? 'Kelompok' : 'Reguler'));
   
-  let roomVal = record.room_number || record.kamar || '';
-  if (!roomVal && isChild && record.guardian_name && typeof allRegistrations !== 'undefined') {
-    const parent = allRegistrations.find(a => 
-      a.full_name && a.full_name.trim().toLowerCase() === record.guardian_name.trim().toLowerCase()
-    );
-    if (parent && (parent.room_number || parent.kamar)) {
-      roomVal = parent.room_number || parent.kamar;
+  let roomVal = '-';
+  if (isAllocActive) {
+    roomVal = record.room_number || record.kamar || '';
+    if (!roomVal && isChild && record.guardian_name && typeof allRegistrations !== 'undefined') {
+      const parent = allRegistrations.find(a => 
+        a.full_name && a.full_name.trim().toLowerCase() === record.guardian_name.trim().toLowerCase()
+      );
+      if (parent && (parent.room_number || parent.kamar)) {
+        roomVal = parent.room_number || parent.kamar;
+      }
     }
+    if (!roomVal || roomVal === '-') roomVal = isChild ? 'Ikut Ortu' : '08';
   }
-  if (!roomVal) roomVal = isChild ? 'Ikut Ortu' : '08';
 
   const daerahVal = record.daerah || record.wilayah || '-';
   const wilayahVal = record.wilayah || '-';
@@ -5813,12 +5843,12 @@ function switchSettingsTab(tabName) {
   // Update pills on connect bar
   const pillTotal = document.getElementById('magPillTotal');
   if (pillTotal) {
-    const list = typeof getRegistrations === 'function' ? getRegistrations() : [];
-    pillTotal.textContent = `${list.length} Jiwa`;
+    pillTotal.textContent = `${allRegistrations.length} Jiwa`;
   }
   const pillDb = document.getElementById('magPillDb');
   if (pillDb) {
-    pillDb.textContent = (typeof isSupabaseConfigured === 'function' && isSupabaseConfigured()) ? 'Supabase Connected' : 'Lokal Aktif';
+    const isCloud = window.dataService && typeof window.dataService.isSupabaseConfigured === 'function' && window.dataService.isSupabaseConfigured();
+    pillDb.textContent = isCloud ? 'Cloud Supabase' : 'Lokal Aktif';
   }
 
   // Sinkronisasi highlight nav menu Rekap Data jika tab Rekap aktif
@@ -5828,11 +5858,15 @@ function switchSettingsTab(tabName) {
   }
 
   if (tabName === 'rekap') {
-    renderStats();
+    updateSummaryMetrics();
+    renderRekapTable();
     setTimeout(() => {
       renderCharts();
     }, 60);
-    renderRekapTable();
+    // Refresh otomatis data terbaru dari cloud database / local storage
+    if (typeof loadAndRenderRegistrations === 'function') {
+      loadAndRenderRegistrations().catch(err => console.warn('Gagal refresh rekap:', err));
+    }
   }
   if (tabName === 'wilayah') {
     renderSettingsWilayahManager();
@@ -6465,9 +6499,110 @@ function renderSettingsRoomsAndGroupsManager() {
   const globalMaxInp = document.getElementById('cfg_globalMaxGroupMembers');
   if (globalMaxInp) globalMaxInp.value = getGlobalMaxGroupMembers();
 
+  updateRoomGroupControlUI();
   renderSettingsRoomsTable();
   renderSettingsGroupsTable();
 }
+
+function updateRoomGroupControlUI() {
+  const isEnabled = isRoomGroupAllocationEnabled();
+  const card = document.getElementById('cfg_roomGroupControlCard');
+  const badge = document.getElementById('cfg_roomGroupStatusBadge');
+  const desc = document.getElementById('cfg_roomGroupStatusDesc');
+  const btn = document.getElementById('btnToggleRoomGroupAllocation');
+  const icon = document.getElementById('cfg_roomGroupIcon');
+
+  if (!badge || !btn) return;
+
+  if (isEnabled) {
+    if (card) {
+      card.style.borderLeft = '5px solid #10b981';
+      card.style.background = '#ffffff';
+    }
+    if (icon) {
+      icon.className = 'fa-solid fa-hotel';
+      if (icon.parentElement) {
+        icon.parentElement.style.background = 'rgba(16, 185, 129, 0.12)';
+        icon.parentElement.style.color = '#059669';
+      }
+    }
+    badge.style.background = '#ecfdf5';
+    badge.style.border = '1px solid #a7f3d0';
+    badge.style.color = '#065f46';
+    badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> AKTIF (DIBAGI OTOMATIS)';
+
+    if (desc) {
+      desc.innerHTML = 'Pembagian kamar &amp; kelompok berjalan otomatis saat peserta mendaftar. Nomor kamar &amp; nama/kode kelompok akan dicetak pada tiket boarding pass peserta.';
+    }
+
+    btn.className = 'btn btn-secondary';
+    btn.style.background = '#fef2f2';
+    btn.style.border = '1.5px solid #fca5a5';
+    btn.style.color = '#b91c1c';
+    btn.innerHTML = '<i class="fa-solid fa-power-off"></i> Tutup / Close Pembagian';
+    btn.title = 'Klik untuk mematikan alokasi kamar & kelompok (tiket akan menampilkan tanda -)';
+  } else {
+    if (card) {
+      card.style.borderLeft = '5px solid #ef4444';
+      card.style.background = '#fffaf9';
+    }
+    if (icon) {
+      icon.className = 'fa-solid fa-ban';
+      if (icon.parentElement) {
+        icon.parentElement.style.background = 'rgba(239, 68, 68, 0.12)';
+        icon.parentElement.style.color = '#dc2626';
+      }
+    }
+    badge.style.background = '#fef2f2';
+    badge.style.border = '1px solid #fecaca';
+    badge.style.color = '#991b1b';
+    badge.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> DITUTUP / CLOSE (TIDAK DIBAGI -)';
+
+    if (desc) {
+      desc.innerHTML = '<strong style="color: #b91c1c;">Fitur Sedang Ditutup (CLOSE):</strong> Pembagian kamar &amp; kelompok dinonaktifkan. Setiap peserta yang mendaftar <u>tidak dialokasikan</u> kamar/kelompok dan di tiket boarding pass akan tercetak strip (<strong>-</strong>).';
+    }
+
+    btn.className = 'btn btn-primary';
+    btn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+    btn.style.border = 'none';
+    btn.style.color = '#ffffff';
+    btn.innerHTML = '<i class="fa-solid fa-play"></i> Buka / Aktifkan Pembagian';
+    btn.title = 'Klik untuk mengaktifkan kembali pembagian kamar & kelompok';
+  }
+}
+
+async function toggleRoomGroupAllocation() {
+  const currentStatus = isRoomGroupAllocationEnabled();
+  const newStatus = !currentStatus;
+  const statusStr = newStatus ? 'true' : 'false';
+
+  localStorage.setItem('paskas_room_group_enabled', statusStr);
+
+  if (window.dataService) {
+    if (typeof window.dataService.saveSettings === 'function') {
+      try {
+        await window.dataService.saveSettings({ is_room_group_enabled: statusStr });
+      } catch (e) {}
+    }
+    if (typeof window.dataService.saveCloudSetting === 'function') {
+      try {
+        await window.dataService.saveCloudSetting('is_room_group_enabled', statusStr);
+      } catch (e) {}
+    }
+  }
+
+  updateRoomGroupControlUI();
+
+  if (newStatus) {
+    showToast('Alhamdulillah, pembagian kamar & kelompok otomatis telah DIAKTIFKAN kembali.', 'success');
+  } else {
+    showToast('Pembagian kamar & kelompok telah DI-CLOSE (DITUTUP). Di tiket peserta akan tampil tanda strip (-).', 'warning');
+  }
+}
+
+window.toggleRoomGroupAllocation = toggleRoomGroupAllocation;
+window.updateRoomGroupControlUI = updateRoomGroupControlUI;
+window.isRoomGroupAllocationEnabled = isRoomGroupAllocationEnabled;
 
 // ===================================================================
 // PENGATURAN TEMPLATE E-TIKET & NARASI KONFIRMASI (WHATSAPP / EMAIL)
