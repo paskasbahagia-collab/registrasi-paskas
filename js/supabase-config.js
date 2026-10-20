@@ -259,7 +259,8 @@ class PaskasDataService {
       'room_number',
       'room_name',
       'guardian_name',
-      'group_code'
+      'group_code',
+      'join_year'
     ]);
   }
 

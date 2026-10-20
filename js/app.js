@@ -347,13 +347,6 @@ function loadStoredCards() {
       if (Array.isArray(parsed) && parsed.length > 0) {
         let needsSave = false;
         parsed.forEach((c, idx) => {
-          // Jika kartu 1 sempat ter-overwrite otomatis ke rocket hall, pulihkan ke Tugu Jogja
-          if (idx === 0 && (typeof c.coverImg === 'string' && (c.coverImg.includes('rocket') || c.coverImg.includes('convention')))) {
-            c.coverImg = 'images/tugu-jogja-hero.jpg';
-            c.thumbImg = 'images/tugu-jogja-card.jpg';
-            needsSave = true;
-          }
-
           c.coverImg = parseDirectImageUrl(c.coverImg, false);
           c.thumbImg = parseDirectImageUrl(c.thumbImg || c.coverImg, true);
           if (!c.narration && DEFAULT_DASHBOARD_CARDS[idx]) {
@@ -933,6 +926,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderDashboardCards();
   applyEventInfoToUI();
   renderRegistrationPageContent();
+  renderAnnouncementUI();
   initCountdownTimer();
   updateDatabaseBadge();
   setupEventListeners();
@@ -1040,8 +1034,8 @@ function renderDashboardCards() {
              loading="lazy"
              onerror="this.onerror=null; this.src='images/rocket-convention-hall-card.jpg';">
         <div class="info-card-gradient">
-          <span class="info-card-label">${card.title}</span>
-          <span class="info-card-sub">${card.category}</span>
+          <span class="info-card-label">${escapeHtml(card.title)}</span>
+          <span class="info-card-sub">${escapeHtml(card.subtitle || card.category || '')}</span>
         </div>
         <span class="info-card-badge">${card.badge}</span>
       </div>
@@ -1308,10 +1302,10 @@ function getUniformSettings() {
   return {
     ikhwanImg: localStorage.getItem('paskas_uniform_ikhwan_image') || settings.uniform_ikhwan_image || 'images/seragam-ikhwan.jpg',
     akhwatImg: localStorage.getItem('paskas_uniform_akhwat_image') || settings.uniform_akhwat_image || 'images/seragam-akhwat.jpg',
-    ikhwanTitle: settings.uniform_title_ikhwan || 'Model Kaos Resmi Ikhwan',
-    akhwatTitle: settings.uniform_title_akhwat || 'Model Kaos / Tunik Resmi Akhwat',
-    ikhwanDesc: settings.uniform_desc_ikhwan || 'Bahan katun combed 24s premium adem, sablon plastisol emas logo resmi Paskas Bahagia.',
-    akhwatDesc: settings.uniform_desc_akhwat || 'Model tunik lengan panjang syar\'i & anggun, bahan katun combed 24s adem dengan aksen list emas.'
+    ikhwanTitle: localStorage.getItem('paskas_uniform_ikhwan_title') || settings.uniform_title_ikhwan || 'Model Kaos Resmi Ikhwan',
+    akhwatTitle: localStorage.getItem('paskas_uniform_akhwat_title') || settings.uniform_title_akhwat || 'Model Kaos / Tunik Resmi Akhwat',
+    ikhwanDesc: localStorage.getItem('paskas_uniform_ikhwan_desc') || settings.uniform_desc_ikhwan || 'Bahan katun combed 24s premium adem, sablon plastisol emas logo resmi Paskas Bahagia.',
+    akhwatDesc: localStorage.getItem('paskas_uniform_akhwat_desc') || settings.uniform_desc_akhwat || 'Model tunik lengan panjang syar\'i & anggun, bahan katun combed 24s adem dengan aksen list emas.'
   };
 }
 
@@ -1320,105 +1314,95 @@ function renderUniformShowcaseHTML() {
 
   return `
     <div class="uniform-showcase-wrap">
-      <div class="uniform-showcase-header">
-        <div class="uniform-showcase-title-box">
-          <h4>
-            <i class="fa-solid fa-shirt" style="color: #fbbf24;"></i>
-            Model Desain Kaos &amp; Seragam Resmi Paskas Bahagia
-          </h4>
-          <p>Disediakan 2 model resmi khusus Ikhwan (Pria) dan Akhwat (Wanita) yang akan dibagikan kepada peserta terdaftar:</p>
+      <!-- Luxury Header Bar -->
+      <div class="uniform-showcase-header-luxury">
+        <div class="uniform-showcase-tag">
+          <i class="fa-solid fa-sparkles text-gold"></i>
+          <span>EDISI EKSKLUSIF RESMI SILATURAHMI AKBAR PASKAS</span>
         </div>
+        <h3 class="uniform-showcase-title">
+          <i class="fa-solid fa-shirt text-gold"></i>
+          Atribut &amp; Seragam Resmi Peserta
+        </h3>
+        <p class="uniform-showcase-subtitle">
+          Disediakan khusus 2 desain resmi seragam untuk seluruh peserta terdaftar. Didesain secara syar'i, elegan, dan nyaman digunakan selama seluruh rangkaian agenda acara.
+        </p>
       </div>
 
+      <!-- Grid 2 Baju: Ikhwan & Akhwat -->
       <div class="uniform-cards-grid">
         <!-- Card 1: Seragam Ikhwan -->
-        <div class="uniform-item-card">
+        <div class="uniform-item-card uniform-card-ikhwan">
           <div class="uniform-card-top-bar">
             <span class="badge-gender-ikhwan">
               <i class="fa-solid fa-mars"></i> Khusus Ikhwan (Laki-laki)
             </span>
-            <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Model 01</span>
+            <span class="uniform-model-tag">
+              <i class="fa-solid fa-circle-check" style="color: #38bdf8;"></i> Model 01
+            </span>
           </div>
 
           <div class="uniform-img-viewport" onclick="openUniformImageLightbox('${uniforms.ikhwanImg}', '${escapeHtml(uniforms.ikhwanTitle)}')">
             <img src="${uniforms.ikhwanImg}" id="storyUniformImgIkhwan" alt="Desain Seragam Ikhwan" onerror="this.src='images/seragam-ikhwan.jpg'">
             <div class="uniform-img-overlay">
               <span class="uniform-zoom-pill">
-                <i class="fa-solid fa-magnifying-glass-plus"></i> Klik untuk Perbesar
+                <i class="fa-solid fa-magnifying-glass-plus"></i> Klik untuk Perbesar HD
               </span>
             </div>
           </div>
 
-          <div class="uniform-card-content">
-            <h5 class="uniform-card-title">${escapeHtml(uniforms.ikhwanTitle)}</h5>
-            <p class="uniform-card-desc">${escapeHtml(uniforms.ikhwanDesc)}</p>
-
-            <div class="uniform-spec-chips-wrap">
-              <span class="uniform-spec-chip"><i class="fa-solid fa-vest" style="color: #38bdf8;"></i> Lengan Pendek</span>
-              <span class="uniform-spec-chip"><i class="fa-solid fa-palette" style="color: #fbbf24;"></i> Forest Green &amp; Gold</span>
-              <span class="uniform-spec-chip"><i class="fa-solid fa-leaf" style="color: #34d399;"></i> Katun Combed 24s</span>
-              <span class="uniform-spec-chip"><i class="fa-solid fa-ruler" style="color: #c084fc;"></i> Size: S s/d 4XL</span>
-            </div>
-
-            <div class="uniform-card-footer">
-              <button type="button" class="btn btn-secondary btn-xs" onclick="openUniformImageLightbox('${uniforms.ikhwanImg}', '${escapeHtml(uniforms.ikhwanTitle)}')" style="padding: 5px 12px; font-size: 11.5px; border-radius: 6px;">
-                <i class="fa-regular fa-eye"></i> Lihat Detail
-              </button>
-              <label class="btn btn-outline-cyan btn-xs" style="cursor: pointer; padding: 5px 12px; font-size: 11.5px; border-radius: 6px; margin: 0; display: inline-flex; align-items: center; gap: 5px;" title="Upload desain baju Ikhwan kustom Anda">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Ganti Desain Baju
-                <input type="file" accept="image/*" style="display: none;" onchange="handleUniformImageUpload(event, 'ikhwan')">
-              </label>
-            </div>
+          <div class="uniform-card-content" style="padding: 18px 22px 22px; text-align: center;">
+            <h5 class="uniform-card-title" style="font-size: 17px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; letter-spacing: -0.2px;">${escapeHtml(uniforms.ikhwanTitle)}</h5>
+            ${uniforms.ikhwanDesc ? `<p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.65; margin: 0; font-weight: 400;">${escapeHtml(uniforms.ikhwanDesc)}</p>` : ''}
           </div>
         </div>
 
         <!-- Card 2: Seragam Akhwat -->
-        <div class="uniform-item-card">
+        <div class="uniform-item-card uniform-card-akhwat">
           <div class="uniform-card-top-bar">
             <span class="badge-gender-akhwat">
               <i class="fa-solid fa-venus"></i> Khusus Akhwat (Perempuan)
             </span>
-            <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Model 02</span>
+            <span class="uniform-model-tag">
+              <i class="fa-solid fa-circle-check" style="color: #f472b6;"></i> Model 02
+            </span>
           </div>
 
           <div class="uniform-img-viewport" onclick="openUniformImageLightbox('${uniforms.akhwatImg}', '${escapeHtml(uniforms.akhwatTitle)}')">
             <img src="${uniforms.akhwatImg}" id="storyUniformImgAkhwat" alt="Desain Seragam Akhwat" onerror="this.src='images/seragam-akhwat.jpg'">
             <div class="uniform-img-overlay">
               <span class="uniform-zoom-pill">
-                <i class="fa-solid fa-magnifying-glass-plus"></i> Klik untuk Perbesar
+                <i class="fa-solid fa-magnifying-glass-plus"></i> Klik untuk Perbesar HD
               </span>
             </div>
           </div>
 
-          <div class="uniform-card-content">
-            <h5 class="uniform-card-title">${escapeHtml(uniforms.akhwatTitle)}</h5>
-            <p class="uniform-card-desc">${escapeHtml(uniforms.akhwatDesc)}</p>
-
-            <div class="uniform-spec-chips-wrap">
-              <span class="uniform-spec-chip"><i class="fa-solid fa-person-dress" style="color: #f472b6;"></i> Model Tunik Panjang Syar'i</span>
-              <span class="uniform-spec-chip"><i class="fa-solid fa-palette" style="color: #fbbf24;"></i> Forest Green &amp; Gold</span>
-              <span class="uniform-spec-chip"><i class="fa-solid fa-leaf" style="color: #34d399;"></i> Katun Combed 24s</span>
-              <span class="uniform-spec-chip"><i class="fa-solid fa-ruler" style="color: #c084fc;"></i> Size: S s/d 4XL</span>
-            </div>
-
-            <div class="uniform-card-footer">
-              <button type="button" class="btn btn-secondary btn-xs" onclick="openUniformImageLightbox('${uniforms.akhwatImg}', '${escapeHtml(uniforms.akhwatTitle)}')" style="padding: 5px 12px; font-size: 11.5px; border-radius: 6px;">
-                <i class="fa-regular fa-eye"></i> Lihat Detail
-              </button>
-              <label class="btn btn-outline-cyan btn-xs" style="cursor: pointer; padding: 5px 12px; font-size: 11.5px; border-radius: 6px; margin: 0; display: inline-flex; align-items: center; gap: 5px;" title="Upload desain baju Akhwat kustom Anda">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Ganti Desain Baju
-                <input type="file" accept="image/*" style="display: none;" onchange="handleUniformImageUpload(event, 'akhwat')">
-              </label>
-            </div>
+          <div class="uniform-card-content" style="padding: 18px 22px 22px; text-align: center;">
+            <h5 class="uniform-card-title" style="font-size: 17px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; letter-spacing: -0.2px;">${escapeHtml(uniforms.akhwatTitle)}</h5>
+            ${uniforms.akhwatDesc ? `<p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.65; margin: 0; font-weight: 400;">${escapeHtml(uniforms.akhwatDesc)}</p>` : ''}
           </div>
         </div>
       </div>
 
-      <!-- Size Chart Guide Banner -->
-      <div style="margin-top: 14px; padding: 12px 16px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.12); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-        <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #cbd5e1;">
-          <i class="fa-solid fa-ruler-combined" style="color: #fbbf24; font-size: 16px;"></i>
-          <span><strong>Ukuran Kaos Seragam:</strong> S (Lebar 46cm), M (48cm), L (50cm), XL (52cm), XXL (54cm), 3XL (56cm), 4XL (58cm). Ukuran seragam dipilih saat mengisi formulir pendaftaran.</span>
+      <!-- Size Chart Guide Banner Yang Elegan -->
+      <div class="uniform-size-guide-card">
+        <div class="uniform-size-guide-head">
+          <div class="uniform-size-guide-title">
+            <i class="fa-solid fa-ruler-combined text-gold"></i>
+            <strong>Panduan Standar Ukuran Baju Seragam (Size Chart):</strong>
+          </div>
+          <span class="uniform-size-guide-note">
+            <i class="fa-solid fa-circle-info"></i> Dipilih saat pengisian formulir pendaftaran
+          </span>
+        </div>
+        <div class="uniform-size-pills-wrap">
+          <div class="size-pill-item"><span class="size-pill-code">S</span><span class="size-pill-val">Lebar 46cm / LD 92cm</span></div>
+          <div class="size-pill-item"><span class="size-pill-code">M</span><span class="size-pill-val">Lebar 48cm / LD 96cm</span></div>
+          <div class="size-pill-item"><span class="size-pill-code">L</span><span class="size-pill-val">Lebar 50cm / LD 100cm</span></div>
+          <div class="size-pill-item"><span class="size-pill-code">XL</span><span class="size-pill-val">Lebar 52cm / LD 104cm</span></div>
+          <div class="size-pill-item"><span class="size-pill-code">XXL</span><span class="size-pill-val">Lebar 54cm / LD 108cm</span></div>
+          <div class="size-pill-item"><span class="size-pill-code">3XL</span><span class="size-pill-val">Lebar 56cm / LD 112cm</span></div>
+          <div class="size-pill-item"><span class="size-pill-code">4XL</span><span class="size-pill-val">Lebar 58cm / LD 116cm</span></div>
         </div>
       </div>
     </div>
@@ -1499,6 +1483,8 @@ function closeUniformImageLightbox(e) {
 window.getUniformSettings = getUniformSettings;
 window.renderUniformShowcaseHTML = renderUniformShowcaseHTML;
 window.handleUniformImageUpload = handleUniformImageUpload;
+window.handleUniformSettingsUpload = handleUniformSettingsUpload;
+window.updateUniformThumbPreview = updateUniformThumbPreview;
 window.openUniformImageLightbox = openUniformImageLightbox;
 window.closeUniformImageLightbox = closeUniformImageLightbox;
 
@@ -1521,7 +1507,13 @@ function renderHeroStoryContent(idx) {
                           (card.title && card.title.toLowerCase().includes('seragam')) ||
                           (card.category && card.category.toLowerCase().includes('atribut'));
 
-    const uniformShowcaseHtml = isUniformCard ? renderUniformShowcaseHTML() : '';
+    if (isUniformCard) {
+      bodyEl.innerHTML = renderUniformShowcaseHTML();
+      if (counterEl) {
+        counterEl.textContent = `${String(idx + 1).padStart(2, '0')} / ${String(DASHBOARD_CARDS.length).padStart(2, '0')}`;
+      }
+      return;
+    }
 
     if (card.narration && card.narration.trim()) {
       const paras = card.narration.split('\n\n').filter(p => p.trim());
@@ -1530,17 +1522,15 @@ function renderHeroStoryContent(idx) {
         : `<p style="line-height: 1.7; color: #e2e8f0; font-size: 14.5px;">${escapeHtml(card.narration).replace(/\n/g, '<br>')}</p>`;
 
       bodyEl.innerHTML = `
-        ${uniformShowcaseHtml}
         <div class="modal-rich-section">
           <h4><i class="fa-solid fa-circle-info"></i> Informasi & Narasi Acara</h4>
           ${pTags}
         </div>
       `;
     } else if (card.content) {
-      bodyEl.innerHTML = uniformShowcaseHtml + card.content;
+      bodyEl.innerHTML = card.content;
     } else {
       bodyEl.innerHTML = `
-        ${uniformShowcaseHtml}
         <div class="modal-rich-section">
           <h4><i class="fa-solid fa-circle-info"></i> Informasi Acara</h4>
           <p style="color: #cbd5e1; font-size: 14px;">${escapeHtml(card.subtitle || 'Belum ada rincian narasi untuk informasi ini.')}</p>
@@ -2285,6 +2275,42 @@ function handleGuardianSelect(input) {
 window.handleGuardianSelect = handleGuardianSelect;
 window.populateRegisteredGuardiansDatalist = populateRegisteredGuardiansDatalist;
 
+function checkEmergencyPhoneMatch(notifyUser = true) {
+  const phoneInput = document.getElementById('ind_phone');
+  const emergencyInput = document.getElementById('ind_emergencyPhone');
+  const errorEl = document.getElementById('ind_emergencyPhone_error');
+  if (!phoneInput || !emergencyInput) return false;
+
+  const phone = phoneInput.value.trim();
+  const emergency = emergencyInput.value.trim();
+  if (!phone || !emergency) {
+    if (errorEl) errorEl.style.display = 'none';
+    emergencyInput.classList.remove('is-invalid');
+    emergencyInput.style.borderColor = '';
+    return false;
+  }
+
+  // Normalisasi nomor HP (hanya angka, konversi awalan 62 ke 0)
+  const normPhone = phone.replace(/\D/g, '').replace(/^62/, '0');
+  const normEmergency = emergency.replace(/\D/g, '').replace(/^62/, '0');
+
+  if (normPhone && normEmergency && normPhone === normEmergency) {
+    if (errorEl) errorEl.style.display = 'block';
+    emergencyInput.classList.add('is-invalid');
+    emergencyInput.style.borderColor = '#ef4444';
+    if (notifyUser && typeof showToast === 'function') {
+      showToast('⚠️ Nomor HP darurat tidak boleh sama dengan nomor WhatsApp aktif Anda! Harap cantumkan nomor keluarga/kerabat terdekat demi keselamatan.', 'warning', 6000);
+    }
+    return true;
+  } else {
+    if (errorEl) errorEl.style.display = 'none';
+    emergencyInput.classList.remove('is-invalid');
+    emergencyInput.style.borderColor = '';
+    return false;
+  }
+}
+window.checkEmergencyPhoneMatch = checkEmergencyPhoneMatch;
+
 function validateIndividuStep(step) {
   if (step === 1) {
     const fullName = document.getElementById('ind_fullName')?.value.trim();
@@ -2312,6 +2338,19 @@ function validateIndividuStep(step) {
       document.getElementById('ind_daerah')?.focus();
       return false;
     }
+    const joinYear = document.getElementById('ind_joinYear')?.value.trim();
+    if (!joinYear) {
+      showToast('Mohon cantumkan tahun bergabung Anda di Paskas (hanya tahun, contoh: 2021).', 'error');
+      document.getElementById('ind_joinYear')?.focus();
+      return false;
+    }
+    const currentYear = new Date().getFullYear();
+    const joinYearNum = parseInt(joinYear, 10);
+    if (isNaN(joinYearNum) || joinYearNum < 2000 || joinYearNum > currentYear) {
+      showToast(`Tahun bergabung harus berupa tahun 4 digit yang valid (antara 2000 s/d ${currentYear}).`, 'error');
+      document.getElementById('ind_joinYear')?.focus();
+      return false;
+    }
     const email = document.getElementById('ind_email')?.value.trim();
     if (!email) {
       showToast('Mohon cantumkan alamat email untuk pengiriman E-Tiket.', 'error');
@@ -2333,6 +2372,10 @@ function validateIndividuStep(step) {
     const emergencyPhone = document.getElementById('ind_emergencyPhone')?.value.trim();
     if (!emergencyPhone) {
       showToast('Mohon cantumkan nomor HP darurat (keluarga).', 'error');
+      document.getElementById('ind_emergencyPhone')?.focus();
+      return false;
+    }
+    if (checkEmergencyPhoneMatch(true)) {
       document.getElementById('ind_emergencyPhone')?.focus();
       return false;
     }
@@ -2939,7 +2982,8 @@ async function handleIndividuFinalSubmit(e) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnHtml;
       }
-      showDuplicateModal(duplicateCheck);
+      showToast(`Data peserta "${duplicateCheck.existing.full_name}" sudah terdaftar sebelumnya (${duplicateCheck.existing.registration_code}). Mengarahkan langsung ke E-Tiket Anda...`, 'info');
+      showTicketModal(duplicateCheck.existing);
       return;
     }
 
@@ -3424,8 +3468,9 @@ function addGroupMemberCard(opts = {}) {
   const initialAge = opts.age !== undefined ? opts.age : '';
   const initialGender = opts.gender || 'Laki-laki';
   const initialCloth = opts.cloth || 'L';
-  const initialMed = opts.med || 'Tidak Ada / Sehat';
+  const initialMed = opts.med !== undefined ? opts.med : '';
   const initialPhone = opts.phone || '';
+  const initialEmergency = opts.emergency || '';
 
   const tr = document.createElement('tr');
   tr.className = 'member-card member-row-item';
@@ -3473,11 +3518,17 @@ function addGroupMemberCard(opts = {}) {
     </td>
     <td>
       <input type="text" class="form-control form-control-sm grp-member-med" 
-             placeholder="Asma / Maag / Sehat" value="${escapeHtml(initialMed)}">
+             placeholder="Asma / Alergi / Sehat" value="${escapeHtml(initialMed)}">
     </td>
     <td>
-      <input type="tel" class="form-control form-control-sm grp-member-phone" 
-             placeholder="08xxxxxxxx" value="${escapeHtml(initialPhone)}">
+      <input type="tel" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm grp-member-phone" 
+             placeholder="08xxxxxxxx" value="${escapeHtml(initialPhone)}"
+             oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+    </td>
+    <td>
+      <input type="tel" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm grp-member-emergency" 
+             placeholder="08xxxxxxxx" value="${escapeHtml(initialEmergency)}"
+             oninput="this.value = this.value.replace(/[^0-9]/g, '');" title="Nomor HP darurat / keluarga">
     </td>
     <td style="text-align: center; vertical-align: middle;">
       <button type="button" class="btn-remove-row-sm" onclick="removeMemberCard(${memberId})" title="Hapus baris ini">
@@ -4024,6 +4075,21 @@ async function downloadAllGroupTicketsOneByOne() {
 function closeTicketModal() {
   const modal = document.getElementById('ticketModal');
   if (modal) modal.classList.remove('active');
+
+  // Bersihkan efek konfeti jika masih ada
+  const confCanvas = document.getElementById('confettiCanvas');
+  if (confCanvas) {
+    const ctx = confCanvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+  }
+
+  // Anggap selesai dan arahkan langsung ke halaman dashboard (atau rekap jika admin)
+  if (typeof isAdminLoggedIn !== 'undefined' && isAdminLoggedIn) {
+    navigateTo('rekap');
+  } else {
+    resetToSelectionScreen();
+    navigateTo('dashboard');
+  }
 }
 
 function printTicketOnly() {
@@ -5787,6 +5853,20 @@ function initSettingsPage(defaultTab = 'rekap', skipSwitchTab = false) {
   if (eventLocationInput) eventLocationInput.value = settings.event_location || '';
   if (eventDescInput) eventDescInput.value = settings.event_desc || '';
 
+  // Form Pengaturan Informasi Update / Pengumuman Dashboard
+  const annEnabled = document.getElementById('cfg_announcementEnabled');
+  const annLabel = document.getElementById('cfg_announcementStatusLabel');
+  const annTitle = document.getElementById('cfg_announcementTitle');
+  const annDate = document.getElementById('cfg_announcementDate');
+  const annText = document.getElementById('cfg_announcementText');
+
+  const isAnnOn = settings.announcement_enabled !== 'false' && settings.announcement_enabled !== false && settings.announcement_enabled !== undefined;
+  if (annEnabled) annEnabled.checked = isAnnOn;
+  if (annLabel) annLabel.textContent = isAnnOn ? 'Aktif' : 'Nonaktif';
+  if (annTitle) annTitle.value = settings.announcement_title || 'Pengumuman & Update Acara';
+  if (annDate) annDate.value = settings.announcement_date || 'Update Terkini';
+  if (annText) annText.value = settings.announcement_text || '';
+
   renderSettingsCardsManager();
   populateRegistrationContentSettings();
   renderSettingsWilayahManager();
@@ -6251,6 +6331,72 @@ async function saveEventInfoSettings() {
   });
 
   showToast('Info acara & headline berhasil disimpan permanen ke Supabase!', 'success');
+}
+
+// ===================================================================
+// PENGELOLA INFORMASI UPDATE TERBARU / PENGUMUMAN DI DASHBOARD
+// ===================================================================
+function renderAnnouncementUI() {
+  const section = document.getElementById('dashboardAnnouncementSection');
+  if (!section) return;
+
+  const settings = window.dataService ? window.dataService.getSettings() : {};
+  const isEnabled = settings.announcement_enabled !== 'false' && settings.announcement_enabled !== false;
+  const title = (settings.announcement_title || '').trim();
+  const text = (settings.announcement_text || '').trim();
+  const date = (settings.announcement_date || '').trim();
+
+  // Tampilkan hanya jika status aktif dan memiliki teks atau judul
+  if (isEnabled && (title || text)) {
+    section.style.display = 'block';
+    const titleEl = document.getElementById('announcementTitleDisplay');
+    const textEl = document.getElementById('announcementTextDisplay');
+    const dateEl = document.getElementById('announcementDateText');
+
+    if (titleEl) titleEl.textContent = title || 'Pengumuman & Update Acara';
+    if (textEl) textEl.textContent = text || '';
+    if (dateEl) dateEl.textContent = date || 'Update Terkini';
+  } else {
+    section.style.display = 'none';
+  }
+}
+
+function toggleAnnouncementSetting(enabled) {
+  const label = document.getElementById('cfg_announcementStatusLabel');
+  if (label) label.textContent = enabled ? 'Aktif' : 'Nonaktif';
+}
+
+async function saveAnnouncementSettings() {
+  const enabledInput = document.getElementById('cfg_announcementEnabled');
+  const titleInput = document.getElementById('cfg_announcementTitle');
+  const dateInput = document.getElementById('cfg_announcementDate');
+  const textInput = document.getElementById('cfg_announcementText');
+
+  const enabled = enabledInput ? enabledInput.checked : true;
+  const title = titleInput ? titleInput.value.trim() : '';
+  const date = dateInput ? dateInput.value.trim() : '';
+  const text = textInput ? textInput.value.trim() : '';
+
+  const payload = {
+    announcement_enabled: String(enabled),
+    announcement_title: title,
+    announcement_date: date,
+    announcement_text: text
+  };
+
+  if (window.dataService) {
+    if (typeof window.dataService.saveSettings === 'function') {
+      await window.dataService.saveSettings(payload);
+    }
+    if (typeof window.dataService.saveCloudSetting === 'function') {
+      for (const [k, v] of Object.entries(payload)) {
+        await window.dataService.saveCloudSetting(k, v);
+      }
+    }
+  }
+
+  renderAnnouncementUI();
+  showToast('Informasi update terbaru berhasil disimpan dan ditampilkan di Dashboard!', 'success');
 }
 
 // ===================================================================
@@ -7249,59 +7395,302 @@ function renderSettingsCardsManager() {
   const container = document.getElementById('settingsCardsList');
   if (!container) return;
 
-  container.innerHTML = DASHBOARD_CARDS.map((card, idx) => `
-    <div class="settings-card-item-box" data-card-idx="${idx}">
-      <div class="settings-card-box-header">
-        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-          <img src="${card.coverImg || card.thumbImg}" class="settings-card-preview-thumb" alt="${card.title}" onerror="this.src='images/rocket-convention-hall-card.jpg'">
-          <div>
-            <div class="settings-card-box-title">Kartu #${idx + 1}: ${escapeHtml(card.title)}</div>
-            <span style="font-size: 11.5px; color: #94a3b8;">${escapeHtml(card.category)}</span>
+  const uniforms = getUniformSettings();
+
+  container.innerHTML = DASHBOARD_CARDS.map((card, idx) => {
+    const isUniformCard = (card.id === 'card-4') || 
+                          (card.title && card.title.toLowerCase().includes('seragam')) ||
+                          (card.category && card.category.toLowerCase().includes('atribut'));
+
+    if (isUniformCard) {
+      return `
+        <div class="settings-card-item-box settings-card-uniform-mode" data-card-idx="${idx}">
+          <div class="settings-card-box-header">
+            <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+              <img src="${card.coverImg || uniforms.ikhwanImg || card.thumbImg}" class="settings-card-preview-thumb" alt="${card.title}" onerror="this.src='images/seragam-ikhwan.jpg'">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <div class="settings-card-box-title">Kartu #${idx + 1}: ${escapeHtml(card.title)}</div>
+                  <span class="settings-chip-badge" style="background: rgba(217, 119, 6, 0.15); color: #d97706; border: 1px solid rgba(217, 119, 6, 0.35); font-weight: 700; font-size: 11px;">
+                    <i class="fa-solid fa-shirt"></i> Khusus Baju Ikhwan &amp; Akhwat
+                  </span>
+                </div>
+                <span style="font-size: 11.5px; color: #94a3b8;">${escapeHtml(card.category)}</span>
+              </div>
+            </div>
+            ${DASHBOARD_CARDS.length > 1 ? `
+              <button type="button" class="btn-remove-card-item" onclick="removeCardFromSettings(${idx})" title="Hapus kartu ini">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="form-row col-2" style="margin-top: 6px;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-size: 12px;">Judul Kartu</label>
+              <input type="text" class="form-control card-input-title" value="${escapeHtml(card.title || '')}" placeholder="Cth: Seragam & Kit" style="padding: 8px 12px; font-size: 13px;">
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-size: 12px;">Kategori / Tagline</label>
+              <input type="text" class="form-control card-input-category" value="${escapeHtml(card.category || '')}" placeholder="Cth: ATRIBUT RESMI" style="padding: 8px 12px; font-size: 13px;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" style="font-size: 12px;">Narasi Ringkas di Kartu (Subjudul)</label>
+            <input type="text" class="form-control card-input-subtitle" value="${escapeHtml(card.subtitle || '')}" placeholder="Deskripsi ringkas yang tampil di kartu..." style="padding: 8px 12px; font-size: 13px;">
+          </div>
+
+          <!-- PENGATURAN KHUSUS BAJU IKHWAN & AKHWAT -->
+          <div class="settings-uniform-manager-box" style="margin-top: 8px; background: linear-gradient(145deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.95)); border: 1.5px solid #d4af37; border-radius: 14px; padding: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 28px; height: 28px; border-radius: 7px; background: #d4af37; color: #1a1815; display: flex; align-items: center; justify-content: center; font-size: 13px;">
+                  <i class="fa-solid fa-shirt"></i>
+                </div>
+                <div>
+                  <strong style="font-size: 13.5px; color: #1e293b;">Pengaturan Khusus Baju &amp; Seragam</strong>
+                  <div style="font-size: 11.5px; color: #64748b;">Upload foto desain dan tentukan narasi eksklusif untuk peserta Ikhwan dan Akhwat</div>
+                </div>
+              </div>
+              <span style="font-size: 11px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 3px 8px; border-radius: 6px; font-weight: 600;">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Mode Khusus Ikhwan &amp; Akhwat
+              </span>
+            </div>
+
+            <div class="settings-uniform-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px;">
+              <!-- Panel Ikhwan -->
+              <div class="settings-uniform-panel" style="background: #ffffff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span class="badge-gender-ikhwan" style="font-size: 11px; padding: 3px 9px;">
+                    <i class="fa-solid fa-mars"></i> Khusus Ikhwan (Laki-laki)
+                  </span>
+                  <span style="font-size: 11px; color: #64748b; font-weight: 600;">Model 01</span>
+                </div>
+
+                <div style="display: flex; gap: 12px; align-items: center;">
+                  <div style="position: relative; width: 85px; height: 85px; border-radius: 10px; overflow: hidden; border: 1.5px solid #93c5fd; background: #0b1120; flex-shrink: 0;">
+                    <img id="cfg_cardUniformIkhwanThumb" src="${uniforms.ikhwanImg}" alt="Preview Ikhwan" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='images/seragam-ikhwan.jpg'">
+                  </div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <label class="btn btn-outline-cyan btn-xs" style="cursor: pointer; padding: 6px 12px; font-size: 12px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background: #eff6ff;">
+                      <i class="fa-solid fa-cloud-arrow-up text-cyan"></i> Upload Baju Ikhwan
+                      <input type="file" accept="image/*" style="display: none;" onchange="handleUniformSettingsUpload(event, 'ikhwan', ${idx})">
+                    </label>
+                    <button type="button" class="btn btn-secondary btn-xs" onclick="openUniformImageLightbox(document.getElementById('cfg_cardUniformIkhwanThumb').src, 'Model Baju Ikhwan')" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;">
+                      <i class="fa-regular fa-eye"></i> Perbesar Foto
+                    </button>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px;">URL / Link Foto Baju Ikhwan</label>
+                  <input type="text" class="form-control card-uniform-ikhwan-img" id="cfg_cardUniformIkhwanImg" value="${escapeHtml(uniforms.ikhwanImg)}" placeholder="URL foto atau klik Upload Baju Ikhwan" style="padding: 6px 10px; font-size: 12px;" oninput="updateUniformThumbPreview(this, 'ikhwan')">
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px;">Judul Model Baju Ikhwan</label>
+                  <input type="text" class="form-control card-uniform-ikhwan-title" value="${escapeHtml(uniforms.ikhwanTitle)}" placeholder="Cth: Model Kaos Resmi Ikhwan" style="padding: 6px 10px; font-size: 12px; font-weight: 600;">
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px;">Narasi Khusus Baju Ikhwan</label>
+                  <textarea class="form-control card-uniform-ikhwan-desc" rows="3" placeholder="Tuliskan spesifikasi bahan, warna, sablon khusus ikhwan..." style="padding: 6px 10px; font-size: 12px; line-height: 1.45; resize: vertical;">${escapeHtml(uniforms.ikhwanDesc)}</textarea>
+                </div>
+              </div>
+
+              <!-- Panel Akhwat -->
+              <div class="settings-uniform-panel" style="background: #ffffff; border: 1.5px solid #fbcfe8; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span class="badge-gender-akhwat" style="font-size: 11px; padding: 3px 9px;">
+                    <i class="fa-solid fa-venus"></i> Khusus Akhwat (Perempuan)
+                  </span>
+                  <span style="font-size: 11px; color: #64748b; font-weight: 600;">Model 02</span>
+                </div>
+
+                <div style="display: flex; gap: 12px; align-items: center;">
+                  <div style="position: relative; width: 85px; height: 85px; border-radius: 10px; overflow: hidden; border: 1.5px solid #f472b6; background: #0b1120; flex-shrink: 0;">
+                    <img id="cfg_cardUniformAkhwatThumb" src="${uniforms.akhwatImg}" alt="Preview Akhwat" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='images/seragam-akhwat.jpg'">
+                  </div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <label class="btn btn-outline-cyan btn-xs" style="cursor: pointer; padding: 6px 12px; font-size: 12px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; background: #fdf2f8;">
+                      <i class="fa-solid fa-cloud-arrow-up text-pink"></i> Upload Baju Akhwat
+                      <input type="file" accept="image/*" style="display: none;" onchange="handleUniformSettingsUpload(event, 'akhwat', ${idx})">
+                    </label>
+                    <button type="button" class="btn btn-secondary btn-xs" onclick="openUniformImageLightbox(document.getElementById('cfg_cardUniformAkhwatThumb').src, 'Model Baju Akhwat')" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;">
+                      <i class="fa-regular fa-eye"></i> Perbesar Foto
+                    </button>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px;">URL / Link Foto Baju Akhwat</label>
+                  <input type="text" class="form-control card-uniform-akhwat-img" id="cfg_cardUniformAkhwatImg" value="${escapeHtml(uniforms.akhwatImg)}" placeholder="URL foto atau klik Upload Baju Akhwat" style="padding: 6px 10px; font-size: 12px;" oninput="updateUniformThumbPreview(this, 'akhwat')">
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px;">Judul Model Baju Akhwat</label>
+                  <input type="text" class="form-control card-uniform-akhwat-title" value="${escapeHtml(uniforms.akhwatTitle)}" placeholder="Cth: Model Kaos / Tunik Resmi Akhwat" style="padding: 6px 10px; font-size: 12px; font-weight: 600;">
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px;">Narasi Khusus Baju Akhwat</label>
+                  <textarea class="form-control card-uniform-akhwat-desc" rows="3" placeholder="Tuliskan spesifikasi tunik panjang syar'i, bahan, aksen emas..." style="padding: 6px 10px; font-size: 12px; line-height: 1.45; resize: vertical;">${escapeHtml(uniforms.akhwatDesc)}</textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Opsional: Gambar Latar / Cover Belakang Kartu -->
+            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <label class="form-label" style="font-size: 11.5px; margin: 0; color: #475569;">Gambar Latar Belakang Kartu (Background Hero / Thumbnail Beranda):</label>
+                <div style="font-size: 11px; color: #94a3b8;">Opsional, secara otomatis memakai foto seragam atau banner atribut.</div>
+              </div>
+              <div style="display: flex; gap: 6px; align-items: center; width: 100%; max-width: 380px;">
+                <input type="text" class="form-control card-input-cover" value="${card.coverImg || uniforms.ikhwanImg || ''}" placeholder="URL foto latar kartu" style="padding: 5px 10px; font-size: 12px;" oninput="updateCardThumbPreview(this, ${idx})">
+                <label class="btn btn-secondary btn-xs" style="cursor: pointer; padding: 5px 8px; font-size: 11px; margin: 0; white-space: nowrap;">
+                  <i class="fa-solid fa-upload"></i> Upload
+                  <input type="file" accept="image/*" style="display: none;" onchange="handleCardImageUpload(event, ${idx})">
+                </label>
+              </div>
+            </div>
           </div>
         </div>
-        ${DASHBOARD_CARDS.length > 1 ? `
-          <button type="button" class="btn-remove-card-item" onclick="removeCardFromSettings(${idx})" title="Hapus kartu ini">
-            <i class="fa-solid fa-trash-can"></i>
-          </button>
-        ` : ''}
-      </div>
+      `;
+    }
 
-      <div class="form-row col-2" style="margin-top: 6px;">
+    return `
+      <div class="settings-card-item-box" data-card-idx="${idx}">
+        <div class="settings-card-box-header">
+          <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+            <img src="${card.coverImg || card.thumbImg}" class="settings-card-preview-thumb" alt="${card.title}" onerror="this.src='images/rocket-convention-hall-card.jpg'">
+            <div>
+              <div class="settings-card-box-title">Kartu #${idx + 1}: ${escapeHtml(card.title)}</div>
+              <span style="font-size: 11.5px; color: #94a3b8;">${escapeHtml(card.category)}</span>
+            </div>
+          </div>
+          ${DASHBOARD_CARDS.length > 1 ? `
+            <button type="button" class="btn-remove-card-item" onclick="removeCardFromSettings(${idx})" title="Hapus kartu ini">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          ` : ''}
+        </div>
+
+        <div class="form-row col-2" style="margin-top: 6px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" style="font-size: 12px;">Judul Kartu</label>
+            <input type="text" class="form-control card-input-title" value="${escapeHtml(card.title || '')}" placeholder="Cth: Jadwal Acara" style="padding: 8px 12px; font-size: 13px;">
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" style="font-size: 12px;">Kategori / Tagline</label>
+            <input type="text" class="form-control card-input-category" value="${escapeHtml(card.category || '')}" placeholder="Cth: AGENDA & RUNDOWN" style="padding: 8px 12px; font-size: 13px;">
+          </div>
+        </div>
+
         <div class="form-group" style="margin: 0;">
-          <label class="form-label" style="font-size: 12px;">Judul Kartu</label>
-          <input type="text" class="form-control card-input-title" value="${escapeHtml(card.title || '')}" placeholder="Cth: Jadwal Acara" style="padding: 8px 12px; font-size: 13px;">
+          <label class="form-label" style="font-size: 12px;">Narasi Ringkas di Kartu (Subjudul)</label>
+          <input type="text" class="form-control card-input-subtitle" value="${escapeHtml(card.subtitle || '')}" placeholder="Deskripsi ringkas yang tampil di kartu..." style="padding: 8px 12px; font-size: 13px;">
         </div>
+
         <div class="form-group" style="margin: 0;">
-          <label class="form-label" style="font-size: 12px;">Kategori / Tagline</label>
-          <input type="text" class="form-control card-input-category" value="${escapeHtml(card.category || '')}" placeholder="Cth: AGENDA & RUNDOWN" style="padding: 8px 12px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <label class="form-label" style="font-size: 12px; margin: 0;">Gambar Latar & Kartu</label>
+            <label class="btn btn-outline-cyan btn-xs" style="cursor: pointer; padding: 4px 10px; font-size: 11.5px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; margin: 0;">
+              <i class="fa-solid fa-upload"></i> Upload Foto
+              <input type="file" accept="image/*" style="display: none;" onchange="handleCardImageUpload(event, ${idx})">
+            </label>
+          </div>
+          <div class="input-with-icon">
+            <i class="fa-solid fa-image"></i>
+            <input type="text" class="form-control card-input-cover" value="${card.coverImg || ''}" placeholder="https://... atau klik tombol Upload Foto" style="padding: 8px 12px 8px 38px; font-size: 13px;" oninput="updateCardThumbPreview(this, ${idx})">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" style="font-size: 12px;">Narasi / Penjelasan Lengkap (Muncul Saat Kartu Dibuka)</label>
+          <textarea class="form-control card-input-narration" rows="4" placeholder="Tuliskan narasi lengkap agenda, fasilitas, atau panduan acara..." style="padding: 8px 12px; font-size: 12.5px; line-height: 1.5; resize: vertical;">${escapeHtml(card.narration || '')}</textarea>
         </div>
       </div>
+    `;
+  }).join('');
+}
 
-      <div class="form-group" style="margin: 0;">
-        <label class="form-label" style="font-size: 12px;">Narasi Ringkas di Kartu (Subjudul)</label>
-        <input type="text" class="form-control card-input-subtitle" value="${escapeHtml(card.subtitle || '')}" placeholder="Deskripsi ringkas yang tampil di kartu..." style="padding: 8px 12px; font-size: 13px;">
-      </div>
+async function handleUniformSettingsUpload(event, genderType, cardIdx) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
 
-      <div class="form-group" style="margin: 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-          <label class="form-label" style="font-size: 12px; margin: 0;">Gambar Latar & Kartu</label>
-          <label class="btn btn-outline-cyan btn-xs" style="cursor: pointer; padding: 4px 10px; font-size: 11.5px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; margin: 0;">
-            <i class="fa-solid fa-upload"></i> Upload Foto
-            <input type="file" accept="image/*" style="display: none;" onchange="handleCardImageUpload(event, ${idx})">
-          </label>
-        </div>
-        <div class="input-with-icon">
-          <i class="fa-solid fa-image"></i>
-          <input type="text" class="form-control card-input-cover" value="${card.coverImg || ''}" placeholder="https://... atau klik tombol Upload Foto" style="padding: 8px 12px 8px 38px; font-size: 13px;" oninput="updateCardThumbPreview(this, ${idx})">
-        </div>
-      </div>
+  if (file.size > 8 * 1024 * 1024) {
+    showToast('Ukuran file gambar maksimal 8MB.', 'warning');
+    return;
+  }
 
-      <div class="form-group" style="margin: 0;">
-        <label class="form-label" style="font-size: 12px;">Narasi / Penjelasan Lengkap (Muncul Saat Kartu Dibuka)</label>
-        <textarea class="form-control card-input-narration" rows="4" placeholder="Tuliskan narasi lengkap agenda, fasilitas, atau panduan acara..." style="padding: 8px 12px; font-size: 12.5px; line-height: 1.5; resize: vertical;">${escapeHtml(card.narration || '')}</textarea>
-      </div>
-    </div>
-  `).join('');
+  showToast(`Memproses foto seragam ${genderType === 'ikhwan' ? 'Ikhwan' : 'Akhwat'}...`, 'info');
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const base64Data = e.target.result;
+    if (typeof base64Data !== 'string' || !base64Data.startsWith('data:image/')) {
+      showToast('Format file gambar tidak valid.', 'error');
+      return;
+    }
+
+    const key = genderType === 'ikhwan' ? 'uniform_ikhwan_image' : 'uniform_akhwat_image';
+    const localKey = genderType === 'ikhwan' ? 'paskas_uniform_ikhwan_image' : 'paskas_uniform_akhwat_image';
+
+    try {
+      localStorage.setItem(localKey, base64Data);
+    } catch(err) {
+      console.warn('Storage quota warning for uniform image:', err);
+    }
+
+    if (window.dataService) {
+      if (typeof window.dataService.saveSettings === 'function') {
+        try { await window.dataService.saveSettings({ [key]: base64Data }); } catch (err) {}
+      }
+      if (typeof window.dataService.saveCloudSetting === 'function') {
+        try { await window.dataService.saveCloudSetting(key, base64Data); } catch (err) {}
+      }
+    }
+
+    // Update settings thumbnail and input
+    const thumbEl = document.getElementById(genderType === 'ikhwan' ? 'cfg_cardUniformIkhwanThumb' : 'cfg_cardUniformAkhwatThumb');
+    if (thumbEl) thumbEl.src = base64Data;
+    const inputEl = document.getElementById(genderType === 'ikhwan' ? 'cfg_cardUniformIkhwanImg' : 'cfg_cardUniformAkhwatImg');
+    if (inputEl) inputEl.value = base64Data;
+
+    // Update header preview if it's the seragam card
+    const cardEl = document.querySelector(`.settings-card-item-box[data-card-idx="${cardIdx}"]`);
+    if (cardEl) {
+      const mainThumb = cardEl.querySelector('.settings-card-preview-thumb');
+      if (mainThumb) mainThumb.src = base64Data;
+      const coverInput = cardEl.querySelector('.card-input-cover');
+      if (coverInput && (!coverInput.value || coverInput.value.includes('unsplash') || coverInput.value.includes('seragam'))) {
+        coverInput.value = base64Data;
+      }
+    }
+
+    // Also sync existing DOM elements elsewhere
+    const storyImg = document.getElementById(genderType === 'ikhwan' ? 'storyUniformImgIkhwan' : 'storyUniformImgAkhwat');
+    if (storyImg) storyImg.src = base64Data;
+    const cfgImg = document.getElementById(genderType === 'ikhwan' ? 'cfg_uniformIkhwanThumb' : 'cfg_uniformAkhwatThumb');
+    if (cfgImg) cfgImg.src = base64Data;
+
+    showToast(`Foto baju ${genderType === 'ikhwan' ? 'Ikhwan' : 'Akhwat'} berhasil di-upload! Klik "Simpan Perubahan Kartu" untuk menerapkan.`, 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateUniformThumbPreview(input, genderType) {
+  const thumb = document.getElementById(genderType === 'ikhwan' ? 'cfg_cardUniformIkhwanThumb' : 'cfg_cardUniformAkhwatThumb');
+  if (!thumb) return;
+  const val = input.value.trim();
+  if (val) {
+    thumb.src = val;
+    thumb.onerror = function() {
+      this.onerror = null;
+      this.src = genderType === 'ikhwan' ? 'images/seragam-ikhwan.jpg' : 'images/seragam-akhwat.jpg';
+    };
+  }
 }
 
 function updateCardThumbPreview(input, idx) {
@@ -7370,11 +7759,70 @@ function saveCardsFromSettings() {
 
   const total = cardElements.length;
   cardElements.forEach((el, idx) => {
+    const isUniform = el.classList.contains('settings-card-uniform-mode') || 
+                      (DASHBOARD_CARDS[idx] && (
+                        DASHBOARD_CARDS[idx].id === 'card-4' ||
+                        (DASHBOARD_CARDS[idx].title && DASHBOARD_CARDS[idx].title.toLowerCase().includes('seragam'))
+                      ));
+
     const title = el.querySelector('.card-input-title')?.value.trim() || `Info ${idx + 1}`;
     const category = el.querySelector('.card-input-category')?.value.trim() || 'INFORMASI';
     const subtitle = el.querySelector('.card-input-subtitle')?.value.trim() || '';
     let cover = el.querySelector('.card-input-cover')?.value.trim() || 'images/rocket-convention-hall.jpg';
-    const narration = el.querySelector('.card-input-narration')?.value.trim() || '';
+    let narration = el.querySelector('.card-input-narration')?.value.trim() || '';
+
+    if (isUniform) {
+      const ikhwanImg = el.querySelector('.card-uniform-ikhwan-img')?.value.trim() || '';
+      const akhwatImg = el.querySelector('.card-uniform-akhwat-img')?.value.trim() || '';
+      const ikhwanTitle = el.querySelector('.card-uniform-ikhwan-title')?.value.trim() || 'Model Kaos Resmi Ikhwan';
+      const akhwatTitle = el.querySelector('.card-uniform-akhwat-title')?.value.trim() || 'Model Kaos / Tunik Resmi Akhwat';
+      const ikhwanDesc = el.querySelector('.card-uniform-ikhwan-desc')?.value.trim() || '';
+      const akhwatDesc = el.querySelector('.card-uniform-akhwat-desc')?.value.trim() || '';
+
+      if (ikhwanImg) {
+        localStorage.setItem('paskas_uniform_ikhwan_image', ikhwanImg);
+      }
+      if (akhwatImg) {
+        localStorage.setItem('paskas_uniform_akhwat_image', akhwatImg);
+      }
+      if (ikhwanTitle) {
+        localStorage.setItem('paskas_uniform_ikhwan_title', ikhwanTitle);
+      }
+      if (akhwatTitle) {
+        localStorage.setItem('paskas_uniform_akhwat_title', akhwatTitle);
+      }
+      if (ikhwanDesc) {
+        localStorage.setItem('paskas_uniform_ikhwan_desc', ikhwanDesc);
+      }
+      if (akhwatDesc) {
+        localStorage.setItem('paskas_uniform_akhwat_desc', akhwatDesc);
+      }
+
+      if (window.dataService) {
+        const uPayload = {
+          uniform_ikhwan_image: ikhwanImg || undefined,
+          uniform_akhwat_image: akhwatImg || undefined,
+          uniform_title_ikhwan: ikhwanTitle,
+          uniform_title_akhwat: akhwatTitle,
+          uniform_desc_ikhwan: ikhwanDesc,
+          uniform_desc_akhwat: akhwatDesc
+        };
+        if (typeof window.dataService.saveSettings === 'function') {
+          window.dataService.saveSettings(uPayload);
+        }
+        if (typeof window.dataService.saveCloudSetting === 'function') {
+          Object.entries(uPayload).forEach(([k, v]) => {
+            if (v !== undefined) window.dataService.saveCloudSetting(k, v);
+          });
+        }
+      }
+
+      if (!cover) {
+        cover = ikhwanImg || 'images/seragam-ikhwan.jpg';
+      }
+
+      narration = `${ikhwanTitle}:\n${ikhwanDesc}\n\n${akhwatTitle}:\n${akhwatDesc}`;
+    }
 
     // Auto-sanitize jika terinput link Google Maps
     cover = parseDirectImageUrl(cover);
@@ -7414,7 +7862,7 @@ function saveCardsFromSettings() {
   }
 
   renderSettingsCardsManager();
-  showToast('Perubahan kartu informasi, gambar & narasi berhasil disimpan!', 'success');
+  showToast('Perubahan kartu informasi, baju seragam & narasi berhasil disimpan!', 'success');
 }
 
 function resetCardsToDefault() {
