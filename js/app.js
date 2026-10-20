@@ -904,16 +904,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Settings cleanup error:', e);
   }
 
-  // Sinkronisasi data pengaturan dari Supabase jika terhubung
-  if (window.dataService && window.dataService.syncSettingsFromSupabase) {
-    try {
-      await window.dataService.syncSettingsFromSupabase();
-    } catch (e) {
-      console.warn('Sync settings on load:', e);
-    }
-  }
-
-  // Muat ulang kartu dan konten registrasi setelah sinkronisasi dari Supabase
+  // 1. FIRST PAINT INSTAN (0 milidetik): Render UI langsung dari data lokal & default
+  // Mencegah countdown 00:00:00:00 atau kartu kosong saat menunggu koneksi jaringan Supabase
   try {
     DASHBOARD_CARDS = loadStoredCards();
     REGISTRATION_CONTENT = loadStoredRegistrationContent();
@@ -939,6 +931,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Inisialisasi Master Wilayah (Dropdown & Settings)
   initMasterWilayah();
 
+  // Inisialisasi form kelompok & tanggal default
+  initGroupMembers();
+  setDefaultDates();
+
+  // If page-settings is already active on load, ensure theme class is applied
+  if (document.getElementById('page-settings')?.classList.contains('active')) {
+    document.body.classList.add('page-settings-active');
+  }
+
+  // 2. SINKRONISASI DATA DARI SUPABASE DI LATAR BELAKANG (Non-blocking)
+  if (window.dataService && window.dataService.syncSettingsFromSupabase) {
+    try {
+      await window.dataService.syncSettingsFromSupabase();
+
+      // Muat ulang kartu dan konten registrasi setelah sinkronisasi dari Supabase
+      DASHBOARD_CARDS = loadStoredCards();
+      REGISTRATION_CONTENT = loadStoredRegistrationContent();
+
+      if (DASHBOARD_CARDS && DASHBOARD_CARDS[0] && DASHBOARD_CARDS[0].coverImg) {
+        const bg1 = document.getElementById('heroBg1');
+        if (bg1) {
+          bg1.style.backgroundImage = `url('${parseDirectImageUrl(DASHBOARD_CARDS[0].coverImg)}')`;
+        }
+      }
+
+      renderDashboardCards();
+      applyEventInfoToUI();
+      renderRegistrationPageContent();
+      renderAnnouncementUI();
+      initCountdownTimer();
+    } catch (e) {
+      console.warn('Sync settings on load:', e);
+    }
+  }
+
   // Inisialisasi input Pengaturan dengan data Cloud Supabase (tanpa berpindah tab)
   try {
     initSettingsPage('rekap', true);
@@ -948,17 +975,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load Registrations & Metrics
   await loadAndRenderRegistrations();
-
-  // Initialize group member form with 1 default card
-  initGroupMembers();
-
-  // Default dates for input (Today + 1 month)
-  setDefaultDates();
-
-  // If page-settings is already active on load, ensure theme class is applied
-  if (document.getElementById('page-settings')?.classList.contains('active')) {
-    document.body.classList.add('page-settings-active');
-  }
 });
 
 function setDefaultDates() {
