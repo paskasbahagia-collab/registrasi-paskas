@@ -27,9 +27,9 @@ const DEFAULT_SETTINGS = {
   is_room_group_enabled: 'true',
   closed_message: 'Mohon maaf, pendaftaran peserta Paskas Bahagia telah ditutup. Silakan hubungi narahubung panitia.',
   event_headline: 'PASKAS BAHAGIA',
-  event_name: 'Silaturahmi Akbar Pasukan Amal Sholeh (PASKAS) Bahagia',
-  event_location: 'Rocket Convention Hall, Sleman, D.I. Yogyakarta',
-  event_desc: 'Selamat datang di portal resmi registrasi peserta Silaturahmi Akbar Paskas Bahagia. Mari eratkan ukhuwah, satukan langkah perjuangan, dan hadirkan senyum bahagia untuk sesama.',
+  event_name: 'Kumpul Keluarga  Pasukan Amal Sholeh (PASKAS)',
+  event_location: 'Roket Convention Center',
+  event_desc: 'Selamat datang di portal resmi registrasi Kumpul Keluarga PASKAS Bahagia. Mari pulang, berkumpul, dan saling menguatkan. Daftarkan dirimu untuk Kumpul Keluarga PASKAS Bahagia, 12-14 November 2026, Sleman, Yogyakarta. Kembali Menghadirkan Rasa dan Makna, Bertumbuh Sehat Bersama.',
   ticket_template_image: 'images/boarding-pass-canva.png',
   uniform_ikhwan_image: 'images/seragam-ikhwan.jpg',
   uniform_akhwat_image: 'images/seragam-akhwat.jpg',
@@ -62,7 +62,12 @@ Alhamdulillah, pendaftaran Anda untuk Silaturahmi Akbar Pasukan Amal Sholeh (PAS
 Tiket boarding pass resmi Anda telah diterbitkan. Silakan simpan / cetak tiket ini dan tunjukkan kepada panitia pada saat registrasi kedatangan di lokasi acara.
 
 Jazakumullahu Khairan Katsiran,
-Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`
+Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`,
+  google_email_script_url: 'https://script.google.com/macros/s/AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A/exec',
+  announcement_enabled: 'true',
+  announcement_title: 'Pengumuman & Update Acara',
+  announcement_date: '20 Oktober 2026, 14:00 WIB',
+  announcement_text: 'Ahlan wa Sahlan! Registrasi peserta Silaturahmi Akbar Paskas Bahagia resmi dibuka. Pastikan melengkapi data rombongan dan ukuran seragam dengan benar sebelum batas akhir pendaftaran.'
 };
 
 // Data Awal Murni (Kosong / 0 Peserta sampai ada pendaftaran baru)
@@ -158,6 +163,10 @@ class PaskasDataService {
           } else if (row.setting_key === 'is_room_group_enabled' || row.setting_key === 'paskas_room_group_enabled') {
             try {
               if (row.setting_value) localStorage.setItem('paskas_room_group_enabled', row.setting_value);
+            } catch (e) {}
+          } else if (row.setting_key === 'paskas_announcements_list' || row.setting_key === 'announcements_list') {
+            try {
+              if (row.setting_value) localStorage.setItem('paskas_announcements_list', row.setting_value);
             } catch (e) {}
           }
         });
@@ -258,9 +267,7 @@ class PaskasDataService {
       'building',
       'room_number',
       'room_name',
-      'guardian_name',
-      'group_code',
-      'join_year'
+      'guardian_name'
     ]);
   }
 
@@ -353,36 +360,40 @@ class PaskasDataService {
         }
       }
 
-      // 2. Hanya upload peserta yang benar-benar didaftarkan saat offline (_is_offline_pending === true)
-      // JANGAN PERNAH re-upload data lokal biasa karena data yang hilang di cloud adalah data yang TELAH DIHAPUS!
-      const pendingOffline = local.filter(r => 
+      // 2. Gabungkan data lokal yang belum tersinkron ke cloud (dan bukan data yang sengaja dihapus)
+      const cloudCodes = new Set(cloudList.map(r => r.registration_code));
+      const localOnly = local.filter(r => 
         r && 
         r.registration_code && 
-        r._is_offline_pending === true && 
-        !deletedCodes.has(r.registration_code)
+        !deletedCodes.has(r.registration_code) &&
+        !cloudCodes.has(r.registration_code)
       );
 
-      if (pendingOffline.length > 0) {
+      if (localOnly.length > 0) {
+        // Gabungkan agar data yang sudah diinput lokal tidak pernah hilang dari tabel
+        cloudList = [...localOnly, ...cloudList];
+
+        // Sinkronkan data lokal yang belum ada di cloud ke Supabase
         try {
-          const cleanUnsynced = pendingOffline.map(r => {
+          const cleanToSync = localOnly.map(r => {
             const clean = this.sanitizeRegistrationPayload(r);
             delete clean._is_offline_pending;
             return clean;
           });
           const { data: savedRows, error: upErr } = await this.supabaseClient
             .from('registrations')
-            .insert(cleanUnsynced)
+            .insert(cleanToSync)
             .select();
           if (!upErr && savedRows && savedRows.length > 0) {
-            cloudList = [...savedRows, ...cloudList];
+            const savedMap = new Map(savedRows.map(s => [s.registration_code, s]));
+            cloudList = cloudList.map(item => savedMap.get(item.registration_code) || item);
           }
         } catch (syncErr) {
-          console.warn('Gagal sync data offline pending ke Supabase:', syncErr);
+          console.warn('Gagal sync data lokal baru ke Supabase:', syncErr);
         }
       }
 
-      // Supabase adalah SUMBER KEBENARAN UTAMA (Single Source of Truth).
-      // Update LocalStorage agar persis sama dengan Supabase.
+      // Update LocalStorage agar selalu konsisten dengan data gabungan cloud & lokal yang valid
       localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cloudList));
       return cloudList;
     }

@@ -68,7 +68,7 @@ const DEFAULT_DASHBOARD_CARDS = [
     id: 'card-1',
     category: 'AGENDA & RUNDOWN',
     title: 'Jadwal Acara',
-    subtitle: 'Rangkaian 3 hari 2 malam silaturahmi penuh berkah',
+    subtitle: 'Dari kedatangan hingga pulang penuh rasa dan makna, kita berkumpul sebagai keluarga',
     badge: '01 / 06',
     coverImg: 'images/tugu-jogja-hero.jpg',
     thumbImg: 'images/tugu-jogja-card.jpg',
@@ -113,7 +113,7 @@ Rangkaian Agenda Utama:
     id: 'card-2',
     category: 'VENUE & FASILITAS',
     title: 'Lokasi & Venue',
-    subtitle: 'Gedung utama, asrama penginapan ber-AC & konsumsi',
+    subtitle: 'Venue Kegiatan',
     badge: '02 / 06',
     coverImg: 'images/rocket-convention-hall.jpg',
     thumbImg: 'images/rocket-convention-hall-card.jpg',
@@ -160,8 +160,8 @@ Fasilitas Unggulan:
     title: 'Transportasi',
     subtitle: 'Armada bus, penjemputan bandara & stasiun',
     badge: '03 / 06',
-    coverImg: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80',
-    thumbImg: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=400&q=80',
+    coverImg: 'images/paskas-transportasi-truck.jpg',
+    thumbImg: 'images/paskas-transportasi-truck.jpg',
     narration: `Panitia menyediakan layanan koordinasi penjemputan gratis bagi kafilah dari luar kota dan armada bus terkoordinasi.
 
 Panduan Perjalanan & Armada:
@@ -373,7 +373,7 @@ let DASHBOARD_CARDS = loadStoredCards();
 // PENGELOLA FOTO POLAROID GANTUNG, LOKASI & NARASI REGISTRASI
 // ===================================================================
 const DEFAULT_REGISTRATION_CONTENT = {
-  location: 'Rocket Convention Hall, Sleman, D.I. Yogyakarta',
+  location: 'Bumi Perkemahan Silaturahmi',
   kicker: 'KAFILAH & SAHABAT PASKAS',
   title: 'Silaturahmi Penuh Berkah di Alam Terbuka',
   narration: 'Silaturahmi Akbar Paskas Bahagia adalah ajang bertemunya hati para pejuang kebaikan, kafilah sedekah, dan keluarga besar dari penjuru tanah air. Mari daftarkan kehadiran Anda dan rombongan wilayah untuk menikmati kehangatan ukhuwah di tengah sejuknya alam asri.',
@@ -392,6 +392,11 @@ const DEFAULT_REGISTRATION_CONTENT = {
       img: 'images/paskas-berkah-smile.jpg',
       title: 'Berbagi Ceria',
       sub: 'Senyum Relawan Ummat'
+    },
+    {
+      img: 'images/paskas-relawan-banner.jpg',
+      title: 'Momen Bahagia 4',
+      sub: "Silaturahmi Akbar '26"
     }
   ]
 };
@@ -1284,6 +1289,7 @@ function openCardDetail(cardId) {
   // Aktifkan mode story di hero (tanpa scroll, in-place transition)
   const hero = document.getElementById('heroWrapper');
   if (hero) {
+    hero.classList.remove('announcement-active');
     hero.classList.add('story-active');
   }
 
@@ -2707,11 +2713,12 @@ function normalizePhoneNumber(phone) {
   return cleaned;
 }
 
-function checkDuplicateRegistration({ full_name, phone_number, wilayah, is_child, excludeId = null }) {
+function checkDuplicateRegistration({ full_name, phone_number, wilayah, is_child, excludeId = null, isGroupMember = false, leaderPhone = '' }) {
   if (!allRegistrations || !allRegistrations.length) return null;
 
   const targetName = (full_name || '').trim().toLowerCase();
   const targetPhone = normalizePhoneNumber(phone_number);
+  const normLeaderPhone = normalizePhoneNumber(leaderPhone);
   const targetWilayah = (wilayah || '').trim().toLowerCase();
 
   for (const reg of allRegistrations) {
@@ -2722,21 +2729,25 @@ function checkDuplicateRegistration({ full_name, phone_number, wilayah, is_child
     const existingWilayah = (reg.wilayah || '').trim().toLowerCase();
     const existingIsChild = reg.is_child || (reg.age && parseInt(reg.age, 10) < 15);
 
-    // Kriteria 1: Untuk dewasa (bukan anak-anak), nomor WhatsApp sama persis
-    if (!is_child && !existingIsChild && targetPhone && existingPhone && targetPhone.length >= 8 && targetPhone === existingPhone) {
-      return {
-        matchedBy: 'phone',
-        message: `Nomor WhatsApp ${phone_number} sudah terdaftar atas nama "${reg.full_name}".`,
-        existing: reg
-      };
-    }
-
-    // Kriteria 2: Nama Lengkap sama di Wilayah yang sama
+    // Kriteria 1: Nama Lengkap sama di Wilayah yang sama (atau nama sama persis)
     if (targetName && existingName && targetName === existingName) {
       if (!targetWilayah || !existingWilayah || targetWilayah === existingWilayah) {
         return {
           matchedBy: 'name_wilayah',
-          message: `Peserta dengan nama "${reg.full_name}" dari kafilah "${reg.wilayah}" sudah terdaftar sebelumnya.`,
+          message: `Peserta dengan nama "${reg.full_name}" dari kafilah "${reg.wilayah || 'Umum'}" sudah terdaftar sebelumnya.`,
+          existing: reg
+        };
+      }
+    }
+
+    // Kriteria 2: Untuk dewasa (bukan anak-anak), nomor WhatsApp sama persis
+    // PENTING: Jika anggota rombongan memakai nomor HP koordinator/ketua, jangan dianggap duplikat jika namanya berbeda!
+    const isSharedLeaderPhone = isGroupMember && normLeaderPhone && targetPhone === normLeaderPhone;
+    if (!is_child && !existingIsChild && targetPhone && existingPhone && targetPhone.length >= 8 && targetPhone === existingPhone) {
+      if (!isSharedLeaderPhone || targetName === existingName) {
+        return {
+          matchedBy: 'phone',
+          message: `Nomor WhatsApp ${phone_number} sudah terdaftar atas nama "${reg.full_name}".`,
           existing: reg
         };
       }
@@ -2745,6 +2756,144 @@ function checkDuplicateRegistration({ full_name, phone_number, wilayah, is_child
 
   return null;
 }
+
+// Mode Safe Preview: Membuka tiket untuk inspeksi tanpa mereset formulir yang sedang diisi
+window.isViewingTicketInSafeMode = false;
+
+function viewDuplicateTicketSafely(regCodeOrRecord) {
+  let record = null;
+  if (typeof regCodeOrRecord === 'object' && regCodeOrRecord !== null) {
+    record = regCodeOrRecord;
+  } else if (typeof regCodeOrRecord === 'string') {
+    record = (allRegistrations || []).find(r => r.registration_code === regCodeOrRecord);
+  }
+
+  if (!record) {
+    showToast('Data E-Tiket peserta tidak ditemukan.', 'warning');
+    return;
+  }
+
+  window.isViewingTicketInSafeMode = true;
+  showTicketModal(record);
+}
+
+// Validasi Cepat & Direct Ticket Preview untuk Formulir Individu
+let foundIndividualDupRecord = null;
+
+function checkIndividualDuplicateOnBlur() {
+  const phoneInput = document.getElementById('ind_phone');
+  const nameInput = document.getElementById('ind_fullName');
+  const noticeBox = document.getElementById('ind_dupPhoneNotice');
+  const noticeText = document.getElementById('ind_dupPhoneText');
+  const btnOpen = document.getElementById('ind_btnOpenDupTicket');
+  if (!phoneInput || !noticeBox) return;
+
+  const phone = phoneInput.value.trim();
+  const name = nameInput ? nameInput.value.trim() : '';
+  const wilayah = document.getElementById('ind_wilayah')?.value || '';
+
+  if (phone.length < 8 && name.length < 3) {
+    hideIndividualDuplicateNotice();
+    return;
+  }
+
+  const dup = checkDuplicateRegistration({
+    full_name: name,
+    phone_number: phone,
+    wilayah: wilayah,
+    is_child: false
+  });
+
+  if (dup) {
+    foundIndividualDupRecord = dup.existing;
+    if (noticeText) {
+      noticeText.innerHTML = `Data sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> (${escapeHtml(dup.existing.registration_code)})`;
+    }
+    if (btnOpen) {
+      btnOpen.onclick = () => {
+        showTicketModal(dup.existing);
+      };
+    }
+    noticeBox.style.display = 'block';
+  } else {
+    hideIndividualDuplicateNotice();
+  }
+}
+
+function hideIndividualDuplicateNotice() {
+  foundIndividualDupRecord = null;
+  const noticeBox = document.getElementById('ind_dupPhoneNotice');
+  if (noticeBox) noticeBox.style.display = 'none';
+}
+
+// Pengecekan Duplikasi Baris Rombongan secara Real-Time & Interaktif
+function checkSingleGroupMemberDuplicate(memberId) {
+  const card = document.getElementById(`memberCard-${memberId}`);
+  if (!card) return;
+
+  const nameInput = card.querySelector('.grp-member-name');
+  const phoneInput = card.querySelector('.grp-member-phone');
+  const name = nameInput ? nameInput.value.trim() : '';
+  const rawPhone = phoneInput ? phoneInput.value.trim() : '';
+  const leaderPhone = document.getElementById('grp_leaderPhone')?.value.trim() || '';
+  const defaultWilayah = document.getElementById('grp_defaultWilayah')?.value || '';
+  const wrap = document.getElementById(`dupWarningWrap-${memberId}`);
+
+  if (!name && !rawPhone) {
+    clearSingleGroupMemberWarning(memberId);
+    return;
+  }
+
+  const dup = checkDuplicateRegistration({
+    full_name: name,
+    phone_number: rawPhone || leaderPhone,
+    wilayah: defaultWilayah,
+    is_child: false,
+    isGroupMember: true,
+    leaderPhone: leaderPhone
+  });
+
+  if (dup) {
+    if (nameInput) nameInput.style.borderColor = '#f59e0b';
+    if (wrap) {
+      wrap.style.display = 'block';
+      wrap.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 4px; padding: 4px 8px; font-size: 11px; color: #fbbf24; margin-top: 5px;">
+          <span>
+            <i class="fa-solid fa-triangle-exclamation"></i> Sudah terdaftar: <strong>${escapeHtml(dup.existing.registration_code)}</strong> (${escapeHtml(dup.existing.full_name)})
+          </span>
+          <div style="display: flex; gap: 4px; flex-shrink: 0;">
+            <button type="button" onclick="viewDuplicateTicketSafely('${escapeHtml(dup.existing.registration_code)}')" style="background: #0284c7; color: #ffffff; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; font-weight: 600; cursor: pointer;" title="Lihat E-Tiket (Aman, form tidak akan ter-reset)">
+              <i class="fa-solid fa-ticket"></i> Cek Tiket
+            </button>
+            <button type="button" onclick="removeMemberCard(${memberId})" style="background: #ef4444; color: #ffffff; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; font-weight: 600; cursor: pointer;" title="Hapus peserta ini dari daftar rombongan">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  clearSingleGroupMemberWarning(memberId);
+}
+
+function clearSingleGroupMemberWarning(memberId) {
+  const card = document.getElementById(`memberCard-${memberId}`);
+  if (card) {
+    const nameInput = card.querySelector('.grp-member-name');
+    if (nameInput && nameInput.style.borderColor === 'rgb(245, 158, 11)') {
+      nameInput.style.borderColor = '';
+    }
+  }
+  const wrap = document.getElementById(`dupWarningWrap-${memberId}`);
+  if (wrap) {
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+  }
+}
+
 
 function showDuplicateModal(duplicateInfo) {
   const reg = duplicateInfo.existing;
@@ -3156,17 +3305,29 @@ function handleKelompokPreview(e) {
       phone_number: phone,
       wilayah: defaultWilayah,
       daerah: defaultDaerah,
-      is_child: isChild
+      is_child: isChild,
+      isGroupMember: true,
+      leaderPhone: leaderPhone
     });
 
     if (dupCheck) {
-      showToast(`Peserta "${name}" (baris ke-${idx + 1}) sudah pernah terdaftar sebelumnya dengan Nomor Registrasi: ${dupCheck.existing.registration_code}.`, 'error');
-      card.querySelector('.grp-member-name').focus();
+      showToast(`Peserta "${name}" (baris ke-${idx + 1}) sudah pernah terdaftar sebelumnya (${dupCheck.existing.registration_code}). Data anggota rombongan lainnya tetap aman di formulir.`, 'warning');
+      const nameInput = card.querySelector('.grp-member-name');
+      if (nameInput) {
+        nameInput.focus();
+        nameInput.style.borderColor = '#f59e0b';
+      }
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      checkSingleGroupMemberDuplicate(card.id.replace('memberCard-', ''));
       return;
     }
 
     const guardianSelect = card.querySelector('.grp-member-guardian');
     const guardianName = (isChild && guardianSelect) ? guardianSelect.value.trim() : '';
+
+    const rawJoinYear = card.querySelector('.grp-member-join-year')?.value;
+    const defaultJoinYear = document.getElementById('grp_joinYear')?.value || '';
+    const joinYear = parseInt(rawJoinYear || defaultJoinYear || String(new Date().getFullYear()), 10);
 
     const code = generateRegistrationCode('kelompok', idx);
     const alloc = autoAllocateRoomAndGroup(gender, isChild, guardianName, batchRecords);
@@ -3182,6 +3343,7 @@ function handleKelompokPreview(e) {
       building: alloc.building,
       full_name: name,
       age: age > 0 ? age : null,
+      join_year: joinYear > 0 ? joinYear : null,
       is_child: isChild,
       guardian_name: guardianName || null,
       gender: gender,
@@ -3213,6 +3375,7 @@ function handleKelompokPreview(e) {
           ` : ''}
         </td>
         <td style="text-align: center; font-weight: 600;">${age} th</td>
+        <td style="text-align: center; font-weight: 600; color: #38bdf8;">${joinYear > 0 ? joinYear : '-'}</td>
         <td>${escapeHtml(gender)}</td>
         <td><strong style="color: #fbbf24;">${cloth}</strong></td>
         <td>${escapeHtml(med || 'Sehat')}</td>
@@ -3289,6 +3452,7 @@ function handleKelompokPreview(e) {
                 <th style="width: 40px; text-align: center;">No</th>
                 <th>Nama Peserta</th>
                 <th style="width: 70px; text-align: center;">Usia</th>
+                <th style="width: 120px; text-align: center;">Tahun Bergabung Paskas</th>
                 <th>Gender</th>
                 <th>Baju</th>
                 <th>Riwayat Medis</th>
@@ -3385,6 +3549,23 @@ function initGroupMembers() {
     leaderInput.dataset.syncBound = 'true';
   }
 
+  // Bind input tahun bergabung koordinator agar otomatis menjadi default bagi baris anggota
+  const grpJoinYearInput = document.getElementById('grp_joinYear');
+  if (grpJoinYearInput && !grpJoinYearInput.dataset.syncBound) {
+    grpJoinYearInput.addEventListener('input', () => {
+      const val = grpJoinYearInput.value;
+      if (val && val.length === 4) {
+        document.querySelectorAll('.grp-member-join-year').forEach(inp => {
+          if (!inp.value || inp.dataset.autoFilled === 'true') {
+            inp.value = val;
+            inp.dataset.autoFilled = 'true';
+          }
+        });
+      }
+    });
+    grpJoinYearInput.dataset.syncBound = 'true';
+  }
+
   // Inisialisasi 3 baris bersih siap ketik langsung
   addGroupMemberCard();
   addGroupMemberCard();
@@ -3466,6 +3647,8 @@ function addGroupMemberCard(opts = {}) {
 
   const initialName = opts.name || '';
   const initialAge = opts.age !== undefined ? opts.age : '';
+  const defaultLeaderJoinYear = document.getElementById('grp_joinYear')?.value || '';
+  const initialJoinYear = opts.joinYear !== undefined ? opts.joinYear : (defaultLeaderJoinYear || new Date().getFullYear());
   const initialGender = opts.gender || 'Laki-laki';
   const initialCloth = opts.cloth || 'L';
   const initialMed = opts.med !== undefined ? opts.med : '';
@@ -3482,7 +3665,9 @@ function addGroupMemberCard(opts = {}) {
     <td>
       <input type="text" class="form-control form-control-sm grp-member-name" 
              placeholder="Nama lengkap peserta" value="${escapeHtml(initialName)}" 
-             oninput="syncAllGroupGuardians()" required>
+             oninput="syncAllGroupGuardians(); clearSingleGroupMemberWarning(${memberId});" 
+             onblur="checkSingleGroupMemberDuplicate(${memberId})" required>
+      <div class="grp-dup-warning-wrap" id="dupWarningWrap-${memberId}" style="display: none; margin-top: 5px;"></div>
       <div class="grp-child-guardian-wrap" id="guardianWrap-${memberId}" style="display: none; margin-top: 5px;">
         <div style="display: flex; align-items: center; gap: 5px; background: rgba(245, 158, 11, 0.12); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.35);">
           <span style="font-size: 10.5px; color: #fbbf24; white-space: nowrap; font-weight: 600;">
@@ -3498,6 +3683,13 @@ function addGroupMemberCard(opts = {}) {
       <input type="number" class="form-control form-control-sm grp-member-age" 
              placeholder="Usia" min="1" max="120" value="${escapeHtml(String(initialAge))}" 
              oninput="syncAllGroupGuardians(); updateGroupStats();" required title="Usia peserta (tahun)">
+    </td>
+    <td>
+      <input type="number" class="form-control form-control-sm grp-member-join-year" 
+             placeholder="Tahun" min="2000" max="${new Date().getFullYear()}" value="${escapeHtml(String(initialJoinYear))}" 
+             data-auto-filled="${initialJoinYear ? 'true' : 'false'}"
+             oninput="this.dataset.autoFilled = 'false';"
+             required title="Tahun pertama bergabung di Paskas">
     </td>
     <td>
       <select class="form-control form-control-sm grp-member-gender" onchange="syncAllGroupGuardians(); updateGroupStats();">
@@ -3523,7 +3715,8 @@ function addGroupMemberCard(opts = {}) {
     <td>
       <input type="tel" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm grp-member-phone" 
              placeholder="08xxxxxxxx" value="${escapeHtml(initialPhone)}"
-             oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+             onblur="checkSingleGroupMemberDuplicate(${memberId})"
+             oninput="this.value = this.value.replace(/[^0-9]/g, ''); clearSingleGroupMemberWarning(${memberId});">
     </td>
     <td>
       <input type="tel" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm grp-member-emergency" 
@@ -4083,7 +4276,14 @@ function closeTicketModal() {
     if (ctx) ctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
   }
 
-  // Anggap selesai dan arahkan langsung ke halaman dashboard (atau rekap jika admin)
+  // Jika tiket dibuka dalam Safe Preview Mode (misal saat cek anggota duplikat di form kelompok atau dari form isian):
+  if (window.isViewingTicketInSafeMode) {
+    window.isViewingTicketInSafeMode = false;
+    // JANGAN reset form dan JANGAN alihkan halaman! Form rombongan tetap utuh 100%.
+    return;
+  }
+
+  // Anggap selesai pendaftaran baru dan arahkan langsung ke halaman dashboard (atau rekap jika admin)
   if (typeof isAdminLoggedIn !== 'undefined' && isAdminLoggedIn) {
     navigateTo('rekap');
   } else {
@@ -4250,11 +4450,26 @@ async function sendTicketEmail() {
   showToast(`Sedang memproses pengiriman E-Tiket ke: ${destEmail}...`, 'info');
 
   try {
+    const googleScriptUrl = settings.google_email_script_url || '';
     const emailjsServiceId = settings.emailjs_service_id || '';
     const emailjsTemplateId = settings.emailjs_template_id || '';
     const emailjsPublicKey = settings.emailjs_public_key || '';
 
-    if (window.emailjs && emailjsPublicKey && emailjsServiceId && emailjsTemplateId) {
+    if (googleScriptUrl) {
+      await fetch(googleScriptUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          to_email: destEmail,
+          to_name: currentTicketRecord.full_name || 'Peserta',
+          subject: subject,
+          message: body,
+          registration_code: currentTicketRecord.registration_code || '-'
+        })
+      });
+      showToast(`Alhamdulillah! E-Tiket resmi terkirim dari paskasbahagia@gmail.com ke: ${destEmail}`, 'success');
+    } else if (window.emailjs && emailjsPublicKey && emailjsServiceId && emailjsTemplateId) {
       await window.emailjs.send(
         emailjsServiceId,
         emailjsTemplateId,
@@ -4269,15 +4484,22 @@ async function sendTicketEmail() {
       );
       showToast(`Alhamdulillah! E-Tiket resmi berhasil dikirim ke: ${destEmail}`, 'success');
     } else {
-      // Fallback Nyata & Pasti Berfungsi: Buka Gmail Web dengan email tujuan, subjek & narasi tiket otomatis terisi
+      // Fallback: Salin teks konfirmasi tiket otomatis ke clipboard & buka Gmail Web / Mailto
+      copyTicketConfirmationMessage(false);
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(destEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       const mailtoUrl = `mailto:${encodeURIComponent(destEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-      const win = window.open(gmailUrl, '_blank');
-      if (!win || win.closed || typeof win.closed === 'undefined') {
+      let opened = false;
+      try {
+        const win = window.open(gmailUrl, '_blank');
+        if (win && !win.closed) opened = true;
+      } catch (e) {
+        opened = false;
+      }
+      if (!opened) {
         window.location.href = mailtoUrl;
       }
-      showToast(`Membuka email untuk dikirimkan ke: ${destEmail}`, 'success');
+      showToast(`Membuka Gmail ke: ${destEmail}. Rincian tiket telah disalin ke clipboard! (Catatan: Hubungkan EmailJS di Pengaturan jika ingin kirim otomatis tanpa buka Gmail).`, 'info');
     }
 
     if (btn) {
@@ -4352,6 +4574,11 @@ window.stepGroupTicket = stepGroupTicket;
 window.switchGroupTicketMember = switchGroupTicketMember;
 window.showSingleTicketFromTable = showSingleTicketFromTable;
 window.copyTicketConfirmationMessage = copyTicketConfirmationMessage;
+window.viewDuplicateTicketSafely = viewDuplicateTicketSafely;
+window.checkSingleGroupMemberDuplicate = checkSingleGroupMemberDuplicate;
+window.clearSingleGroupMemberWarning = clearSingleGroupMemberWarning;
+window.checkIndividualDuplicateOnBlur = checkIndividualDuplicateOnBlur;
+window.hideIndividualDuplicateNotice = hideIndividualDuplicateNotice;
 
 // ===================================================================
 // 6. REKAP DATA & METRICS
@@ -5853,19 +6080,16 @@ function initSettingsPage(defaultTab = 'rekap', skipSwitchTab = false) {
   if (eventLocationInput) eventLocationInput.value = settings.event_location || '';
   if (eventDescInput) eventDescInput.value = settings.event_desc || '';
 
-  // Form Pengaturan Informasi Update / Pengumuman Dashboard
+  // Form Pengaturan Papan Informasi & Warta Pengumuman Dashboard
   const annEnabled = document.getElementById('cfg_announcementEnabled');
   const annLabel = document.getElementById('cfg_announcementStatusLabel');
-  const annTitle = document.getElementById('cfg_announcementTitle');
-  const annDate = document.getElementById('cfg_announcementDate');
-  const annText = document.getElementById('cfg_announcementText');
-
   const isAnnOn = settings.announcement_enabled !== 'false' && settings.announcement_enabled !== false && settings.announcement_enabled !== undefined;
   if (annEnabled) annEnabled.checked = isAnnOn;
   if (annLabel) annLabel.textContent = isAnnOn ? 'Aktif' : 'Nonaktif';
-  if (annTitle) annTitle.value = settings.announcement_title || 'Pengumuman & Update Acara';
-  if (annDate) annDate.value = settings.announcement_date || 'Update Terkini';
-  if (annText) annText.value = settings.announcement_text || '';
+  try {
+    setNowAnnouncementDate();
+    renderSettingsAnnouncementsList();
+  } catch (e) {}
 
   renderSettingsCardsManager();
   populateRegistrationContentSettings();
@@ -6285,18 +6509,11 @@ function applyEventInfoToUI(settings) {
       heroDesc.textContent = settings.event_desc;
     }
 
-    // 3. Badge Info Acara & Lokasi di Atas Headline Dashboard
+    // 3. Badge Info Acara di Atas Headline Dashboard (Lokasi Ditiadakan)
     const heroBadge = document.getElementById('heroEventBadge');
     if (heroBadge) {
-      const name = (settings.event_name || '').trim();
-      const loc = (settings.event_location || '').trim();
-      if (name && loc) {
-        heroBadge.textContent = `${name.toUpperCase()} • ${loc.toUpperCase()}`;
-      } else if (name) {
-        heroBadge.textContent = name.toUpperCase();
-      } else if (loc) {
-        heroBadge.textContent = loc.toUpperCase();
-      }
+      const name = (settings.event_name || 'Kumpul Keluarga Pasukan Amal Sholeh (Paskas)').trim();
+      heroBadge.textContent = name.toUpperCase();
     }
 
     // 4. Sinkronkan ke Info Lokasi di Halaman Registrasi
@@ -6334,31 +6551,244 @@ async function saveEventInfoSettings() {
 }
 
 // ===================================================================
-// PENGELOLA INFORMASI UPDATE TERBARU / PENGUMUMAN DI DASHBOARD
+// PENGELOLA PAPAN INFORMASI & WARTA PENGUMUMAN DI DASHBOARD (MULTI-ITEM)
 // ===================================================================
+const DEFAULT_ANNOUNCEMENTS = [
+  {
+    id: 'ann-1',
+    title: 'Informasi Penjemputan Peserta & Rute Armada Shuttle',
+    date: '20 Oktober 2026, 14:00 WIB',
+    category: 'Penjemputan & Transportasi',
+    content: 'Ahlan wa Sahlan para kafilah peserta! Panitia menyediakan armada bus penjemputan gratis di Bandara Internasional Yogyakarta (YIA) dan Stasiun Tugu / Lempuyangan. Mohon kafilah mengonfirmasi jadwal kedatangan kepada narahubung divisi transportasi.',
+    is_pinned: true
+  },
+  {
+    id: 'ann-2',
+    title: 'Pembagian Kamar & Ketentuan Pengambilan Seragam Resmi',
+    date: '18 Oktober 2026, 10:30 WIB',
+    category: 'Akomodasi & Seragam',
+    content: 'Bagi seluruh peserta yang telah menerima Boarding Pass resmi, pengambilan seragam kaos resmi Paskas Bahagia (Ikhwan) dan tunik (Akhwat) dapat dilakukan di Meja Registrasi Utama Gedung Convention Hall saat kedatangan.',
+    is_pinned: false
+  }
+];
+
+function loadStoredAnnouncements() {
+  const sanitizeDate = (d) => {
+    if (!d || d.includes('Update Terkini:') || d.trim() === '-') {
+      return '20 Oktober 2026, 14:00 WIB';
+    }
+    return d;
+  };
+
+  try {
+    const raw = localStorage.getItem('paskas_announcements_list');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(item => ({
+          ...item,
+          date: sanitizeDate(item.date)
+        }));
+      }
+    }
+  } catch (e) {}
+
+  const settings = window.dataService ? window.dataService.getSettings() : {};
+  if (settings.announcement_title && settings.announcement_text) {
+    return [
+      {
+        id: 'ann-1',
+        title: settings.announcement_title,
+        date: sanitizeDate(settings.announcement_date),
+        category: 'Pemberitahuan Penting',
+        content: settings.announcement_text,
+        is_pinned: true
+      }
+    ];
+  }
+  return [...DEFAULT_ANNOUNCEMENTS];
+}
+
+function formatCurrentAnnouncementDate() {
+  const now = new Date();
+  const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const day = now.getDate();
+  const month = months[now.getMonth()];
+  const year = now.getFullYear();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${day} ${month} ${year}, ${hours}:${minutes} WIB`;
+}
+
+function setNowAnnouncementDate() {
+  const inp = document.getElementById('ann_inputDate');
+  if (inp && !inp.value) {
+    inp.value = formatCurrentAnnouncementDate();
+  }
+}
+
 function renderAnnouncementUI() {
-  const section = document.getElementById('dashboardAnnouncementSection');
-  if (!section) return;
+  const container = document.getElementById('broadcastContainerInner');
+  const heroBtn = document.getElementById('heroAnnouncementBtn');
+  if (!container) return;
 
   const settings = window.dataService ? window.dataService.getSettings() : {};
   const isEnabled = settings.announcement_enabled !== 'false' && settings.announcement_enabled !== false;
-  const title = (settings.announcement_title || '').trim();
-  const text = (settings.announcement_text || '').trim();
-  const date = (settings.announcement_date || '').trim();
+  const announcements = loadStoredAnnouncements();
 
-  // Tampilkan hanya jika status aktif dan memiliki teks atau judul
-  if (isEnabled && (title || text)) {
-    section.style.display = 'block';
-    const titleEl = document.getElementById('announcementTitleDisplay');
-    const textEl = document.getElementById('announcementTextDisplay');
-    const dateEl = document.getElementById('announcementDateText');
+  if (isEnabled && announcements.length > 0) {
+    if (heroBtn) heroBtn.style.display = 'inline-flex';
 
-    if (titleEl) titleEl.textContent = title || 'Pengumuman & Update Acara';
-    if (textEl) textEl.textContent = text || '';
-    if (dateEl) dateEl.textContent = date || 'Update Terkini';
+    // Pengumuman paling atas adalah pengumuman TERBARU
+    const latest = announcements[0];
+    const previous = announcements.slice(1);
+
+    let html = `
+      <!-- Top Bar Full Width -->
+      <div class="broadcast-section-topbar">
+        <div class="broadcast-topbar-left">
+          <div class="broadcast-topbar-badge">
+            <span class="broadcast-pulse-dot"></span>
+            <i class="fa-solid fa-bullhorn text-gold"></i>
+            <span>PAPAN INFORMASI &amp; WARTA RESMI</span>
+          </div>
+          <h2 class="broadcast-topbar-title">Warta Pengumuman &amp; Arahan Kegiatan</h2>
+          <p class="broadcast-topbar-sub">Pantau informasi terbaru, perubahan jadwal, dan arahan teknis resmi dari Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia.</p>
+        </div>
+        <div class="broadcast-topbar-right">
+          <span class="broadcast-chip-live">
+            <span class="broadcast-pulse-dot green"></span> Update Panitia
+          </span>
+          <span class="broadcast-chip-count">
+            <i class="fa-solid fa-newspaper text-gold"></i> ${announcements.length} Warta Tersedia
+          </span>
+        </div>
+      </div>
+
+      <!-- Kartu Pengumuman Paling Baru (Featured Editorial Bulletin 3-Kolom) -->
+      <div class="broadcast-featured-card">
+        <div class="broadcast-banner-glow"></div>
+        <div class="broadcast-motif-overlay" aria-hidden="true"></div>
+        
+        <div class="broadcast-bulletin-grid">
+          <!-- Kolom 1: Tile Tanggal & Status Visual (Kiri) -->
+          <div class="broadcast-col-tile">
+            <div class="broadcast-tile-badge-wrap">
+              <span class="broadcast-badge-new">
+                <i class="fa-solid fa-sparkles"></i> TERBARU
+              </span>
+            </div>
+
+            <div class="broadcast-tile-datebox">
+              <div class="broadcast-tile-cal-icon">
+                <i class="fa-regular fa-calendar-check text-gold"></i>
+              </div>
+              <div class="broadcast-tile-date-info">
+                <span class="broadcast-tile-date-label">TANGGAL RILIS</span>
+                <span class="broadcast-tile-date-val">${escapeHtml(latest.date || '20 Oktober 2026, 14:00 WIB')}</span>
+              </div>
+            </div>
+
+            <div class="broadcast-tile-catbox">
+              <span class="broadcast-category-pill">
+                <i class="fa-solid fa-tag text-gold"></i> ${escapeHtml(latest.category || 'Pemberitahuan')}
+              </span>
+            </div>
+
+            <div class="broadcast-tile-badge-status">
+              <span class="broadcast-pulse-dot gold"></span>
+              <span>WARTA UTAMA</span>
+            </div>
+          </div>
+
+          <!-- Kolom 2: Judul, Isi Arahan Warta & Tombol Aksi (Kanan/Utama) -->
+          <div class="broadcast-col-main">
+            <div class="broadcast-main-kicker">
+              <span class="broadcast-kicker-tag">
+                <i class="fa-solid fa-bullhorn text-gold"></i> PENGUMUMAN RESMI
+              </span>
+              <span class="broadcast-kicker-sep">•</span>
+              <span class="broadcast-kicker-event">Panitia Silaturahmi Akbar Paskas</span>
+            </div>
+
+            <h3 class="broadcast-featured-title">${escapeHtml(latest.title || 'Pengumuman Resmi')}</h3>
+            
+            <div class="broadcast-featured-content-wrap">
+              <p class="broadcast-featured-text">${escapeHtml(latest.content || '')}</p>
+            </div>
+
+            <div class="broadcast-main-action-footer">
+              <div class="broadcast-main-footer-line">
+                <i class="fa-solid fa-circle-check text-green"></i>
+                <span>Arahan resmi Panitia Pelaksana. Harap disimak oleh seluruh kafilah &amp; koordinator rombongan.</span>
+              </div>
+              ${previous.length > 0 ? `
+              <div class="broadcast-footer-cta-group">
+                <button type="button" class="broadcast-btn-archive" onclick="document.getElementById('broadcastHistorySec')?.scrollIntoView({ behavior: 'smooth' })">
+                  <i class="fa-solid fa-clock-rotate-left text-gold"></i>
+                  <span>Lihat Arsip Warta</span>
+                </button>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Jika ada pengumuman sebelumnya, tampilkan di bawahnya dengan tanggal jelas
+    if (previous.length > 0) {
+      html += `
+        <div class="broadcast-history-section" id="broadcastHistorySec">
+          <div class="broadcast-history-heading">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Pengumuman &amp; Update Sebelumnya (${previous.length})</span>
+          </div>
+          <div class="broadcast-history-grid">
+            ${previous.map((item, idx) => `
+              <div class="broadcast-history-card">
+                <div class="broadcast-history-card-header">
+                  <span class="broadcast-date-badge" style="font-size: 11.5px; padding: 3px 10px;">
+                    <i class="fa-regular fa-calendar-days text-gold"></i> ${escapeHtml(item.date || '-')}
+                  </span>
+                  <span class="broadcast-category-badge" style="font-size: 11px; padding: 3px 8px;">
+                    ${escapeHtml(item.category || 'Umum')}
+                  </span>
+                </div>
+                <h4 class="broadcast-history-card-title">${escapeHtml(item.title || '')}</h4>
+                <p class="broadcast-history-card-desc">${escapeHtml(item.content || '')}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
   } else {
-    section.style.display = 'none';
+    if (heroBtn) heroBtn.style.display = 'none';
+    closeHeroAnnouncement();
   }
+}
+
+function openHeroAnnouncement() {
+  const hero = document.getElementById('heroWrapper');
+  if (hero) {
+    hero.classList.remove('story-active');
+    hero.classList.add('announcement-active');
+    hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function closeHeroAnnouncement() {
+  const hero = document.getElementById('heroWrapper');
+  if (hero) {
+    hero.classList.remove('announcement-active');
+  }
+}
+
+function scrollToAnnouncement() {
+  openHeroAnnouncement();
 }
 
 function toggleAnnouncementSetting(enabled) {
@@ -6366,38 +6796,241 @@ function toggleAnnouncementSetting(enabled) {
   if (label) label.textContent = enabled ? 'Aktif' : 'Nonaktif';
 }
 
-async function saveAnnouncementSettings() {
-  const enabledInput = document.getElementById('cfg_announcementEnabled');
-  const titleInput = document.getElementById('cfg_announcementTitle');
-  const dateInput = document.getElementById('cfg_announcementDate');
-  const textInput = document.getElementById('cfg_announcementText');
+let currentEditingAnnId = null;
 
-  const enabled = enabledInput ? enabledInput.checked : true;
-  const title = titleInput ? titleInput.value.trim() : '';
-  const date = dateInput ? dateInput.value.trim() : '';
-  const text = textInput ? textInput.value.trim() : '';
+function renderSettingsAnnouncementsList() {
+  const container = document.getElementById('settingsAnnouncementsList');
+  const countLabel = document.getElementById('settingsAnnCountLabel');
+  if (!container) return;
+
+  const list = loadStoredAnnouncements();
+  if (countLabel) countLabel.textContent = `${list.length} Pengumuman`;
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 13px;">
+        Belum ada pengumuman. Gunakan formulir di atas untuk menerbitkan pengumuman pertama.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map((item, idx) => {
+    const isLatest = idx === 0;
+    return `
+      <div class="settings-ann-item-box ${isLatest ? 'is-latest' : ''}">
+        <div class="settings-ann-item-header">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            ${isLatest ? `
+              <span class="settings-chip-badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px;">
+                <i class="fa-solid fa-sparkles"></i> #1 TERBARU
+              </span>
+            ` : `
+              <span class="settings-chip-badge" style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
+                #${idx + 1}
+              </span>
+            `}
+            <span style="font-size: 11.5px; color: #fbbf24; font-weight: 600;">
+              <i class="fa-regular fa-calendar-check"></i> ${escapeHtml(item.date || '-')}
+            </span>
+            <span style="font-size: 11px; background: rgba(255, 255, 255, 0.06); padding: 2px 8px; border-radius: 4px; color: #94a3b8;">
+              ${escapeHtml(item.category || 'Umum')}
+            </span>
+          </div>
+          <div class="settings-ann-item-actions">
+            <button type="button" class="btn btn-secondary btn-xs" onclick="editAnnouncementFromSettings('${escapeHtml(item.id)}')" style="padding: 3px 8px; font-size: 11px;" title="Edit Pengumuman">
+              <i class="fa-solid fa-pen-to-square"></i> Edit
+            </button>
+            <button type="button" class="btn btn-danger btn-xs" onclick="deleteAnnouncementFromSettings('${escapeHtml(item.id)}')" style="padding: 3px 8px; font-size: 11px;" title="Hapus Pengumuman">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+        <div style="font-size: 13.5px; font-weight: 700; color: #f8fafc; margin-bottom: 4px;">${escapeHtml(item.title || '')}</div>
+        <div style="font-size: 12px; color: #94a3b8; line-height: 1.5; max-height: 48px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.content || '')}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function saveSingleAnnouncementFromForm() {
+  const titleInp = document.getElementById('ann_inputTitle');
+  const dateInp = document.getElementById('ann_inputDate');
+  const catInp = document.getElementById('ann_inputCategory');
+  const textInp = document.getElementById('ann_inputText');
+  const editIdInp = document.getElementById('ann_editId');
+
+  const title = (titleInp?.value || '').trim();
+  const date = (dateInp?.value || '').trim() || formatCurrentAnnouncementDate();
+  const category = (catInp?.value || '').trim() || 'Pemberitahuan Penting';
+  const content = (textInp?.value || '').trim();
+  const editId = (editIdInp?.value || '').trim();
+
+  if (!title) {
+    showToast('Mohon masukkan judul pengumuman!', 'warning');
+    if (titleInp) titleInp.focus();
+    return;
+  }
+  if (!content) {
+    showToast('Mohon tuliskan isi/narasi pengumuman!', 'warning');
+    if (textInp) textInp.focus();
+    return;
+  }
+
+  let list = loadStoredAnnouncements();
+
+  if (editId) {
+    // Mode Update
+    const idx = list.findIndex(item => item.id === editId);
+    if (idx !== -1) {
+      list[idx] = {
+        ...list[idx],
+        title,
+        date,
+        category,
+        content
+      };
+      showToast('Perubahan pengumuman berhasil disimpan!', 'success');
+    }
+  } else {
+    // Mode Tambah Baru: Tempatkan di urutan teratas (idx 0 = Paling Baru!)
+    const newItem = {
+      id: 'ann-' + Date.now(),
+      title,
+      date,
+      category,
+      content,
+      is_pinned: true
+    };
+    list.unshift(newItem);
+    showToast('Pengumuman baru berhasil diterbitkan sebagai TERBARU!', 'success');
+  }
+
+  saveAnnouncementsToStorage(list);
+  cancelEditAnnouncement();
+  renderSettingsAnnouncementsList();
+  renderAnnouncementUI();
+}
+
+function editAnnouncementFromSettings(id) {
+  const list = loadStoredAnnouncements();
+  const item = list.find(x => x.id === id);
+  if (!item) return;
+
+  currentEditingAnnId = id;
+  const editIdInp = document.getElementById('ann_editId');
+  const titleInp = document.getElementById('ann_inputTitle');
+  const dateInp = document.getElementById('ann_inputDate');
+  const catInp = document.getElementById('ann_inputCategory');
+  const textInp = document.getElementById('ann_inputText');
+  const modeTitle = document.getElementById('annFormModeTitle');
+  const cancelBtn = document.getElementById('btnCancelEditAnn');
+  const saveBtnText = document.getElementById('btnSaveSingleAnnText');
+
+  if (editIdInp) editIdInp.value = item.id;
+  if (titleInp) titleInp.value = item.title || '';
+  if (dateInp) dateInp.value = item.date || '';
+  if (catInp) catInp.value = item.category || '';
+  if (textInp) textInp.value = item.content || '';
+
+  if (modeTitle) modeTitle.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit Pengumuman: ${escapeHtml(item.title)}`;
+  if (cancelBtn) cancelBtn.style.display = 'inline-block';
+  if (saveBtnText) saveBtnText.textContent = 'Simpan Perubahan';
+
+  if (titleInp) titleInp.focus();
+}
+
+function cancelEditAnnouncement() {
+  currentEditingAnnId = null;
+  const editIdInp = document.getElementById('ann_editId');
+  const titleInp = document.getElementById('ann_inputTitle');
+  const dateInp = document.getElementById('ann_inputDate');
+  const catInp = document.getElementById('ann_inputCategory');
+  const textInp = document.getElementById('ann_inputText');
+  const modeTitle = document.getElementById('annFormModeTitle');
+  const cancelBtn = document.getElementById('btnCancelEditAnn');
+  const saveBtnText = document.getElementById('btnSaveSingleAnnText');
+
+  if (editIdInp) editIdInp.value = '';
+  if (titleInp) titleInp.value = '';
+  if (dateInp) dateInp.value = formatCurrentAnnouncementDate();
+  if (catInp) catInp.value = '';
+  if (textInp) textInp.value = '';
+
+  if (modeTitle) modeTitle.innerHTML = `<i class="fa-solid fa-plus-circle"></i> Tambah Pengumuman Baru`;
+  if (cancelBtn) cancelBtn.style.display = 'none';
+  if (saveBtnText) saveBtnText.textContent = 'Terbitkan Pengumuman';
+}
+
+function deleteAnnouncementFromSettings(id) {
+  let list = loadStoredAnnouncements();
+  const item = list.find(x => x.id === id);
+  const title = item ? item.title : 'ini';
+
+  if (!confirm(`Apakah Anda yakin ingin menghapus pengumuman "${title}"?`)) return;
+
+  list = list.filter(x => x.id !== id);
+  saveAnnouncementsToStorage(list);
+
+  if (currentEditingAnnId === id) cancelEditAnnouncement();
+  renderSettingsAnnouncementsList();
+  renderAnnouncementUI();
+  showToast('Pengumuman berhasil dihapus!', 'info');
+}
+
+async function saveAllAnnouncementSettings() {
+  const enabledInput = document.getElementById('cfg_announcementEnabled');
+  const isEnabled = enabledInput ? enabledInput.checked : true;
+  const list = loadStoredAnnouncements();
+
+  await saveAnnouncementsToStorage(list, isEnabled);
+  renderAnnouncementUI();
+  showToast('Seluruh daftar pengumuman berhasil disimpan permanen ke Supabase!', 'success');
+}
+
+async function saveAnnouncementsToStorage(list, isEnabledOverride) {
+  try {
+    localStorage.setItem('paskas_announcements_list', JSON.stringify(list));
+  } catch (e) {}
+
+  const enabledInput = document.getElementById('cfg_announcementEnabled');
+  const isEnabled = isEnabledOverride !== undefined ? isEnabledOverride : (enabledInput ? enabledInput.checked : true);
 
   const payload = {
-    announcement_enabled: String(enabled),
-    announcement_title: title,
-    announcement_date: date,
-    announcement_text: text
+    announcement_enabled: String(isEnabled)
   };
+
+  if (list && list.length > 0) {
+    payload.announcement_title = list[0].title;
+    payload.announcement_date = list[0].date;
+    payload.announcement_text = list[0].content;
+  }
 
   if (window.dataService) {
     if (typeof window.dataService.saveSettings === 'function') {
       await window.dataService.saveSettings(payload);
     }
     if (typeof window.dataService.saveCloudSetting === 'function') {
+      await window.dataService.saveCloudSetting('paskas_announcements_list', list);
       for (const [k, v] of Object.entries(payload)) {
         await window.dataService.saveCloudSetting(k, v);
       }
     }
   }
-
-  renderAnnouncementUI();
-  showToast('Informasi update terbaru berhasil disimpan dan ditampilkan di Dashboard!', 'success');
 }
+
+window.renderAnnouncementUI = renderAnnouncementUI;
+window.openHeroAnnouncement = openHeroAnnouncement;
+window.closeHeroAnnouncement = closeHeroAnnouncement;
+window.scrollToAnnouncement = scrollToAnnouncement;
+window.toggleAnnouncementSetting = toggleAnnouncementSetting;
+window.setNowAnnouncementDate = setNowAnnouncementDate;
+window.saveSingleAnnouncementFromForm = saveSingleAnnouncementFromForm;
+window.editAnnouncementFromSettings = editAnnouncementFromSettings;
+window.cancelEditAnnouncement = cancelEditAnnouncement;
+window.deleteAnnouncementFromSettings = deleteAnnouncementFromSettings;
+window.saveAllAnnouncementSettings = saveAllAnnouncementSettings;
+window.renderSettingsAnnouncementsList = renderSettingsAnnouncementsList;
 
 // ===================================================================
 // MASTER KAMAR & KELOMPOK PESERTA (SETTINGS - GEDUNG, IKHWAN & AKHWAT)
@@ -7024,9 +7657,11 @@ function loadTicketTemplateSettings() {
   const emServiceInp = document.getElementById('cfg_emailjsServiceId');
   const emTemplateInp = document.getElementById('cfg_emailjsTemplateId');
   const emPublicInp = document.getElementById('cfg_emailjsPublicKey');
+  const scriptInp = document.getElementById('cfg_googleEmailScriptUrl');
   if (emServiceInp) emServiceInp.value = settings.emailjs_service_id || '';
   if (emTemplateInp) emTemplateInp.value = settings.emailjs_template_id || '';
   if (emPublicInp) emPublicInp.value = settings.emailjs_public_key || '';
+  if (scriptInp) scriptInp.value = settings.google_email_script_url || '';
 
   const tplImg = getValidTicketTemplateUrl(settings.ticket_template_image);
   
@@ -7278,6 +7913,7 @@ function saveTicketTemplateSettings() {
   const emServiceInp = document.getElementById('cfg_emailjsServiceId');
   const emTemplateInp = document.getElementById('cfg_emailjsTemplateId');
   const emPublicInp = document.getElementById('cfg_emailjsPublicKey');
+  const scriptInp = document.getElementById('cfg_googleEmailScriptUrl');
 
   window.dataService.saveSettings({
     ticket_template_image: finalImg,
@@ -7289,7 +7925,8 @@ function saveTicketTemplateSettings() {
     confirmation_email_body: bodyInp?.value || '',
     emailjs_service_id: emServiceInp?.value?.trim() || '',
     emailjs_template_id: emTemplateInp?.value?.trim() || '',
-    emailjs_public_key: emPublicInp?.value?.trim() || ''
+    emailjs_public_key: emPublicInp?.value?.trim() || '',
+    google_email_script_url: scriptInp?.value?.trim() || ''
   });
 
   showToast('Pengaturan template tiket dan narasi berhasil disimpan!', 'success');

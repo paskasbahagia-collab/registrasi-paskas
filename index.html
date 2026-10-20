@@ -33,7 +33,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=62.0">
+  <link rel="stylesheet" href="css/style.css?v=72.0">
 </head>
 <body>
 
@@ -113,7 +113,7 @@
           <div class="hero-left-column">
             <div class="hero-badge">
               <span class="badge-dot"></span>
-              <span id="heroEventBadge">SILATURAHMI AKBAR NASIONAL PASKAS 2026 • JOGJA</span>
+              <span id="heroEventBadge">KUMPUL KELUARGA PASUKAN AMAL SHOLEH (PASKAS)</span>
             </div>
 
             <h1 class="hero-headline" id="heroMainHeadline">
@@ -121,8 +121,7 @@
             </h1>
 
             <p class="hero-description" id="heroEventDesc">
-              Selamat datang di portal resmi registrasi peserta Silaturahmi Akbar Paskas Bahagia. 
-              Mari eratkan ukhuwah, satukan langkah perjuangan, dan hadirkan senyum bahagia untuk sesama.
+              Selamat datang di portal resmi registrasi Kumpul Keluarga PASKAS Bahagia. Mari pulang, berkumpul, dan saling menguatkan. Daftarkan dirimu untuk Kumpul Keluarga PASKAS Bahagia, 12–14 November 2026, Sleman, Yogyakarta. Kembali Menghadirkan Rasa dan Makna, Bertumbuh Sehat Bersama.
             </p>
 
             <!-- Registration Deadline Countdown Box -->
@@ -160,6 +159,10 @@
               <button class="btn btn-primary btn-glow" onclick="navigateTo('registration')">
                 <i class="fa-solid fa-ticket"></i>
                 <span>Daftar Sekarang</span>
+              </button>
+              <button type="button" class="btn btn-glass-gold" id="heroAnnouncementBtn" onclick="openHeroAnnouncement()" style="display: none;">
+                <i class="fa-solid fa-bullhorn text-gold"></i>
+                <span>Papan Informasi</span>
               </button>
             </div>
           </div>
@@ -232,31 +235,26 @@
               </div>
             </div>
           </div>
+        </div>
 
-        <!-- SEKSI INFORMASI UPDATE TERBARU (BROADCAST ANNOUNCEMENT) -->
-        <div class="dashboard-broadcast-section" id="dashboardAnnouncementSection" style="display: none;">
-          <div class="dashboard-broadcast-container">
-            <div class="broadcast-banner-card">
-              <div class="broadcast-banner-glow"></div>
-              <div class="broadcast-banner-header">
-                <div class="broadcast-banner-badge">
-                  <span class="broadcast-pulse-dot"></span>
-                  <i class="fa-solid fa-bullhorn text-gold"></i>
-                  <span id="announcementBadgeText">INFORMASI UPDATE TERBARU</span>
-                </div>
-                <div class="broadcast-banner-date" id="announcementDateDisplay">
-                  <i class="fa-regular fa-clock"></i> <span id="announcementDateText">Update Terkini</span>
-                </div>
-              </div>
-              <div class="broadcast-banner-body">
-                <h3 class="broadcast-banner-title" id="announcementTitleDisplay">Pengumuman & Update Acara</h3>
-                <p class="broadcast-banner-desc" id="announcementTextDisplay">Pantau informasi terbaru dan update penting seputar pelaksanaan kegiatan di sini.</p>
-              </div>
-            </div>
+        <!-- STATE 3: SEAMLESS IN-PLACE ANNOUNCEMENT REVEAL (Zero Scroll) -->
+        <div class="hero-announcement-container" id="heroAnnouncementContainer">
+          <!-- Top Floating Action Bar -->
+          <div class="announcement-top-bar">
+            <button type="button" class="btn btn-glass-gold btn-back-dashboard" onclick="closeHeroAnnouncement()">
+              <i class="fa-solid fa-arrow-left"></i>
+              <span>Kembali ke Halaman Utama</span>
+            </button>
+          </div>
+
+          <!-- Papan Informasi Container -->
+          <div class="dashboard-broadcast-container" id="broadcastContainerInner">
+            <!-- Diinjeksi dinamis melalui renderAnnouncementUI() -->
           </div>
         </div>
 
-      </div>
+      </div> <!-- Akhir .dashboard-hero-wrapper (#heroWrapper) -->
+
     </section>
 
     <!-- ===================================================== -->
@@ -361,6 +359,23 @@
                     <div class="hanging-caption">
                       <p class="h-title" id="hangingPhotoTitle_2">Berbagi Ceria</p>
                       <span class="h-sub" id="hangingPhotoSub_2">Senyum Relawan Ummat</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Photo 4: Momen Bahagia 4 -->
+                <div class="hanging-photo-item photo-sway-1" onclick="interactHangingPhoto(this)" title="Klik foto untuk suara krincing & goyangan!">
+                  <div class="hanging-peg">
+                    <div class="peg-wood"></div>
+                    <div class="peg-bell"><i class="fa-solid fa-bell"></i></div>
+                  </div>
+                  <div class="hanging-card">
+                    <div class="hanging-img-box">
+                      <img src="images/paskas-relawan-banner.jpg" alt="Momen Bahagia 4" class="hanging-img" id="hangingPhotoImg_3" onerror="this.src='images/paskas-polaroid.jpg'">
+                    </div>
+                    <div class="hanging-caption">
+                      <p class="h-title" id="hangingPhotoTitle_3">Momen Bahagia 4</p>
+                      <span class="h-sub" id="hangingPhotoSub_3">Silaturahmi Akbar '26</span>
                     </div>
                   </div>
                 </div>
@@ -679,7 +694,18 @@
                           </label>
                           <div class="input-with-icon">
                             <i class="fa-brands fa-whatsapp text-forest"></i>
-                            <input type="tel" id="ind_phone" name="phone" class="form-control" placeholder="Contoh: 081234567890" inputmode="numeric" pattern="[0-9]*" required onblur="checkEmergencyPhoneMatch(true)" oninput="this.value = this.value.replace(/[^0-9]/g, ''); checkEmergencyPhoneMatch(false)">
+                            <input type="tel" id="ind_phone" name="phone" class="form-control" placeholder="Contoh: 081234567890" inputmode="numeric" pattern="[0-9]*" required onblur="checkEmergencyPhoneMatch(true); checkIndividualDuplicateOnBlur();" oninput="this.value = this.value.replace(/[^0-9]/g, ''); checkEmergencyPhoneMatch(false); hideIndividualDuplicateNotice();">
+                          </div>
+                          <div id="ind_dupPhoneNotice" style="display: none; margin-top: 8px; font-size: 12.5px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 8px 12px; color: #a7f3d0; animation: fadeIn 0.3s ease;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                              <div>
+                                <i class="fa-solid fa-circle-check" style="color: #34d399; margin-right: 4px;"></i>
+                                <span id="ind_dupPhoneText">Nomor ini sudah terdaftar resmi.</span>
+                              </div>
+                              <button type="button" class="btn btn-xs" id="ind_btnOpenDupTicket" style="font-size: 11.5px; padding: 4px 10px; background: #10b981; color: white; border: none; border-radius: 5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                                <i class="fa-solid fa-ticket"></i> Buka E-Tiket Saya
+                              </button>
+                            </div>
                           </div>
                           <small class="form-hint"><i class="fa-solid fa-circle-info"></i> Nomor utama untuk grup koordinasi peserta (hanya angka).</small>
                         </div>
@@ -1147,7 +1173,7 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="grp_joinYear" class="form-label">Tahun Bergabung</label>
+                  <label for="grp_joinYear" class="form-label">Tahun Bergabung Paskas</label>
                   <input type="number" id="grp_joinYear" class="form-control" placeholder="Cth: 2021" min="2000" max="2026" title="Tahun pertama aktif di Paskas">
                 </div>
               </div>
@@ -1261,7 +1287,8 @@
                       <tr>
                         <th style="width: 44px; text-align: center;">No</th>
                         <th style="min-width: 190px;">Nama Lengkap Peserta <span class="required">*</span></th>
-                        <th style="width: 80px; text-align: center;">Usia <span class="required">*</span></th>
+                        <th style="width: 75px; text-align: center;">Usia <span class="required">*</span></th>
+                        <th style="min-width: 110px; text-align: center;">Tahun Bergabung Paskas <span class="required">*</span></th>
                         <th style="width: 125px;">Jenis Kelamin <span class="required">*</span></th>
                         <th style="width: 85px;">Ukuran Baju <span class="required">*</span></th>
                         <th style="min-width: 160px;">Riwayat Penyakit</th>
@@ -2874,16 +2901,16 @@ CREATE TABLE IF NOT EXISTS registrations (
 
                 <div class="form-divider" style="margin: 24px 0 20px;"></div>
 
-                <!-- Pengaturan Informasi Update / Pengumuman Terkini di Dashboard -->
-                <div class="settings-announcement-box" style="background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 18px; margin-bottom: 26px;">
-                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <!-- Pengaturan Papan Informasi & Warta Pengumuman di Dashboard -->
+                <div class="settings-announcement-box" style="background: rgba(15, 23, 42, 0.75); border: 1.5px solid rgba(245, 158, 11, 0.45); border-radius: 14px; padding: 20px; margin-bottom: 26px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                      <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; display: flex; align-items: center; justify-content: center; font-size: 16px;">
                         <i class="fa-solid fa-bullhorn"></i>
                       </div>
                       <div>
-                        <strong style="font-size: 14px; color: #f8fafc;">Informasi Tambahan / Update Terbaru (Dashboard)</strong>
-                        <div style="font-size: 11.5px; color: #94a3b8;">Tampilkan banner pengumuman & info update penting di bagian bawah dashboard</div>
+                        <strong style="font-size: 14.5px; color: #f8fafc;">Papan Informasi &amp; Pengumuman (Full Width Beranda)</strong>
+                        <div style="font-size: 11.5px; color: #94a3b8;">Kelola warta resmi panitia. Pengumuman paling atas otomatis ditandai dengan badge "TERBARU" dan tanggal rilis.</div>
                       </div>
                     </div>
                     <label class="switch-toggle" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -2893,25 +2920,83 @@ CREATE TABLE IF NOT EXISTS registrations (
                     </label>
                   </div>
 
-                  <div class="form-row col-2" style="margin-top: 10px;">
-                    <div class="form-group" style="margin-bottom: 10px;">
-                      <label class="form-label" style="font-size: 12px;">Judul Info / Pengumuman</label>
-                      <input type="text" id="cfg_announcementTitle" class="form-control" placeholder="Contoh: Update Penting Penjemputan Peserta">
+                  <!-- Form Input Tambah / Edit Pengumuman -->
+                  <div style="background: rgba(8, 14, 26, 0.6); border: 1px dashed rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                      <span style="font-size: 12px; font-weight: 700; color: #fbbf24;" id="annFormModeTitle">
+                        <i class="fa-solid fa-plus-circle"></i> Tambah Pengumuman Baru
+                      </span>
+                      <button type="button" class="btn btn-xs btn-outline-cyan" id="btnCancelEditAnn" onclick="cancelEditAnnouncement()" style="display: none; padding: 2px 8px; font-size: 11px;">
+                        Batal Edit
+                      </button>
                     </div>
-                    <div class="form-group" style="margin-bottom: 10px;">
-                      <label class="form-label" style="font-size: 12px;">Tanggal / Keterangan Waktu Update</label>
-                      <input type="text" id="cfg_announcementDate" class="form-control" placeholder="Contoh: Update Terkini: 20 Oktober 2026">
+
+                    <input type="hidden" id="ann_editId" value="">
+
+                    <div class="form-row col-2" style="margin-top: 6px;">
+                      <div class="form-group" style="margin-bottom: 10px;">
+                        <label class="form-label" style="font-size: 12px;">Judul Pengumuman *</label>
+                        <input type="text" id="ann_inputTitle" class="form-control" placeholder="Contoh: Rute Penjemputan Bandara &amp; Stasiun">
+                      </div>
+                      <div class="form-group" style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                          <label class="form-label" style="font-size: 12px; margin: 0;">Tanggal &amp; Waktu Update *</label>
+                          <button type="button" class="btn btn-xs" onclick="setNowAnnouncementDate()" style="font-size: 10.5px; color: #fbbf24; background: transparent; border: none; padding: 0; cursor: pointer;">
+                            <i class="fa-regular fa-clock"></i> Sekarang
+                          </button>
+                        </div>
+                        <input type="text" id="ann_inputDate" class="form-control" placeholder="Contoh: 20 Oktober 2026, 14:00 WIB" style="margin-top: 4px;">
+                      </div>
+                    </div>
+
+                    <div class="form-row col-2" style="margin-top: 0;">
+                      <div class="form-group" style="margin-bottom: 10px;">
+                        <label class="form-label" style="font-size: 12px;">Kategori / Tag Warta</label>
+                        <input type="text" id="ann_inputCategory" class="form-control" list="ann_cat_list" placeholder="Contoh: Penjemputan &amp; Transportasi">
+                        <datalist id="ann_cat_list">
+                          <option value="Penjemputan &amp; Transportasi">
+                          <option value="Pendaftaran &amp; Seragam">
+                          <option value="Akomodasi &amp; Kamar">
+                          <option value="Jadwal &amp; Rundown">
+                          <option value="Pemberitahuan Penting">
+                          <option value="Informasi Umum">
+                        </datalist>
+                      </div>
+                      <div class="form-group" style="margin-bottom: 10px; display: flex; align-items: flex-end;">
+                        <button type="button" class="btn btn-primary btn-sm" id="btnSaveSingleAnn" onclick="saveSingleAnnouncementFromForm()" style="width: 100%; height: 38px; font-weight: 700;">
+                          <i class="fa-solid fa-paper-plane"></i> <span id="btnSaveSingleAnnText">Terbitkan Pengumuman</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 4px;">
+                      <label class="form-label" style="font-size: 12px;">Isi / Narasi Pengumuman Lengkap *</label>
+                      <textarea id="ann_inputText" class="form-control" rows="3" placeholder="Tuliskan info perubahan rute, jadwal, lokasi temu, narahubung panitia, atau arahan jemaah..."></textarea>
                     </div>
                   </div>
 
-                  <div class="form-group" style="margin-bottom: 14px;">
-                    <label class="form-label" style="font-size: 12px;">Isi / Narasi Informasi Update Terbaru</label>
-                    <textarea id="cfg_announcementText" class="form-control" rows="3" placeholder="Tuliskan info perubahan jadwal, lokasi temu, rute penjemputan, atau pesan penting panitia..."></textarea>
+                  <!-- Daftar Pengumuman Tersimpan -->
+                  <div style="margin-bottom: 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                      <span style="font-size: 12px; font-weight: 700; color: #cbd5e1;">
+                        <i class="fa-solid fa-list-check text-gold"></i> Daftar Pengumuman Aktif (Teratas = Terkini / TERBARU)
+                      </span>
+                      <span style="font-size: 11px; color: #94a3b8;" id="settingsAnnCountLabel">0 Pengumuman</span>
+                    </div>
+
+                    <div id="settingsAnnouncementsList" style="max-height: 280px; overflow-y: auto;">
+                      <!-- Injected via JavaScript -->
+                    </div>
                   </div>
 
-                  <button type="button" class="btn btn-primary btn-sm" onclick="saveAnnouncementSettings()">
-                    <i class="fa-solid fa-floppy-disk"></i> Simpan Informasi Update Terbaru
-                  </button>
+                  <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="saveAllAnnouncementSettings()">
+                      <i class="fa-solid fa-floppy-disk"></i> Simpan Permanen ke Supabase
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="navigateTo('dashboard'); scrollToAnnouncement();">
+                      <i class="fa-solid fa-eye"></i> Lihat di Beranda
+                    </button>
+                  </div>
                 </div>
 
                 <div class="form-divider" style="margin: 28px 0 22px;"></div>
@@ -3138,6 +3223,12 @@ CREATE TABLE IF NOT EXISTS registrations (
                       <label class="form-label" style="font-size: 11px; margin-bottom: 4px;">Public Key (User ID)</label>
                       <input type="text" id="cfg_emailjsPublicKey" class="form-control" style="font-size: 12px;" placeholder="misal: aBcD1234_Key">
                     </div>
+                  </div>
+                  <div style="margin-top: 10px; border-top: 1px dashed rgba(2, 132, 199, 0.3); padding-top: 10px;">
+                    <label class="form-label" style="font-size: 11px; margin-bottom: 4px; color: #38bdf8;">
+                      <i class="fa-solid fa-code"></i> Atau URL Web App Google Apps Script (Gratis s/d 500 email/hari via paskasbahagia@gmail.com)
+                    </label>
+                    <input type="url" id="cfg_googleEmailScriptUrl" class="form-control" style="font-size: 12px;" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
                   </div>
                 </div>
 
@@ -3672,8 +3763,11 @@ CREATE TABLE IF NOT EXISTS registrations (
       </div>
 
       <div class="bp-actions-bar" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.12);">
-        <div>
-          <button type="button" class="btn btn-primary" onclick="sendTicketEmail()" id="btnSendTicketEmail" style="background: #0284c7; border: none; color: #ffffff; font-weight: 600; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary" onclick="sendTicketWhatsApp()" id="btnSendTicketWa" style="background: #25d366; border: none; color: #ffffff; font-weight: 600; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);">
+            <i class="fa-brands fa-whatsapp"></i> Kirim WhatsApp
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="sendTicketEmail()" id="btnSendTicketEmail" style="background: #0284c7; border: none; color: #ffffff; font-weight: 600; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
             <i class="fa-solid fa-envelope"></i> Kirim via Email
           </button>
         </div>
@@ -3681,7 +3775,7 @@ CREATE TABLE IF NOT EXISTS registrations (
           <button type="button" class="btn btn-accent" onclick="downloadTicketImage()" id="btnDownloadTicketPng" style="background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; border: none; font-weight: 600; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
             <i class="fa-solid fa-download"></i> Unduh E-Tiket (PNG)
           </button>
-          <button type="button" class="btn btn-primary" onclick="closeTicketModal(); if (typeof isAdminLoggedIn !== 'undefined' && isAdminLoggedIn) { navigateTo('rekap'); } else { navigateTo('dashboard'); }" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #1a1815; font-weight: 700; border: none; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);">
+          <button type="button" class="btn btn-primary" onclick="closeTicketModal()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #1a1815; font-weight: 700; border: none; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);">
             <i class="fa-solid fa-circle-check"></i> Selesai
           </button>
         </div>
@@ -3875,7 +3969,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=68.0"></script>
-  <script src="js/app.js?v=68.0"></script>
+  <script src="js/supabase-config.js?v=72.0"></script>
+  <script src="js/app.js?v=72.0"></script>
 </body>
 </html>

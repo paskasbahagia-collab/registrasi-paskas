@@ -63,7 +63,8 @@ VALUES
     ('is_registration_open', 'true', 'Status pendaftaran: true (buka) / false (tutup)'),
     ('event_name', 'Silaturahmi Akbar Pasukan Amal Sholeh (PASKAS) Bahagia', 'Nama kegiatan agenda'),
     ('event_location', 'Rocket Convention Hall, Sleman, D.I. Yogyakarta', 'Lokasi utama acara'),
-    ('event_date', '2026-11-10 s/d 2026-11-13', 'Tanggal pelaksanaan kegiatan')
+    ('event_date', '2026-11-10 s/d 2026-11-13', 'Tanggal pelaksanaan kegiatan'),
+    ('google_email_script_url', 'https://script.google.com/macros/s/AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A/exec', 'URL Apps Script Web App untuk pengiriman email otomatis dari paskasbahagia@gmail.com')
 ON CONFLICT (setting_key) DO UPDATE 
 SET setting_value = EXCLUDED.setting_value,
     description = EXCLUDED.description,
