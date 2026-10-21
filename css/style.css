@@ -9417,7 +9417,7 @@ input:checked + .slider:before {
   }
 
   /* ============================================================
-     ROMBONGAN: MOBILE CARD VIEW (OPSI 1)
+     ROMBONGAN: MOBILE VERTICAL CARD VIEW (SEMUA KE BAWAH)
      ============================================================ */
   .group-table-card-wrap .table-responsive {
     overflow-x: visible !important;
@@ -9439,45 +9439,73 @@ input:checked + .slider:before {
     width: 100% !important;
   }
 
+  /* Baris tabel berubah menjadi kartu vertikal utuh ke bawah */
+  .table-compact-members tbody tr.coord-card,
   .table-compact-members tbody tr.member-card {
     display: flex !important;
-    flex-wrap: wrap !important;
+    flex-direction: column !important;
     background: #ffffff !important;
-    border: 1.5px solid #dcd4c3 !important;
     border-radius: 16px !important;
-    padding: 16px 14px 14px 14px !important;
-    box-shadow: 0 4px 14px rgba(35, 66, 51, 0.06) !important;
+    padding: 16px 14px 16px 14px !important;
     position: relative !important;
-    gap: 10px 0 !important;
+    gap: 11px !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
 
-  /* Header Card: Nomor Peserta & Tombol Hapus */
-  .table-compact-members td:nth-child(1) {
-    order: 1 !important;
-    flex: 0 0 auto !important;
+  .table-compact-members tbody tr.coord-card {
+    border: 1.5px solid #d4af37 !important;
+    box-shadow: 0 4px 14px rgba(212, 175, 55, 0.12) !important;
+  }
+
+  .table-compact-members tbody tr.member-card {
+    border: 1.5px solid #dcd4c3 !important;
+    box-shadow: 0 4px 14px rgba(35, 66, 51, 0.06) !important;
+  }
+
+  /* Setiap sel td menjadi blok penuh 100% ke bawah */
+  .table-compact-members td {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
     padding: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
+    box-sizing: border-box !important;
   }
 
-  .table-compact-members td:nth-child(1)::after {
-    content: 'Peserta Rombongan';
-    font-family: 'Outfit', sans-serif;
-    font-weight: 700;
-    font-size: 13.5px;
-    color: #234233;
+  /* Input dan select di tampilan HP */
+  .table-compact-members td .form-control {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 9px 12px !important;
+    font-size: 14px !important;
+    border-radius: 10px !important;
+    text-align: left !important;
+    height: 42px !important;
   }
 
+  .table-compact-members td .grp-coord-age,
+  .table-compact-members td .grp-coord-join-year,
+  .table-compact-members td .grp-member-age,
+  .table-compact-members td .grp-member-join-year {
+    text-align: left !important;
+    padding: 9px 12px !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+  }
+
+  /* Tombol Hapus / Gembok diposisikan rapi di pojok kanan atas kartu */
   .table-compact-members td:last-child {
-    order: 2 !important;
-    flex: 0 0 auto !important;
-    margin-left: auto !important;
+    position: absolute !important;
+    top: 14px !important;
+    right: 14px !important;
+    width: auto !important;
     padding: 0 !important;
+    margin: 0 !important;
     display: flex !important;
     align-items: center !important;
+    z-index: 2 !important;
   }
 
   .table-compact-members td:last-child .btn-remove-row-sm {
@@ -9489,16 +9517,44 @@ input:checked + .slider:before {
     border-radius: 8px !important;
   }
 
-  /* Nama Lengkap: Full width */
-  .table-compact-members td:nth-child(2) {
-    order: 3 !important;
-    flex: 0 0 100% !important;
-    width: 100% !important;
-    padding: 4px 0 0 0 !important;
+  /* -------------------------------------------------------------
+     1. KHUSUS TABEL KOORDINATOR ROMBONGAN (#groupCoordinatorsTable)
+     ------------------------------------------------------------- */
+  #groupCoordinatorsTable td:nth-child(1) {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px dashed #e2d9c8 !important;
+    padding-right: 44px !important;
   }
 
-  .table-compact-members td:nth-child(2)::before {
-    content: 'Nama Lengkap Peserta *';
+  #groupCoordinatorsTable td:nth-child(1) > div {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  #groupCoordinatorsTable td:nth-child(1)::after {
+    content: 'Data Koordinator';
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 13.5px;
+    color: #b45309;
+  }
+
+  #groupCoordinatorsTable td:nth-child(2)::before {
+    content: 'Nama Lengkap Koordinator *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #854d0e;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  #groupCoordinatorsTable td:nth-child(3)::before {
+    content: 'Usia Koordinator *';
     display: block;
     font-size: 11.5px;
     font-weight: 700;
@@ -9507,32 +9563,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  /* Usia, Thn Bergabung & Gender bersebelahan */
-  .table-compact-members td:nth-child(3) {
-    order: 4 !important;
-    flex: 0 0 28% !important;
-    max-width: 28% !important;
-    padding: 0 4px 0 0 !important;
-  }
-
-  .table-compact-members td:nth-child(3)::before {
-    content: 'Usia *';
-    display: block;
-    font-size: 11.5px;
-    font-weight: 700;
-    color: #4b6354;
-    margin-bottom: 4px;
-    font-family: 'Outfit', sans-serif;
-  }
-
-  .table-compact-members td:nth-child(4) {
-    order: 5 !important;
-    flex: 0 0 34% !important;
-    max-width: 34% !important;
-    padding: 0 4px 0 0 !important;
-  }
-
-  .table-compact-members td:nth-child(4)::before {
+  #groupCoordinatorsTable td:nth-child(4)::before {
     content: 'Tahun Bergabung Paskas *';
     display: block;
     font-size: 11.5px;
@@ -9542,14 +9573,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  .table-compact-members td:nth-child(5) {
-    order: 6 !important;
-    flex: 0 0 38% !important;
-    max-width: 38% !important;
-    padding: 0 !important;
-  }
-
-  .table-compact-members td:nth-child(5)::before {
+  #groupCoordinatorsTable td:nth-child(5)::before {
     content: 'Jenis Kelamin *';
     display: block;
     font-size: 11.5px;
@@ -9559,15 +9583,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  /* Ukuran Baju */
-  .table-compact-members td:nth-child(6) {
-    order: 7 !important;
-    flex: 0 0 100% !important;
-    width: 100% !important;
-    padding: 0 !important;
-  }
-
-  .table-compact-members td:nth-child(6)::before {
+  #groupCoordinatorsTable td:nth-child(6)::before {
     content: 'Ukuran Baju *';
     display: block;
     font-size: 11.5px;
@@ -9577,15 +9593,107 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  /* Riwayat Medis */
-  .table-compact-members td:nth-child(7) {
-    order: 8 !important;
-    flex: 0 0 100% !important;
-    width: 100% !important;
-    padding: 0 !important;
+  #groupCoordinatorsTable td:nth-child(7)::before {
+    content: 'Riwayat Penyakit (Opsional)';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
   }
 
-  .table-compact-members td:nth-child(7)::before {
+  #groupCoordinatorsTable td:nth-child(8)::before {
+    content: 'No. WhatsApp Koordinator *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #854d0e;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  #groupCoordinatorsTable td:nth-child(9)::before {
+    content: 'Email Koordinator *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #854d0e;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* -------------------------------------------------------------
+     2. KHUSUS TABEL ANGGOTA ROMBONGAN (#groupMembersTable)
+     ------------------------------------------------------------- */
+  #groupMembersTable td:nth-child(1) {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px dashed #e2d9c8 !important;
+    padding-right: 44px !important;
+  }
+
+  #groupMembersTable td:nth-child(1)::after {
+    content: 'Peserta / Anggota Rombongan';
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 13.5px;
+    color: #234233;
+  }
+
+  #groupMembersTable td:nth-child(2)::before {
+    content: 'Nama Lengkap Peserta *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  #groupMembersTable td:nth-child(3)::before {
+    content: 'Usia Peserta *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  #groupMembersTable td:nth-child(4)::before {
+    content: 'Tahun Bergabung Paskas *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  #groupMembersTable td:nth-child(5)::before {
+    content: 'Jenis Kelamin *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  #groupMembersTable td:nth-child(6)::before {
+    content: 'Ukuran Baju *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  #groupMembersTable td:nth-child(7)::before {
     content: 'Riwayat Medis / Penyakit (Opsional)';
     display: block;
     font-size: 11.5px;
@@ -9595,15 +9703,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  /* No HP Peserta */
-  .table-compact-members td:nth-child(8) {
-    order: 9 !important;
-    flex: 0 0 100% !important;
-    width: 100% !important;
-    padding: 0 !important;
-  }
-
-  .table-compact-members td:nth-child(8)::before {
+  #groupMembersTable td:nth-child(8)::before {
     content: 'No. WhatsApp / HP (Opsional)';
     display: block;
     font-size: 11.5px;
@@ -9613,15 +9713,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  /* No HP Darurat */
-  .table-compact-members td:nth-child(9) {
-    order: 10 !important;
-    flex: 0 0 100% !important;
-    width: 100% !important;
-    padding: 0 !important;
-  }
-
-  .table-compact-members td:nth-child(9)::before {
+  #groupMembersTable td:nth-child(9)::before {
     content: 'No. WA Darurat (Opsional)';
     display: block;
     font-size: 11.5px;
