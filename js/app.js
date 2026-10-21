@@ -373,20 +373,20 @@ let DASHBOARD_CARDS = loadStoredCards();
 // PENGELOLA FOTO POLAROID GANTUNG, LOKASI & NARASI REGISTRASI
 // ===================================================================
 const DEFAULT_REGISTRATION_CONTENT = {
-  location: 'Bumi Perkemahan Silaturahmi',
+  location: 'Roket Convention Center',
   kicker: 'KAFILAH & SAHABAT PASKAS',
-  title: 'Silaturahmi Penuh Berkah di Alam Terbuka',
-  narration: 'Silaturahmi Akbar Paskas Bahagia adalah ajang bertemunya hati para pejuang kebaikan, kafilah sedekah, dan keluarga besar dari penjuru tanah air. Mari daftarkan kehadiran Anda dan rombongan wilayah untuk menikmati kehangatan ukhuwah di tengah sejuknya alam asri.',
+  title: 'Kumpul Keluarga Paskas Bahagia di Sleman, Yogyakarta',
+  narration: 'Mari pulang, berkumpul, dan saling menguatkan. Daftarkan dirimu untuk Kumpul Keluarga PASKAS Bahagia, Sleman, Yogyakarta. Kembali Menghadirkan Rasa dan Makna, Bertumbuh Sehat Bersama.',
   photos: [
     {
       img: 'images/paskas-polaroid.jpg',
       title: 'Sahabat Paskas',
-      sub: "Kafilah Silaturahmi '26"
+      sub: 'Menjalin Ukhuwah'
     },
     {
       img: 'images/paskas-camp-circle.jpg',
-      title: 'Kemah Ukhuwah',
-      sub: 'Malam Bintang di Alam'
+      title: 'Terus Bergerak',
+      sub: 'Peduli Sesama'
     },
     {
       img: 'images/paskas-berkah-smile.jpg',
@@ -395,8 +395,8 @@ const DEFAULT_REGISTRATION_CONTENT = {
     },
     {
       img: 'images/paskas-relawan-banner.jpg',
-      title: 'Momen Bahagia 4',
-      sub: "Silaturahmi Akbar '26"
+      title: 'Hadirkan Rasa',
+      sub: 'Tetap Bergerak'
     }
   ]
 };
@@ -409,9 +409,12 @@ function loadStoredRegistrationContent() {
       if (parsed && typeof parsed === 'object') {
         const savedSettings = window.dataService ? window.dataService.getSettings() : {};
         const fallbackLocation = savedSettings.event_location || DEFAULT_REGISTRATION_CONTENT.location;
+        const resolvedLocation = (parsed.location && parsed.location !== 'Bumi Perkemahan Silaturahmi') 
+          ? parsed.location 
+          : fallbackLocation;
 
         return {
-          location: parsed.location || fallbackLocation,
+          location: resolvedLocation,
           kicker: parsed.kicker || DEFAULT_REGISTRATION_CONTENT.kicker,
           title: parsed.title || DEFAULT_REGISTRATION_CONTENT.title,
           narration: parsed.narration || DEFAULT_REGISTRATION_CONTENT.narration,
@@ -9050,7 +9053,8 @@ async function handleHangingPhotoUploadDynamic(event, idx) {
 
   try {
     showToast('Memproses & mengompres foto kualitas tajam...', 'info');
-    const res = await compressImageFile(file, 1400, 0.85);
+    // Kompres ke resolusi optimal 900px agar tajam & sangat ringan disimpan ke Cloud Supabase
+    const res = await compressImageFile(file, 900, 0.8);
 
     const box = document.querySelector(`.settings-photo-box[data-photo-idx="${idx}"]`);
     if (box) {
@@ -9064,65 +9068,83 @@ async function handleHangingPhotoUploadDynamic(event, idx) {
       REGISTRATION_CONTENT.photos[idx].img = res.dataUrl;
     }
 
-    if (res.isLowRes) {
-      showToast(`⚠️ Peringatan: Resolusi gambar sumber agak kecil (${res.width}x${res.height}px).`, 'warning');
-    } else {
-      showToast(`Foto polaroid #${idx + 1} siap! Klik 'Simpan Lokasi, Narasi & Foto' untuk menerapkan.`, 'success');
-    }
+    showToast(`Foto polaroid #${idx + 1} siap! Klik 'Simpan Lokasi, Narasi & Foto' untuk menyimpan permanen ke Cloud.`, 'success');
   } catch (err) {
     console.error('Gagal upload foto polaroid:', err);
     showToast('Gagal memproses file foto. Pastikan format file gambar valid.', 'error');
   }
 }
 
-function saveRegistrationContent() {
-  const locationVal = (document.getElementById('cfg_regLocation')?.value || '').trim();
-  const kicker = (document.getElementById('cfg_regKicker')?.value || '').trim();
-  const title = (document.getElementById('cfg_regTitle')?.value || '').trim();
-  const narration = (document.getElementById('cfg_regNarration')?.value || '').trim();
-
-  // Ambil semua input foto yang dinamis
-  syncHangingPhotoInputsToState();
-
-  REGISTRATION_CONTENT = {
-    location: locationVal || DEFAULT_REGISTRATION_CONTENT.location,
-    kicker: kicker || DEFAULT_REGISTRATION_CONTENT.kicker,
-    title: title || DEFAULT_REGISTRATION_CONTENT.title,
-    narration: narration || DEFAULT_REGISTRATION_CONTENT.narration,
-    photos: Array.isArray(REGISTRATION_CONTENT.photos) && REGISTRATION_CONTENT.photos.length > 0 
-      ? REGISTRATION_CONTENT.photos 
-      : JSON.parse(JSON.stringify(DEFAULT_REGISTRATION_CONTENT.photos))
-  };
+async function saveRegistrationContent() {
+  const saveBtn = document.querySelector('button[onclick="saveRegistrationContent()"]');
+  let origText = '';
+  if (saveBtn) {
+    origText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan ke Cloud...';
+  }
 
   try {
-    localStorage.setItem('paskas_reg_content', JSON.stringify(REGISTRATION_CONTENT));
+    const locationVal = (document.getElementById('cfg_regLocation')?.value || '').trim();
+    const kicker = (document.getElementById('cfg_regKicker')?.value || '').trim();
+    const title = (document.getElementById('cfg_regTitle')?.value || '').trim();
+    const narration = (document.getElementById('cfg_regNarration')?.value || '').trim();
+
+    // Ambil semua input foto yang dinamis dari DOM
+    syncHangingPhotoInputsToState();
+
+    REGISTRATION_CONTENT = {
+      location: locationVal || DEFAULT_REGISTRATION_CONTENT.location,
+      kicker: kicker || DEFAULT_REGISTRATION_CONTENT.kicker,
+      title: title || DEFAULT_REGISTRATION_CONTENT.title,
+      narration: narration || DEFAULT_REGISTRATION_CONTENT.narration,
+      photos: Array.isArray(REGISTRATION_CONTENT.photos) && REGISTRATION_CONTENT.photos.length > 0 
+        ? REGISTRATION_CONTENT.photos 
+        : JSON.parse(JSON.stringify(DEFAULT_REGISTRATION_CONTENT.photos))
+    };
+
+    // 1. Simpan permanen ke Cloud Supabase dan TUNGGU sampai tuntas
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
-      window.dataService.saveCloudSetting('paskas_reg_content', REGISTRATION_CONTENT);
+      await window.dataService.saveCloudSetting('paskas_reg_content', REGISTRATION_CONTENT);
     }
+
+    // 2. Simpan ke LocalStorage sebagai cadangan cepat
+    try {
+      localStorage.setItem('paskas_reg_content', JSON.stringify(REGISTRATION_CONTENT));
+    } catch (lsErr) {
+      console.warn('LocalStorage limit reached, data tetap aman di Cloud Supabase:', lsErr);
+    }
+
+    // 3. Sinkronkan juga event_location di pengaturan sistem
+    if (window.dataService && typeof window.dataService.saveSettings === 'function') {
+      await window.dataService.saveSettings({ event_location: REGISTRATION_CONTENT.location });
+      const evLocInput = document.getElementById('cfg_eventLocation');
+      if (evLocInput) evLocInput.value = REGISTRATION_CONTENT.location;
+    }
+
+    renderRegistrationPageContent();
+    renderHangingPhotosSettingsManager();
+    showToast('Alhamdulillah! Lokasi, narasi & foto polaroid berhasil disimpan permanen ke Cloud Supabase!', 'success');
   } catch (e) {
-    console.warn('Gagal menyimpan paskas_reg_content:', e);
-    showToast('Penyimpanan lokal penuh. Coba gunakan link URL gambar.', 'error');
-    return;
+    console.error('Gagal menyimpan paskas_reg_content:', e);
+    showToast('Gagal menyimpan ke Cloud Supabase: ' + (e.message || e), 'error');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = origText;
+    }
   }
-
-  // Also sync event_location in settings if dataService exists
-  if (window.dataService && typeof window.dataService.saveSettings === 'function') {
-    window.dataService.saveSettings({ event_location: REGISTRATION_CONTENT.location });
-    const evLocInput = document.getElementById('cfg_eventLocation');
-    if (evLocInput) evLocInput.value = REGISTRATION_CONTENT.location;
-  }
-
-  renderRegistrationPageContent();
-  renderHangingPhotosSettingsManager();
-  showToast('Pengaturan lokasi, narasi & galeri foto polaroid berhasil disimpan!', 'success');
 }
 
-function resetRegistrationContent() {
+async function resetRegistrationContent() {
   if (confirm('Kembalikan lokasi, narasi dan galeri foto polaroid registrasi ke setelan awal?')) {
-    localStorage.removeItem('paskas_reg_content');
     REGISTRATION_CONTENT = JSON.parse(JSON.stringify(DEFAULT_REGISTRATION_CONTENT));
+    localStorage.removeItem('paskas_reg_content');
+    if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+      await window.dataService.saveCloudSetting('paskas_reg_content', REGISTRATION_CONTENT);
+    }
     if (window.dataService && typeof window.dataService.saveSettings === 'function') {
-      window.dataService.saveSettings({ event_location: DEFAULT_REGISTRATION_CONTENT.location });
+      await window.dataService.saveSettings({ event_location: DEFAULT_REGISTRATION_CONTENT.location });
       const evLocInput = document.getElementById('cfg_eventLocation');
       if (evLocInput) evLocInput.value = DEFAULT_REGISTRATION_CONTENT.location;
     }

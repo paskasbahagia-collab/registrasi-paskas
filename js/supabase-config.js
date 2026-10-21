@@ -768,11 +768,17 @@ class PaskasDataService {
             updated_at: new Date().toISOString()
           }
         ], { onConflict: 'setting_key' });
-        if (error) console.warn(`Supabase upsert ${key} error:`, error);
+        if (error) {
+          console.warn(`Supabase upsert ${key} error:`, error);
+          throw error;
+        }
+        return true;
       } catch (err) {
         console.warn(`Gagal simpan ${key} ke Supabase:`, err);
+        throw err;
       }
     }
+    return false;
   }
 }
 
