@@ -9422,7 +9422,8 @@ async function saveCardsFromSettings() {
   }
 
   const total = cardElements.length;
-  cardElements.forEach((el, idx) => {
+  for (let idx = 0; idx < total; idx++) {
+    const el = cardElements[idx];
     const isUniform = el.classList.contains('settings-card-uniform-mode') || 
                       (DASHBOARD_CARDS[idx] && (
                         DASHBOARD_CARDS[idx].id === 'card-4' ||
@@ -9492,7 +9493,7 @@ async function saveCardsFromSettings() {
       DASHBOARD_CARDS[idx].narration = narration;
       DASHBOARD_CARDS[idx].badge = `${String(idx + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
     }
-  });
+  }
 
   // Buat payload kartu yang ringkas dan bersih (tanpa HTML content lama) agar hemat kuota Supabase
   const cleanCardsPayload = DASHBOARD_CARDS.map(c => ({
