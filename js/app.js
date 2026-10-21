@@ -1522,15 +1522,10 @@ function renderHeroStoryContent(idx) {
     }
 
     if (card.narration && card.narration.trim()) {
-      const paras = card.narration.split('\n\n').filter(p => p.trim());
-      const pTags = paras.length > 0
-        ? paras.map(p => `<p style="margin-bottom: 12px; line-height: 1.7; color: #e2e8f0; font-size: 14.5px;">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('')
-        : `<p style="line-height: 1.7; color: #e2e8f0; font-size: 14.5px;">${escapeHtml(card.narration).replace(/\n/g, '<br>')}</p>`;
-
       bodyEl.innerHTML = `
         <div class="modal-rich-section">
-          <h4><i class="fa-solid fa-circle-info"></i> Informasi & Narasi Acara</h4>
-          ${pTags}
+          <h4><i class="fa-solid fa-circle-info"></i> Informasi &amp; Narasi Acara</h4>
+          ${renderFormattedNarrationHTML(card.narration)}
         </div>
       `;
     } else if (card.content) {
@@ -6954,7 +6949,7 @@ function loadStoredAnnouncements() {
     const raw = localStorage.getItem('paskas_announcements_list');
     if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map(item => ({
           ...item,
           date: sanitizeDate(item.date)
@@ -6964,7 +6959,7 @@ function loadStoredAnnouncements() {
   } catch (e) {}
 
   const settings = window.dataService ? window.dataService.getSettings() : {};
-  if (settings.announcement_title && settings.announcement_text) {
+  if (settings.announcement_title && settings.announcement_text && settings.announcement_title.trim() !== '') {
     return [
       {
         id: 'ann-1',
@@ -7223,12 +7218,13 @@ function renderSettingsAnnouncementsList() {
   }).join('');
 }
 
-function saveSingleAnnouncementFromForm() {
+async function saveSingleAnnouncementFromForm() {
   const titleInp = document.getElementById('ann_inputTitle');
   const dateInp = document.getElementById('ann_inputDate');
   const catInp = document.getElementById('ann_inputCategory');
   const textInp = document.getElementById('ann_inputText');
   const editIdInp = document.getElementById('ann_editId');
+  const saveBtn = document.getElementById('btnSaveSingleAnn');
 
   const title = (titleInp?.value || '').trim();
   const date = (dateInp?.value || '').trim() || formatCurrentAnnouncementDate();
@@ -7260,7 +7256,6 @@ function saveSingleAnnouncementFromForm() {
         category,
         content
       };
-      showToast('Perubahan pengumuman berhasil disimpan!', 'success');
     }
   } else {
     // Mode Tambah Baru: Tempatkan di urutan teratas (idx 0 = Paling Baru!)
@@ -7273,10 +7268,27 @@ function saveSingleAnnouncementFromForm() {
       is_pinned: true
     };
     list.unshift(newItem);
-    showToast('Pengumuman baru berhasil diterbitkan sebagai TERBARU!', 'success');
   }
 
-  saveAnnouncementsToStorage(list);
+  // Tampilkan loading saat proses simpan ke Cloud
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
+  }
+
+  try {
+    await saveAnnouncementsToStorage(list);
+    showToast(editId ? 'Perubahan pengumuman berhasil disimpan ke Supabase!' : 'Pengumuman baru berhasil diterbitkan & tersimpan ke Cloud!', 'success');
+  } catch (err) {
+    console.warn('Gagal sinkron pengumuman:', err);
+    showToast('Pengumuman tersimpan di lokal!', 'info');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span id="btnSaveSingleAnnText">Terbitkan Pengumuman</span>`;
+    }
+  }
+
   cancelEditAnnouncement();
   renderSettingsAnnouncementsList();
   renderAnnouncementUI();
@@ -7349,6 +7361,17 @@ async function deleteAnnouncementFromSettings(id) {
 }
 
 async function saveAllAnnouncementSettings() {
+  const titleInp = document.getElementById('ann_inputTitle');
+  const textInp = document.getElementById('ann_inputText');
+  const title = (titleInp?.value || '').trim();
+  const content = (textInp?.value || '').trim();
+
+  // Jika admin sedang mengisi formulir di atas lalu langsung klik tombol Simpan
+  if (title && content) {
+    await saveSingleAnnouncementFromForm();
+    return;
+  }
+
   const enabledInput = document.getElementById('cfg_announcementEnabled');
   const isEnabled = enabledInput ? enabledInput.checked : true;
   const list = loadStoredAnnouncements();
@@ -7380,9 +7403,6 @@ async function saveAnnouncementsToStorage(list, isEnabledOverride) {
     }
     if (typeof window.dataService.saveCloudSetting === 'function') {
       await window.dataService.saveCloudSetting('paskas_announcements_list', safeList);
-      for (const [k, v] of Object.entries(payload)) {
-        await window.dataService.saveCloudSetting(k, v);
-      }
     }
   }
 }
@@ -8396,6 +8416,193 @@ async function handleCardImageUpload(event, idx) {
   }
 }
 
+/* ===================================================================
+   HELPER FORMAT TEKS & REORDER KARTU INFORMASI DASHBOARD
+   =================================================================== */
+
+function renderFormattedNarrationHTML(rawText) {
+  if (!rawText) return '';
+  const paras = rawText.split(/\n\s*\n/).filter(p => p.trim());
+  return paras.map(para => {
+    let formatted = escapeHtml(para);
+    
+    // Decode safe allowed formatting tags
+    formatted = formatted.replace(/&lt;(\/?)b&gt;/gi, '<$1b>');
+    formatted = formatted.replace(/&lt;(\/?)strong&gt;/gi, '<$1strong>');
+    formatted = formatted.replace(/&lt;(\/?)i&gt;/gi, '<$1i>');
+    formatted = formatted.replace(/&lt;(\/?)em&gt;/gi, '<$1em>');
+    formatted = formatted.replace(/&lt;(\/?)u&gt;/gi, '<$1u>');
+    formatted = formatted.replace(/&lt;mark&gt;/gi, '<mark style="background: rgba(251, 191, 36, 0.25); color: #fbbf24; padding: 2px 6px; border-radius: 4px; font-weight: 700;">');
+    formatted = formatted.replace(/&lt;\/mark&gt;/gi, '</mark>');
+    formatted = formatted.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+
+    // Markdown syntax
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #ffffff; font-weight: 700;">$1</strong>');
+    formatted = formatted.replace(/\*(.+?)\*/g, '<em style="color: #fde68a;">$1</em>');
+    formatted = formatted.replace(/__(.+?)__/g, '<u style="text-decoration-color: #fbbf24;">$1</u>');
+
+    // Bullet points (• or - )
+    formatted = formatted.replace(/(^|<br>)([-•])\s*(.+?)(?=(<br>|$))/g, '$1<span style="display: inline-flex; align-items: baseline; gap: 6px; margin: 2px 0;"><i class="fa-solid fa-circle-check text-gold" style="font-size: 11px;"></i> <span>$3</span></span>');
+
+    // Line breaks within paragraph
+    formatted = formatted.replace(/\n/g, '<br>');
+
+    return `<p style="margin-bottom: 14px; line-height: 1.8; color: #e2e8f0; font-size: 15px;">${formatted}</p>`;
+  }).join('');
+}
+
+function applyTextFormatting(btnEl, formatType) {
+  const container = btnEl.closest('.form-group') || btnEl.closest('.settings-card-item-box') || btnEl.parentElement.parentElement;
+  const textarea = container ? container.querySelector('textarea') : null;
+  if (!textarea) return;
+
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const val = textarea.value;
+  const selectedText = val.substring(start, end);
+
+  let replacement = '';
+  let cursorOffset = 0;
+
+  switch (formatType) {
+    case 'bold':
+      replacement = selectedText ? `**${selectedText}**` : `**Teks Tebal**`;
+      cursorOffset = selectedText ? replacement.length : 2;
+      break;
+    case 'italic':
+      replacement = selectedText ? `*${selectedText}*` : `*Teks Miring*`;
+      cursorOffset = selectedText ? replacement.length : 1;
+      break;
+    case 'underline':
+      replacement = selectedText ? `<u>${selectedText}</u>` : `<u>Teks Garis Bawah</u>`;
+      cursorOffset = selectedText ? replacement.length : 3;
+      break;
+    case 'paragraph':
+      replacement = `\n\n`;
+      cursorOffset = 2;
+      break;
+    case 'bullet':
+      replacement = selectedText 
+        ? selectedText.split('\n').map(l => l.startsWith('• ') ? l : `• ${l}`).join('\n') 
+        : `\n• Poin penting: `;
+      cursorOffset = replacement.length;
+      break;
+    case 'highlight':
+      replacement = selectedText ? `<mark>${selectedText}</mark>` : `<mark>Teks Sorot</mark>`;
+      cursorOffset = selectedText ? replacement.length : 6;
+      break;
+    default:
+      return;
+  }
+
+  textarea.value = val.substring(0, start) + replacement + val.substring(end);
+  textarea.focus();
+  
+  if (selectedText) {
+    textarea.setSelectionRange(start, start + replacement.length);
+  } else {
+    const selLen = (formatType === 'bold' ? 10 : formatType === 'italic' ? 11 : formatType === 'underline' ? 16 : (formatType === 'highlight' ? 10 : 0));
+    textarea.setSelectionRange(start + cursorOffset, start + cursorOffset + selLen);
+  }
+
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function getFormattingToolbarHTML(hintText = 'Pilih kata lalu klik tombol format:') {
+  return `
+    <div class="narration-toolbar">
+      <div class="narration-toolbar-group">
+        <span style="font-size: 11px; font-weight: 700; color: #475569; margin-right: 4px; display: inline-flex; align-items: center; gap: 4px;">
+          <i class="fa-solid fa-pen-nib text-gold"></i> Format:
+        </span>
+        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'bold')" title="Tebalkan Tulisan (Bold: **teks**)">
+          <i class="fa-solid fa-bold"></i> <b>Tebal</b>
+        </button>
+        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'italic')" title="Miringkan Tulisan (Italic: *teks*)">
+          <i class="fa-solid fa-italic"></i> <i>Miring</i>
+        </button>
+        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'underline')" title="Garis Bawahi Tulisan (Underline: <u>teks</u>)">
+          <i class="fa-solid fa-underline"></i> <u>Garis Bawah</u>
+        </button>
+        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'paragraph')" title="Ganti Baris / Paragraf Baru (Enter)">
+          <i class="fa-solid fa-paragraph"></i> Baris Baru
+        </button>
+        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'bullet')" title="Tambahkan Simbol Poin (•)">
+          <i class="fa-solid fa-list-ul"></i> Poin (•)
+        </button>
+        <button type="button" class="btn-format-tool tool-highlight" onclick="applyTextFormatting(this, 'highlight')" title="Sorot Teks Warna Emas (<mark>)">
+          <i class="fa-solid fa-highlighter"></i> Sorot
+        </button>
+      </div>
+      <span style="font-size: 10.5px; color: #94a3b8; font-style: italic;">
+        ${hintText}
+      </span>
+    </div>
+  `;
+}
+
+function syncCardFormInputsToMemory() {
+  const cardElements = document.querySelectorAll('.settings-card-item-box');
+  if (!cardElements.length) return;
+  cardElements.forEach((el, idx) => {
+    if (!DASHBOARD_CARDS[idx]) return;
+    const title = el.querySelector('.card-input-title')?.value;
+    const category = el.querySelector('.card-input-category')?.value;
+    const subtitle = el.querySelector('.card-input-subtitle')?.value;
+    const cover = el.querySelector('.card-input-cover')?.value;
+    const narration = el.querySelector('.card-input-narration')?.value;
+
+    if (title !== undefined) DASHBOARD_CARDS[idx].title = title.trim();
+    if (category !== undefined) DASHBOARD_CARDS[idx].category = category.trim();
+    if (subtitle !== undefined) DASHBOARD_CARDS[idx].subtitle = subtitle.trim();
+    if (cover !== undefined) DASHBOARD_CARDS[idx].coverImg = cover.trim();
+    if (narration !== undefined) DASHBOARD_CARDS[idx].narration = narration.trim();
+  });
+}
+
+function updateCardBadges() {
+  const total = DASHBOARD_CARDS.length;
+  DASHBOARD_CARDS.forEach((c, i) => {
+    c.badge = `${String(i + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
+  });
+}
+
+function moveCardUp(idx) {
+  if (idx <= 0) return;
+  syncCardFormInputsToMemory();
+  const temp = DASHBOARD_CARDS[idx];
+  DASHBOARD_CARDS[idx] = DASHBOARD_CARDS[idx - 1];
+  DASHBOARD_CARDS[idx - 1] = temp;
+  updateCardBadges();
+  renderSettingsCardsManager();
+  renderDashboardCards();
+  showToast(`Kartu "${DASHBOARD_CARDS[idx - 1].title}" digeser naik ke Posisi #${idx}`, 'info');
+}
+
+function moveCardDown(idx) {
+  if (idx >= DASHBOARD_CARDS.length - 1) return;
+  syncCardFormInputsToMemory();
+  const temp = DASHBOARD_CARDS[idx];
+  DASHBOARD_CARDS[idx] = DASHBOARD_CARDS[idx + 1];
+  DASHBOARD_CARDS[idx + 1] = temp;
+  updateCardBadges();
+  renderSettingsCardsManager();
+  renderDashboardCards();
+  showToast(`Kartu "${DASHBOARD_CARDS[idx + 1].title}" digeser turun ke Posisi #${idx + 2}`, 'info');
+}
+
+function moveCardToPosition(fromIdx, targetIdx) {
+  targetIdx = parseInt(targetIdx, 10);
+  if (isNaN(targetIdx) || fromIdx === targetIdx || targetIdx < 0 || targetIdx >= DASHBOARD_CARDS.length) return;
+  syncCardFormInputsToMemory();
+  const [movedCard] = DASHBOARD_CARDS.splice(fromIdx, 1);
+  DASHBOARD_CARDS.splice(targetIdx, 0, movedCard);
+  updateCardBadges();
+  renderSettingsCardsManager();
+  renderDashboardCards();
+  showToast(`Kartu "${movedCard.title}" berhasil dipindahkan ke Posisi #${targetIdx + 1}!`, 'success');
+}
+
 function renderSettingsCardsManager() {
   const container = document.getElementById('settingsCardsList');
   if (!container) return;
@@ -8407,27 +8614,55 @@ function renderSettingsCardsManager() {
                           (card.title && card.title.toLowerCase().includes('seragam')) ||
                           (card.category && card.category.toLowerCase().includes('atribut'));
 
+    const orderControlsHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <div class="card-order-controls">
+          <span style="font-size: 11px; font-weight: 700; color: #475569; margin-right: 4px; display: inline-flex; align-items: center; gap: 3px;">
+            <i class="fa-solid fa-arrow-down-up-across-line text-gold"></i> Urutan:
+          </span>
+          <select onchange="moveCardToPosition(${idx}, this.value)" style="font-size: 11.5px; font-weight: 700; padding: 3px 6px; border: 1px solid #e2e8f0; border-radius: 5px; background: #f8fafc; color: #1e293b; cursor: pointer;" title="Pindahkan urutan kartu ini">
+            ${DASHBOARD_CARDS.map((_, pIdx) => `
+              <option value="${pIdx}" ${pIdx === idx ? 'selected' : ''}>
+                Posisi #${pIdx + 1} ${pIdx === 0 ? '(Utama / #1)' : ''}
+              </option>
+            `).join('')}
+          </select>
+          <button type="button" class="btn-order-arrow" onclick="moveCardUp(${idx})" ${idx === 0 ? 'disabled' : ''} title="Geser Naik (1 tingkat lebih awal)">
+            <i class="fa-solid fa-arrow-up"></i>
+          </button>
+          <button type="button" class="btn-order-arrow" onclick="moveCardDown(${idx})" ${idx === DASHBOARD_CARDS.length - 1 ? 'disabled' : ''} title="Geser Turun (1 tingkat lebih akhir)">
+            <i class="fa-solid fa-arrow-down"></i>
+          </button>
+        </div>
+
+        ${DASHBOARD_CARDS.length > 1 ? `
+          <button type="button" class="btn-remove-card-item" onclick="removeCardFromSettings(${idx})" title="Hapus kartu ini" style="background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        ` : ''}
+      </div>
+    `;
+
     if (isUniformCard) {
       return `
         <div class="settings-card-item-box settings-card-uniform-mode" data-card-idx="${idx}">
-          <div class="settings-card-box-header">
-            <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+          <div class="settings-card-box-header" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px;">
               <img src="${card.coverImg || uniforms.ikhwanImg || card.thumbImg}" class="settings-card-preview-thumb" alt="${card.title}" onerror="this.src='images/seragam-ikhwan.jpg'">
               <div>
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                  <div class="settings-card-box-title">Kartu #${idx + 1}: ${escapeHtml(card.title)}</div>
+                  <span class="settings-chip-badge" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 6px;">
+                    #${idx + 1}
+                  </span>
+                  <div class="settings-card-box-title">${escapeHtml(card.title)}</div>
                   <span class="settings-chip-badge" style="background: rgba(217, 119, 6, 0.15); color: #d97706; border: 1px solid rgba(217, 119, 6, 0.35); font-weight: 700; font-size: 11px;">
-                    <i class="fa-solid fa-shirt"></i> Khusus Baju Ikhwan &amp; Akhwat
+                    <i class="fa-solid fa-shirt"></i> Khusus Baju
                   </span>
                 </div>
                 <span style="font-size: 11.5px; color: #94a3b8;">${escapeHtml(card.category)}</span>
               </div>
             </div>
-            ${DASHBOARD_CARDS.length > 1 ? `
-              <button type="button" class="btn-remove-card-item" onclick="removeCardFromSettings(${idx})" title="Hapus kartu ini">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
-            ` : ''}
+            ${orderControlsHTML}
           </div>
 
           <div class="form-row col-2" style="margin-top: 6px;">
@@ -8500,7 +8735,8 @@ function renderSettingsCardsManager() {
 
                 <div class="form-group" style="margin: 0;">
                   <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px;">Narasi Khusus Baju Ikhwan</label>
-                  <textarea class="form-control card-uniform-ikhwan-desc" rows="3" placeholder="Tuliskan spesifikasi bahan, warna, sablon khusus ikhwan..." style="padding: 6px 10px; font-size: 12px; line-height: 1.45; resize: vertical;">${escapeHtml(uniforms.ikhwanDesc)}</textarea>
+                  ${getFormattingToolbarHTML('Pilih teks lalu format:')}
+                  <textarea class="form-control card-uniform-ikhwan-desc textarea-with-toolbar" rows="6" placeholder="Tuliskan spesifikasi bahan, warna, sablon khusus ikhwan..." style="padding: 10px 12px; font-size: 13px; line-height: 1.5; min-height: 140px; resize: vertical;">${escapeHtml(uniforms.ikhwanDesc)}</textarea>
                 </div>
               </div>
 
@@ -8540,7 +8776,8 @@ function renderSettingsCardsManager() {
 
                 <div class="form-group" style="margin: 0;">
                   <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px;">Narasi Khusus Baju Akhwat</label>
-                  <textarea class="form-control card-uniform-akhwat-desc" rows="3" placeholder="Tuliskan spesifikasi tunik panjang syar'i, bahan, aksen emas..." style="padding: 6px 10px; font-size: 12px; line-height: 1.45; resize: vertical;">${escapeHtml(uniforms.akhwatDesc)}</textarea>
+                  ${getFormattingToolbarHTML('Pilih teks lalu format:')}
+                  <textarea class="form-control card-uniform-akhwat-desc textarea-with-toolbar" rows="6" placeholder="Tuliskan spesifikasi tunik panjang syar'i, bahan, aksen emas..." style="padding: 10px 12px; font-size: 13px; line-height: 1.5; min-height: 140px; resize: vertical;">${escapeHtml(uniforms.akhwatDesc)}</textarea>
                 </div>
               </div>
             </div>
@@ -8566,19 +8803,20 @@ function renderSettingsCardsManager() {
 
     return `
       <div class="settings-card-item-box" data-card-idx="${idx}">
-        <div class="settings-card-box-header">
-          <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+        <div class="settings-card-box-header" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px;">
             <img src="${card.coverImg || card.thumbImg}" class="settings-card-preview-thumb" alt="${card.title}" onerror="this.src='images/rocket-convention-hall-card.jpg'">
             <div>
-              <div class="settings-card-box-title">Kartu #${idx + 1}: ${escapeHtml(card.title)}</div>
+              <div class="settings-card-box-title" style="display: flex; align-items: center; gap: 8px;">
+                <span class="settings-chip-badge" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 6px;">
+                  #${idx + 1}
+                </span>
+                <span>${escapeHtml(card.title)}</span>
+              </div>
               <span style="font-size: 11.5px; color: #94a3b8;">${escapeHtml(card.category)}</span>
             </div>
           </div>
-          ${DASHBOARD_CARDS.length > 1 ? `
-            <button type="button" class="btn-remove-card-item" onclick="removeCardFromSettings(${idx})" title="Hapus kartu ini">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          ` : ''}
+          ${orderControlsHTML}
         </div>
 
         <div class="form-row col-2" style="margin-top: 6px;">
@@ -8612,8 +8850,9 @@ function renderSettingsCardsManager() {
         </div>
 
         <div class="form-group" style="margin: 0;">
-          <label class="form-label" style="font-size: 12px;">Narasi / Penjelasan Lengkap (Muncul Saat Kartu Dibuka)</label>
-          <textarea class="form-control card-input-narration" rows="4" placeholder="Tuliskan narasi lengkap agenda, fasilitas, atau panduan acara..." style="padding: 8px 12px; font-size: 12.5px; line-height: 1.5; resize: vertical;">${escapeHtml(card.narration || '')}</textarea>
+          <label class="form-label" style="font-size: 12px; margin-bottom: 5px;">Narasi / Penjelasan Lengkap (Muncul Saat Kartu Dibuka)</label>
+          ${getFormattingToolbarHTML()}
+          <textarea class="form-control card-input-narration textarea-with-toolbar" rows="8" placeholder="Tuliskan narasi lengkap agenda, fasilitas, atau panduan acara..." style="padding: 12px 14px; font-size: 13.5px; line-height: 1.6; min-height: 200px; resize: vertical;">${escapeHtml(card.narration || '')}</textarea>
         </div>
       </div>
     `;
@@ -9441,4 +9680,11 @@ function initAntiInspectGuard() {
 // Inisialisasi perlindungan otomatis saat skrip dimuat
 initAdminActivityTracker();
 initAntiInspectGuard();
+
+// Export fungsi pembantu format teks narasi & pengatur urutan kartu
+window.renderFormattedNarrationHTML = renderFormattedNarrationHTML;
+window.applyTextFormatting = applyTextFormatting;
+window.moveCardUp = moveCardUp;
+window.moveCardDown = moveCardDown;
+window.moveCardToPosition = moveCardToPosition;
 

@@ -1302,10 +1302,10 @@
                       <tr>
                         <th style="width: 44px; text-align: center;">No</th>
                         <th style="min-width: 190px;">Nama Lengkap Peserta <span class="required">*</span></th>
-                        <th style="width: 75px; text-align: center;">Usia <span class="required">*</span></th>
-                        <th style="min-width: 110px; text-align: center;">Tahun Bergabung Paskas <span class="required">*</span></th>
-                        <th style="width: 125px;">Jenis Kelamin <span class="required">*</span></th>
-                        <th style="width: 85px;">Ukuran Baju <span class="required">*</span></th>
+                        <th style="min-width: 88px; width: 92px; text-align: center;">Usia <span class="required">*</span></th>
+                        <th style="min-width: 120px; width: 125px; text-align: center;">Tahun Bergabung Paskas <span class="required">*</span></th>
+                        <th style="min-width: 130px; width: 135px;">Jenis Kelamin <span class="required">*</span></th>
+                        <th style="min-width: 90px; width: 95px;">Ukuran Baju <span class="required">*</span></th>
                         <th style="min-width: 160px;">Riwayat Penyakit</th>
                         <th style="min-width: 135px;">No. WA Peserta</th>
                         <th style="min-width: 135px;">No. WA Darurat</th>
@@ -3033,8 +3033,36 @@ CREATE TABLE IF NOT EXISTS registrations (
                   </div>
 
                   <div class="form-group" style="margin-bottom: 4px;">
-                    <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">Isi / Narasi Pengumuman Lengkap *</label>
-                    <textarea id="ann_inputText" class="form-control" rows="3" placeholder="Tuliskan info perubahan rute, jadwal, lokasi temu, narahubung panitia, atau arahan jemaah..."></textarea>
+                    <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815; margin-bottom: 5px;">Isi / Narasi Pengumuman Lengkap *</label>
+                    <div class="narration-toolbar">
+                      <div class="narration-toolbar-group">
+                        <span style="font-size: 11px; font-weight: 700; color: #475569; margin-right: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                          <i class="fa-solid fa-pen-nib text-gold"></i> Format:
+                        </span>
+                        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'bold')" title="Tebalkan Tulisan (Bold: **teks**)">
+                          <i class="fa-solid fa-bold"></i> <b>Tebal</b>
+                        </button>
+                        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'italic')" title="Miringkan Tulisan (Italic: *teks*)">
+                          <i class="fa-solid fa-italic"></i> <i>Miring</i>
+                        </button>
+                        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'underline')" title="Garis Bawahi Tulisan (Underline: <u>teks</u>)">
+                          <i class="fa-solid fa-underline"></i> <u>Garis Bawah</u>
+                        </button>
+                        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'paragraph')" title="Ganti Baris / Paragraf Baru (Enter)">
+                          <i class="fa-solid fa-paragraph"></i> Baris Baru
+                        </button>
+                        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'bullet')" title="Tambahkan Simbol Poin (•)">
+                          <i class="fa-solid fa-list-ul"></i> Poin (•)
+                        </button>
+                        <button type="button" class="btn-format-tool tool-highlight" onclick="applyTextFormatting(this, 'highlight')" title="Sorot Teks Warna Emas (<mark>)">
+                          <i class="fa-solid fa-highlighter"></i> Sorot
+                        </button>
+                      </div>
+                      <span style="font-size: 10.5px; color: #94a3b8; font-style: italic;">
+                        Pilih kata lalu klik tombol format
+                      </span>
+                    </div>
+                    <textarea id="ann_inputText" class="form-control textarea-with-toolbar" rows="6" placeholder="Tuliskan info perubahan rute, jadwal, lokasi temu, narahubung panitia, atau arahan jemaah..." style="min-height: 140px; padding: 12px 14px; font-size: 13.5px; line-height: 1.6; resize: vertical;"></textarea>
                   </div>
                 </div>
 
