@@ -63,7 +63,7 @@ Tiket boarding pass resmi Anda telah diterbitkan. Silakan simpan / cetak tiket i
 
 Jazakumullahu Khairan Katsiran,
 Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`,
-  google_email_script_url: 'https://script.google.com/macros/s/AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A/exec',
+  google_email_script_url: '',
   announcement_enabled: 'true',
   announcement_title: 'Pengumuman & Update Acara',
   announcement_date: '20 Oktober 2026, 14:00 WIB',

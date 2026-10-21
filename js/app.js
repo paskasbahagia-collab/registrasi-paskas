@@ -3228,9 +3228,6 @@ async function handleIndividuFinalSubmit(e) {
     // Show official E-Tiket Modal
     showTicketModal(saved);
 
-    // Kirim konfirmasi email otomatis di latar belakang jika tersedia
-    sendAutoRegistrationEmail(saved);
-
     // Refresh data rekap
     await loadAndRenderRegistrations();
   } catch (err) {
@@ -3579,7 +3576,6 @@ async function confirmAndSubmitRegistration() {
       // Tampilkan tiket satu per satu untuk seluruh peserta rombongan
       if (savedBatch && savedBatch.length > 0) {
         showTicketModal(savedBatch, 0);
-        savedBatch.forEach(item => sendAutoRegistrationEmail(item));
       }
 
       await loadAndRenderRegistrations();
@@ -4147,6 +4143,10 @@ function showTicketModal(recordOrBatch, initialIndex = 0) {
   const modal = document.getElementById('ticketModal');
   if (!modal || !recordOrBatch) return;
 
+  // Pastikan tombol WhatsApp yang telah dihapus tidak muncul
+  const waBtn = document.getElementById('btnSendTicketWa');
+  if (waBtn) waBtn.remove();
+
   if (Array.isArray(recordOrBatch)) {
     currentTicketBatch = recordOrBatch;
   } else {
@@ -4472,36 +4472,6 @@ function sendTicketWhatsApp() {
   window.open(waUrl, '_blank');
   showToast(`Membuka WhatsApp untuk mengirim tiket ke No: ${phone}`, 'success');
 }
-window.sendTicketWhatsApp = sendTicketWhatsApp;
-
-function sendAutoRegistrationEmail(record) {
-  if (!record || !record.email) return;
-  try {
-    const settings = window.dataService ? window.dataService.getSettings() : {};
-    const scriptUrl = settings.google_email_script_url || '';
-    if (!scriptUrl) return;
-
-    const subject = settings.confirmation_email_subject || `[E-TIKET RESMI] Silaturahmi Akbar Paskas Bahagia - ${record.registration_code}`;
-    const body = buildConfirmationMessage(record);
-
-    fetch(scriptUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        to_email: record.email,
-        email: record.email,
-        to_name: record.full_name || 'Peserta',
-        name: record.full_name || 'Peserta',
-        subject: subject,
-        message: body,
-        body: body,
-        registration_code: record.registration_code || '-'
-      })
-    }).catch(e => console.warn('Auto send email error:', e));
-  } catch (e) {}
-}
-
 async function sendTicketEmail() {
   if (!currentTicketRecord) {
     showToast('Tidak ada data tiket yang sedang aktif.', 'warning');
@@ -4531,18 +4501,18 @@ async function sendTicketEmail() {
   const originalText = btn ? btn.innerHTML : '';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim E-Tiket...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan Email...';
   }
-
-  showToast(`Sedang memproses pengiriman E-Tiket ke: ${destEmail}...`, 'info');
 
   try {
     const googleScriptUrl = settings.google_email_script_url || '';
     const emailjsServiceId = settings.emailjs_service_id || '';
     const emailjsTemplateId = settings.emailjs_template_id || '';
     const emailjsPublicKey = settings.emailjs_public_key || '';
+    const isDummyScript = !googleScriptUrl || googleScriptUrl.includes('AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A');
 
-    if (googleScriptUrl) {
+    if (googleScriptUrl && !isDummyScript) {
+      showToast(`Mengirim E-Tiket via Google Apps Script ke: ${destEmail}...`, 'info');
       await fetch(googleScriptUrl, {
         method: 'POST',
         mode: 'no-cors',
@@ -4574,8 +4544,7 @@ async function sendTicketEmail() {
       );
       showToast(`Alhamdulillah! E-Tiket resmi berhasil dikirim ke: ${destEmail}`, 'success');
     } else {
-      // Fallback: Salin teks konfirmasi tiket otomatis ke clipboard & buka Gmail Web / Mailto
-      copyTicketConfirmationMessage(false);
+      // Buka Gmail Web / aplikasi Email dengan tujuan, subjek, dan tiket yang sudah otomatis terisi
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(destEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       const mailtoUrl = `mailto:${encodeURIComponent(destEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
@@ -4589,7 +4558,7 @@ async function sendTicketEmail() {
       if (!opened) {
         window.location.href = mailtoUrl;
       }
-      showToast(`Membuka Gmail ke: ${destEmail}. Rincian tiket telah disalin ke clipboard! (Catatan: Hubungkan EmailJS di Pengaturan jika ingin kirim otomatis tanpa buka Gmail).`, 'info');
+      showToast(`Membuka Gmail ke: ${destEmail}. Rincian tiket telah disalin ke clipboard!`, 'info');
     }
 
     if (btn) {
