@@ -2077,6 +2077,169 @@ function escapeHtml(str) {
 }
 
 // ===================================================================
+// ===================================================================
+// PAS FOTO PESERTA: COMPRESSION & UPLOAD HANDLERS
+// ===================================================================
+let ind_selectedPhotoData = null;
+
+function compressImageFile(file, maxWidth = 800, maxHeight = 1000, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      reject(new Error('File yang dipilih bukan gambar valid.'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error('Gagal memuat gambar untuk dikompresi.'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleIndividuPhotoSelected(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  try {
+    showToast('Memproses dan mengoptimalkan pas foto...', 'info');
+    const compressed = await compressImageFile(file, 800, 1000, 0.82);
+    ind_selectedPhotoData = compressed;
+
+    const previewSlot = document.getElementById('ind_photoPreviewSlot');
+    const emptyState = document.getElementById('ind_photoEmptyState');
+    const previewImg = document.getElementById('ind_photoPreviewImg');
+    const btnRemove = document.getElementById('ind_btnRemovePhoto');
+    const btnLabel = document.getElementById('ind_btnPhotoLabel');
+
+    if (emptyState) emptyState.style.display = 'none';
+    if (previewImg) {
+      previewImg.src = compressed;
+      previewImg.style.display = 'block';
+    }
+    if (btnRemove) btnRemove.style.display = 'inline-flex';
+    if (btnLabel) btnLabel.textContent = 'Ganti Foto';
+
+    showToast('Pas foto berhasil diunggah dan siap dicetak pada E-Tiket.', 'success');
+  } catch (err) {
+    showToast('Gagal memproses foto: ' + err.message, 'error');
+  }
+}
+
+function removeIndividuPhoto() {
+  ind_selectedPhotoData = null;
+  const input = document.getElementById('ind_photoInput');
+  if (input) input.value = '';
+
+  const emptyState = document.getElementById('ind_photoEmptyState');
+  const previewImg = document.getElementById('ind_photoPreviewImg');
+  const btnRemove = document.getElementById('ind_btnRemovePhoto');
+  const btnLabel = document.getElementById('ind_btnPhotoLabel');
+
+  if (emptyState) emptyState.style.display = 'flex';
+  if (previewImg) {
+    previewImg.src = '';
+    previewImg.style.display = 'none';
+  }
+  if (btnRemove) btnRemove.style.display = 'none';
+  if (btnLabel) btnLabel.textContent = 'Pilih / Ambil Foto';
+  showToast('Pas foto telah dihapus.', 'info');
+}
+
+function triggerRowPhotoUpload(type, id) {
+  const input = document.getElementById(`${type}PhotoInput-${id}`);
+  if (input) input.click();
+}
+
+async function handleRowPhotoSelected(e, type, id) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  try {
+    const compressed = await compressImageFile(file, 750, 950, 0.80);
+    const hiddenInput = document.getElementById(`${type}PhotoData-${id}`);
+    if (hiddenInput) hiddenInput.value = compressed;
+
+    const slot = document.getElementById(`${type}PhotoSlot-${id}`);
+    if (slot) {
+      slot.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+          <img src="${compressed}" class="cell-photo-thumb" onclick="openPhotoPreviewLightbox('${compressed.replace(/'/g, "\\'")}', 'Peserta #${id}')" title="Klik untuk lihat foto">
+          <i class="fa-solid fa-circle-xmark" style="color: #ef4444; font-size: 14px; cursor: pointer;" onclick="removeRowPhoto('${type}', ${id})" title="Hapus foto"></i>
+        </div>
+      `;
+    }
+    showToast('Foto peserta berhasil dipasang.', 'success');
+  } catch (err) {
+    showToast('Gagal memproses foto: ' + err.message, 'error');
+  }
+}
+
+function removeRowPhoto(type, id) {
+  const hiddenInput = document.getElementById(`${type}PhotoData-${id}`);
+  if (hiddenInput) hiddenInput.value = '';
+  const fileInput = document.getElementById(`${type}PhotoInput-${id}`);
+  if (fileInput) fileInput.value = '';
+
+  const slot = document.getElementById(`${type}PhotoSlot-${id}`);
+  if (slot) {
+    slot.innerHTML = `
+      <button type="button" class="cell-photo-btn" onclick="triggerRowPhotoUpload('${type}', ${id})" title="Unggah Pas Foto">
+        <i class="fa-solid fa-camera"></i> +Foto
+      </button>
+    `;
+  }
+}
+
+function openPhotoPreviewLightbox(imgSrc, name = 'Peserta') {
+  if (!imgSrc) return;
+  const modal = document.getElementById('photoPreviewLightboxModal');
+  const imgEl = document.getElementById('photoLightboxImg');
+  const titleEl = document.getElementById('photoLightboxTitle');
+  if (imgEl) imgEl.src = imgSrc;
+  if (titleEl) titleEl.textContent = `Pas Foto: ${name}`;
+  if (modal) modal.classList.add('active');
+}
+
+function closePhotoPreviewLightbox(e) {
+  if (e && e.target && e.target !== e.currentTarget && !e.target.classList.contains('btn-close-modal-sm') && !e.target.closest('.btn-close-modal-sm') && !e.target.classList.contains('btn-secondary')) {
+    return;
+  }
+  const modal = document.getElementById('photoPreviewLightboxModal');
+  if (modal) modal.classList.remove('active');
+}
+
+window.handleIndividuPhotoSelected = handleIndividuPhotoSelected;
+window.removeIndividuPhoto = removeIndividuPhoto;
+window.triggerRowPhotoUpload = triggerRowPhotoUpload;
+window.handleRowPhotoSelected = handleRowPhotoSelected;
+window.removeRowPhoto = removeRowPhoto;
+window.openPhotoPreviewLightbox = openPhotoPreviewLightbox;
+window.closePhotoPreviewLightbox = closePhotoPreviewLightbox;
+
 // PROGRESSIVE STEP WIZARD & ANSWER PREVIEW LOGIC (Form Individu)
 // ===================================================================
 let currentIndividuStep = 1;
@@ -3419,6 +3582,7 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
       transport_departure: transportDeparture,
       cloth_size: clothSize,
       medical_history: medical || 'Tidak Ada (Sehat)',
+      photo_url: ind_selectedPhotoData || null,
       notes: ''
     };
 
@@ -3430,6 +3594,7 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
 
     showToast(`Alhamdulillah! Pendaftaran berhasil dengan No. Registrasi: ${saved.registration_code}`, 'success');
     document.getElementById('formIndividu').reset();
+    removeIndividuPhoto();
     setDefaultDates();
     selectMedicalStatus('healthy');
     const detailMed = document.getElementById('ind_medical_detail');
@@ -3632,6 +3797,7 @@ function handleKelompokPreview(e) {
       transport_departure: defaultTransport,
       cloth_size: cloth,
       medical_history: med || 'Tidak Ada',
+      photo_url: (card.querySelector('.grp-coord-photo-data')?.value.trim() || null),
       phone_number: phone,
       email: email,
       notes: ''
@@ -3748,6 +3914,7 @@ function handleKelompokPreview(e) {
       transport_departure: defaultTransport,
       cloth_size: cloth,
       medical_history: med || 'Tidak Ada',
+      photo_url: (card.querySelector('.grp-member-photo-data')?.value.trim() || null),
       phone_number: phone,
       email: primaryLeaderEmail || null,
       notes: `Rombongan: ${groupName} (Ketua: ${primaryLeaderName})${guardianName ? ' • Ikut Ortu: ' + guardianName : ''}`
@@ -4021,6 +4188,7 @@ function addGroupCoordinatorCard(opts = {}) {
   const initialMed = opts.med !== undefined ? opts.med : '';
   const initialPhone = opts.phone || '';
   const initialEmail = opts.email || '';
+  const initialPhoto = opts.photo || '';
 
   const tr = document.createElement('tr');
   tr.className = 'coord-card coord-row-item';
@@ -4033,6 +4201,22 @@ function addGroupCoordinatorCard(opts = {}) {
           <i class="fa-solid fa-crown text-gold"></i> ${isPrimary ? 'Utama' : 'Pendamping'}
         </span>
       </div>
+    </td>
+    <td style="text-align: center; vertical-align: middle;">
+      <div id="coordPhotoSlot-${coordId}">
+        ${initialPhoto ? `
+          <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+            <img src="${initialPhoto}" class="cell-photo-thumb" onclick="openPhotoPreviewLightbox('${initialPhoto.replace(/'/g, "\\'")}', 'Koordinator #${coordId}')" title="Klik untuk lihat foto">
+            <i class="fa-solid fa-circle-xmark" style="color: #ef4444; font-size: 14px; cursor: pointer;" onclick="removeRowPhoto('coord', ${coordId})" title="Hapus foto"></i>
+          </div>
+        ` : `
+          <button type="button" class="cell-photo-btn" onclick="triggerRowPhotoUpload('coord', ${coordId})" title="Unggah Pas Foto Koordinator">
+            <i class="fa-solid fa-camera"></i> +Foto
+          </button>
+        `}
+      </div>
+      <input type="file" id="coordPhotoInput-${coordId}" accept="image/*" style="display: none;" onchange="handleRowPhotoSelected(event, 'coord', ${coordId})">
+      <input type="hidden" class="grp-coord-photo-data" id="coordPhotoData-${coordId}" value="${escapeHtml(initialPhoto)}">
     </td>
     <td>
       <input type="text" class="form-control form-control-sm grp-coord-name" 
@@ -4235,6 +4419,7 @@ function addGroupMemberCard(opts = {}) {
   const initialMed = opts.med !== undefined ? opts.med : '';
   const initialPhone = opts.phone || '';
   const initialEmergency = opts.emergency || '';
+  const initialPhoto = opts.photo || '';
 
   const tr = document.createElement('tr');
   tr.className = 'member-card member-row-item';
@@ -4242,6 +4427,22 @@ function addGroupMemberCard(opts = {}) {
   tr.innerHTML = `
     <td style="text-align: center; vertical-align: middle;">
       <span class="member-num-badge">${memberId}</span>
+    </td>
+    <td style="text-align: center; vertical-align: middle;">
+      <div id="memberPhotoSlot-${memberId}">
+        ${initialPhoto ? `
+          <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+            <img src="${initialPhoto}" class="cell-photo-thumb" onclick="openPhotoPreviewLightbox('${initialPhoto.replace(/'/g, "\\'")}', 'Anggota #${memberId}')" title="Klik untuk lihat foto">
+            <i class="fa-solid fa-circle-xmark" style="color: #ef4444; font-size: 14px; cursor: pointer;" onclick="removeRowPhoto('member', ${memberId})" title="Hapus foto"></i>
+          </div>
+        ` : `
+          <button type="button" class="cell-photo-btn" onclick="triggerRowPhotoUpload('member', ${memberId})" title="Unggah Pas Foto Anggota">
+            <i class="fa-solid fa-camera"></i> +Foto
+          </button>
+        `}
+      </div>
+      <input type="file" id="memberPhotoInput-${memberId}" accept="image/*" style="display: none;" onchange="handleRowPhotoSelected(event, 'member', ${memberId})">
+      <input type="hidden" class="grp-member-photo-data" id="memberPhotoData-${memberId}" value="${escapeHtml(initialPhoto)}">
     </td>
     <td>
       <input type="text" class="form-control form-control-sm grp-member-name" 
@@ -4540,6 +4741,23 @@ function renderActiveTicket(record) {
     ticketCard.style.backgroundSize = '100% 100%';
     ticketCard.style.backgroundPosition = 'center';
     ticketCard.style.backgroundRepeat = 'no-repeat';
+  }
+
+  // Handle Pas Foto Peserta pada Kartu Tiket Boarding Pass (Matches User Mockup Gambar 2)
+  const photoImg = document.getElementById('ticketBpPhotoImg');
+  const photoUrl = record.photo_url || record.photo_data || '';
+  if (photoUrl && ticketCard) {
+    ticketCard.classList.add('has-photo');
+    if (photoImg) {
+      photoImg.src = photoUrl;
+      photoImg.style.display = 'block';
+    }
+  } else if (ticketCard) {
+    ticketCard.classList.remove('has-photo');
+    if (photoImg) {
+      photoImg.src = '';
+      photoImg.style.display = 'none';
+    }
   }
 
   // Kop Maskapai & Tagline
@@ -5132,7 +5350,8 @@ async function sendTicketEmail() {
           message: body,
           body: body,
           registration_code: currentTicketRecord.registration_code || '-',
-          image_base64: imageBase64
+          image_base64: imageBase64,
+          photo_base64: currentTicketRecord.photo_url || currentTicketRecord.photo_data || ''
         })
       });
 
@@ -5656,8 +5875,16 @@ function renderRekapTable() {
         <td style="color: #475569; font-weight: 700; text-align: center;">${rowNo}</td>
         <td><span class="badge-table-code">${item.registration_code}</span></td>
         <td>
-          <strong style="color: #0f172a; font-size: 14.5px; font-weight: 800; display: block; letter-spacing: -0.01em;">${escapeHtml(item.full_name)}</strong>
-          ${item.group_name ? `<small style="color: #b45309; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;"><i class="fa-solid fa-users"></i> ${escapeHtml(item.group_name)}</small>` : '<small style="color: #64748b; font-weight: 600; margin-top: 3px; display: block;">Individu</small>'}
+          <div style="display: flex; align-items: center; gap: 10px;">
+            ${item.photo_url || item.photo_data
+              ? `<img src="${item.photo_url || item.photo_data}" class="rekap-avatar-img" alt="${escapeHtml(item.full_name)}" onclick="openPhotoPreviewLightbox('${(item.photo_url || item.photo_data).replace(/'/g, "\\'")}', '${escapeHtml(item.full_name).replace(/'/g, "\\'")}')" title="Klik untuk perbesar pas foto">`
+              : `<div class="rekap-avatar-placeholder" title="Belum ada pas foto"><i class="fa-solid fa-user"></i></div>`
+            }
+            <div style="min-width: 0;">
+              <strong style="color: #0f172a; font-size: 14.5px; font-weight: 800; display: block; letter-spacing: -0.01em;">${escapeHtml(item.full_name)}</strong>
+              ${item.group_name ? `<small style="color: #b45309; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;"><i class="fa-solid fa-users"></i> ${escapeHtml(item.group_name)}</small>` : '<small style="color: #64748b; font-weight: 600; margin-top: 3px; display: block;">Individu</small>'}
+            </div>
+          </div>
         </td>
         <td>
           <span class="${isMale ? 'badge-gender-l' : 'badge-gender-p'}">
@@ -5825,11 +6052,16 @@ function viewAttendeeDetail(id) {
 
   body.innerHTML = `
     <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-        <div>
-          <span class="badge-table-code">${attendee.registration_code}</span>
-          <h3 style="font-size: 22px; margin-top: 6px; color: #ffffff;">${attendee.full_name}</h3>
-          <span style="font-size: 13px; color: #fbbf24;">${attendee.gender} &bull; ${attendee.wilayah}${attendee.daerah ? ` &bull; ${attendee.daerah}` : ''}</span>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+          ${attendee.photo_url || attendee.photo_data ? `
+            <img src="${attendee.photo_url || attendee.photo_data}" style="width: 70px; height: 88px; object-fit: cover; object-position: top center; border-radius: 8px; border: 2px solid #fbbf24; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openPhotoPreviewLightbox('${(attendee.photo_url || attendee.photo_data).replace(/'/g, "\\'")}', '${escapeHtml(attendee.full_name).replace(/'/g, "\\'")}')" title="Klik untuk perbesar pas foto">
+          ` : ''}
+          <div>
+            <span class="badge-table-code">${attendee.registration_code}</span>
+            <h3 style="font-size: 22px; margin-top: 6px; color: #ffffff;">${attendee.full_name}</h3>
+            <span style="font-size: 13px; color: #fbbf24;">${attendee.gender} &bull; ${attendee.wilayah}${attendee.daerah ? ` &bull; ${attendee.daerah}` : ''}</span>
+          </div>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
           ${isChild ? `<span class="badge-count-pill" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);"><i class="fa-solid fa-child"></i> ANAK-ANAK (${ageNum || '<15'} Th)</span>` : ''}

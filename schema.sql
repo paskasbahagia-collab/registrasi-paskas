@@ -41,6 +41,7 @@ ALTER TABLE registrations ADD COLUMN IF NOT EXISTS room_name VARCHAR(150);
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS guardian_name VARCHAR(200);
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS group_code VARCHAR(50);
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS join_year INT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS photo_url TEXT;
 
 -- Index untuk mempercepat query pencarian
 CREATE INDEX IF NOT EXISTS idx_reg_code ON registrations(registration_code);

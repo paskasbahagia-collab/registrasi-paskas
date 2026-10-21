@@ -319,7 +319,10 @@ class PaskasDataService {
       'building',
       'room_number',
       'room_name',
-      'guardian_name'
+      'guardian_name',
+      'group_code',
+      'join_year',
+      'photo_url'
     ]);
   }
 
@@ -509,8 +512,25 @@ class PaskasDataService {
             throw retryErr || error;
           }
         } else if (error) {
-          console.warn('Supabase insert registration error:', error);
-          throw error;
+          // Jika Supabase menolak karena kolom belum dibuat di PostgreSQL Supabase
+          if (error.message && (error.message.includes('photo_url') || error.message.includes('column') || error.code === '42703' || error.code === 'PGRST204')) {
+            console.warn('Kolom photo_url belum ada di remote Supabase. Menyimpan data peserta tanpa kolom photo_url...');
+            const fallbackData = { ...insertData };
+            delete fallbackData.photo_url;
+            const { data: fbData, error: fbErr } = await this.supabaseClient
+              .from('registrations')
+              .insert([fallbackData])
+              .select();
+            if (!fbErr && fbData && fbData[0]) {
+              newRecord.id = fbData[0].id;
+              newRecord._is_offline_pending = false;
+            } else {
+              throw fbErr || error;
+            }
+          } else {
+            console.warn('Supabase insert registration error:', error);
+            throw error;
+          }
         }
 
         if (data && data[0]) {
@@ -567,8 +587,28 @@ class PaskasDataService {
           .select();
 
         if (error) {
-          console.warn('Supabase batch insert error:', error);
-          throw error;
+          if (error.message && (error.message.includes('photo_url') || error.code === '42703' || error.code === 'PGRST204')) {
+            console.warn('Kolom photo_url belum ada di remote Supabase. Menyimpan batch tanpa photo_url...');
+            const fallbackList = cleanList.map(item => {
+              const fb = { ...item };
+              delete fb.photo_url;
+              return fb;
+            });
+            const { data: fbData, error: fbErr } = await this.supabaseClient
+              .from('registrations')
+              .insert(fallbackList)
+              .select();
+            if (!fbErr && fbData && Array.isArray(fbData)) {
+              fbData.forEach((row, idx) => {
+                if (stampedList[idx]) stampedList[idx].id = row.id;
+              });
+            } else {
+              throw fbErr || error;
+            }
+          } else {
+            console.warn('Supabase batch insert error:', error);
+            throw error;
+          }
         }
 
         if (data && Array.isArray(data)) {
