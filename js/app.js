@@ -6949,9 +6949,9 @@ function loadStoredAnnouncements() {
 
   try {
     const raw = localStorage.getItem('paskas_announcements_list');
-    if (raw) {
+    if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed.map(item => ({
           ...item,
           date: sanitizeDate(item.date)
@@ -7329,7 +7329,7 @@ function cancelEditAnnouncement() {
   if (saveBtnText) saveBtnText.textContent = 'Terbitkan Pengumuman';
 }
 
-function deleteAnnouncementFromSettings(id) {
+async function deleteAnnouncementFromSettings(id) {
   let list = loadStoredAnnouncements();
   const item = list.find(x => x.id === id);
   const title = item ? item.title : 'ini';
@@ -7337,7 +7337,7 @@ function deleteAnnouncementFromSettings(id) {
   if (!confirm(`Apakah Anda yakin ingin menghapus pengumuman "${title}"?`)) return;
 
   list = list.filter(x => x.id !== id);
-  saveAnnouncementsToStorage(list);
+  await saveAnnouncementsToStorage(list);
 
   if (currentEditingAnnId === id) cancelEditAnnouncement();
   renderSettingsAnnouncementsList();
@@ -7352,33 +7352,31 @@ async function saveAllAnnouncementSettings() {
 
   await saveAnnouncementsToStorage(list, isEnabled);
   renderAnnouncementUI();
-  showToast('Seluruh daftar pengumuman berhasil disimpan permanen ke Supabase!', 'success');
+  showToast('Pengaturan pengumuman berhasil disimpan ke Supabase!', 'success');
 }
 
 async function saveAnnouncementsToStorage(list, isEnabledOverride) {
+  const safeList = Array.isArray(list) ? list : [];
   try {
-    localStorage.setItem('paskas_announcements_list', JSON.stringify(list));
+    localStorage.setItem('paskas_announcements_list', JSON.stringify(safeList));
   } catch (e) {}
 
   const enabledInput = document.getElementById('cfg_announcementEnabled');
   const isEnabled = isEnabledOverride !== undefined ? isEnabledOverride : (enabledInput ? enabledInput.checked : true);
 
   const payload = {
-    announcement_enabled: String(isEnabled)
+    announcement_enabled: String(isEnabled),
+    announcement_title: safeList.length > 0 ? safeList[0].title : '',
+    announcement_date: safeList.length > 0 ? safeList[0].date : '',
+    announcement_text: safeList.length > 0 ? safeList[0].content : ''
   };
-
-  if (list && list.length > 0) {
-    payload.announcement_title = list[0].title;
-    payload.announcement_date = list[0].date;
-    payload.announcement_text = list[0].content;
-  }
 
   if (window.dataService) {
     if (typeof window.dataService.saveSettings === 'function') {
       await window.dataService.saveSettings(payload);
     }
     if (typeof window.dataService.saveCloudSetting === 'function') {
-      await window.dataService.saveCloudSetting('paskas_announcements_list', list);
+      await window.dataService.saveCloudSetting('paskas_announcements_list', safeList);
       for (const [k, v] of Object.entries(payload)) {
         await window.dataService.saveCloudSetting(k, v);
       }
