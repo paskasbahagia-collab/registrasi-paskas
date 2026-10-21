@@ -8758,9 +8758,20 @@ function removeCardFromSettings(idx) {
   showToast('Kartu berhasil dihapus dari daftar.', 'info');
 }
 
-function saveCardsFromSettings() {
+async function saveCardsFromSettings() {
+  const saveBtn = document.querySelector('button[onclick="saveCardsFromSettings()"]');
+  let origText = '';
+  if (saveBtn) {
+    origText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan ke Cloud...';
+  }
+
   const cardElements = document.querySelectorAll('.settings-card-item-box');
-  if (!cardElements.length) return;
+  if (!cardElements.length) {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = origText; }
+    return;
+  }
 
   const total = cardElements.length;
   cardElements.forEach((el, idx) => {
@@ -8784,24 +8795,12 @@ function saveCardsFromSettings() {
       const ikhwanDesc = el.querySelector('.card-uniform-ikhwan-desc')?.value.trim() || '';
       const akhwatDesc = el.querySelector('.card-uniform-akhwat-desc')?.value.trim() || '';
 
-      if (ikhwanImg) {
-        localStorage.setItem('paskas_uniform_ikhwan_image', ikhwanImg);
-      }
-      if (akhwatImg) {
-        localStorage.setItem('paskas_uniform_akhwat_image', akhwatImg);
-      }
-      if (ikhwanTitle) {
-        localStorage.setItem('paskas_uniform_ikhwan_title', ikhwanTitle);
-      }
-      if (akhwatTitle) {
-        localStorage.setItem('paskas_uniform_akhwat_title', akhwatTitle);
-      }
-      if (ikhwanDesc) {
-        localStorage.setItem('paskas_uniform_ikhwan_desc', ikhwanDesc);
-      }
-      if (akhwatDesc) {
-        localStorage.setItem('paskas_uniform_akhwat_desc', akhwatDesc);
-      }
+      if (ikhwanImg) localStorage.setItem('paskas_uniform_ikhwan_image', ikhwanImg);
+      if (akhwatImg) localStorage.setItem('paskas_uniform_akhwat_image', akhwatImg);
+      if (ikhwanTitle) localStorage.setItem('paskas_uniform_ikhwan_title', ikhwanTitle);
+      if (akhwatTitle) localStorage.setItem('paskas_uniform_akhwat_title', akhwatTitle);
+      if (ikhwanDesc) localStorage.setItem('paskas_uniform_ikhwan_desc', ikhwanDesc);
+      if (akhwatDesc) localStorage.setItem('paskas_uniform_akhwat_desc', akhwatDesc);
 
       if (window.dataService) {
         const uPayload = {
@@ -8814,11 +8813,6 @@ function saveCardsFromSettings() {
         };
         if (typeof window.dataService.saveSettings === 'function') {
           window.dataService.saveSettings(uPayload);
-        }
-        if (typeof window.dataService.saveCloudSetting === 'function') {
-          Object.entries(uPayload).forEach(([k, v]) => {
-            if (v !== undefined) window.dataService.saveCloudSetting(k, v);
-          });
         }
       }
 
@@ -8850,11 +8844,16 @@ function saveCardsFromSettings() {
 
   try {
     localStorage.setItem('paskas_custom_cards', JSON.stringify(DASHBOARD_CARDS));
-    if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
-      window.dataService.saveCloudSetting('paskas_custom_cards', DASHBOARD_CARDS);
-    }
   } catch (e) {
-    console.warn('Gagal menyimpan kartu custom:', e);
+    console.warn('LocalStorage limit reached for custom cards:', e);
+  }
+
+  if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+    try {
+      await window.dataService.saveCloudSetting('paskas_custom_cards', DASHBOARD_CARDS);
+    } catch (errCloud) {
+      console.error('Gagal simpan kartu ke Supabase:', errCloud);
+    }
   }
 
   // Refresh tampilan di dashboard
@@ -8867,13 +8866,20 @@ function saveCardsFromSettings() {
   }
 
   renderSettingsCardsManager();
-  showToast('Perubahan kartu informasi, baju seragam & narasi berhasil disimpan!', 'success');
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = origText;
+  }
+  showToast('Alhamdulillah! Perubahan kartu informasi, seragam & narasi berhasil disimpan permanen ke Cloud!', 'success');
 }
 
-function resetCardsToDefault() {
+async function resetCardsToDefault() {
   if (confirm('Kembalikan semua kartu informasi ke pengaturan dan gambar bawaan awal?')) {
-    localStorage.removeItem('paskas_custom_cards');
     DASHBOARD_CARDS = JSON.parse(JSON.stringify(DEFAULT_DASHBOARD_CARDS));
+    localStorage.removeItem('paskas_custom_cards');
+    if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+      await window.dataService.saveCloudSetting('paskas_custom_cards', DASHBOARD_CARDS);
+    }
     currentCardIndex = 0;
     renderDashboardCards();
     if (DASHBOARD_CARDS[0] && DASHBOARD_CARDS[0].coverImg) {
