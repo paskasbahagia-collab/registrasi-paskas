@@ -591,6 +591,21 @@
                             <i class="fa-regular fa-user"></i>
                             <input type="text" id="ind_fullName" name="fullName" class="form-control" placeholder="Nama lengkap sesuai KTP / tanda pengenal" maxlength="100" required onblur="checkIndividualDuplicateOnBlur()" oninput="checkIndividualDuplicateOnBlur()">
                           </div>
+                          <!-- PEMBERITAHUAN DI BAGIAN IDENTITAS DIRI (JELAS, KONTRAS TINGGI & MUDAH TERLIHAT) -->
+                          <div id="ind_dupNameNotice" class="duplicate-alert-banner" style="display: none; margin-top: 10px;">
+                            <div class="dup-banner-header">
+                              <i class="fa-solid fa-triangle-exclamation" style="color: #b45309; font-size: 15px;"></i>
+                              <span>DATA SUDAH TERDAFTAR!</span>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                              <div class="dup-banner-body" id="ind_dupNameText">
+                                Data peserta ini sudah terdaftar resmi di sistem.
+                              </div>
+                              <button type="button" class="btn btn-sm btn-open-dup-ticket" id="ind_btnOpenDupNameTicket">
+                                <i class="fa-solid fa-ticket"></i> Buka E-Tiket Saya
+                              </button>
+                            </div>
+                          </div>
                         </div>
 
                         <!-- Usia Peserta -->
@@ -720,13 +735,16 @@
                             <i class="fa-brands fa-whatsapp text-forest"></i>
                             <input type="tel" id="ind_phone" name="phone" class="form-control" placeholder="Contoh: 081234567890" inputmode="numeric" pattern="[0-9]*" maxlength="16" required onblur="checkEmergencyPhoneMatch(true); checkIndividualDuplicateOnBlur();" oninput="this.value = this.value.replace(/[^0-9]/g, ''); checkEmergencyPhoneMatch(false); hideIndividualDuplicateNotice();">
                           </div>
-                          <div id="ind_dupPhoneNotice" style="display: none; margin-top: 8px; font-size: 12.5px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 8px 12px; color: #a7f3d0; animation: fadeIn 0.3s ease;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                              <div>
-                                <i class="fa-solid fa-circle-check" style="color: #34d399; margin-right: 4px;"></i>
-                                <span id="ind_dupPhoneText">Nomor ini sudah terdaftar resmi.</span>
+                          <div id="ind_dupPhoneNotice" class="duplicate-alert-banner" style="display: none; margin-top: 10px;">
+                            <div class="dup-banner-header">
+                              <i class="fa-solid fa-triangle-exclamation" style="color: #b45309; font-size: 15px;"></i>
+                              <span>KONTAK SUDAH TERDAFTAR!</span>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                              <div class="dup-banner-body" id="ind_dupPhoneText">
+                                Nomor WhatsApp / kontak ini sudah terdaftar resmi di sistem.
                               </div>
-                              <button type="button" class="btn btn-xs" id="ind_btnOpenDupTicket" style="font-size: 11.5px; padding: 4px 10px; background: #10b981; color: white; border: none; border-radius: 5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                              <button type="button" class="btn btn-sm btn-open-dup-ticket" id="ind_btnOpenDupTicket">
                                 <i class="fa-solid fa-ticket"></i> Buka E-Tiket Saya
                               </button>
                             </div>
@@ -4110,7 +4128,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=102.0"></script>
-  <script src="js/app.js?v=102.0"></script>
+  <script src="js/supabase-config.js?v=103.0"></script>
+  <script src="js/app.js?v=103.0"></script>
 </body>
 </html>

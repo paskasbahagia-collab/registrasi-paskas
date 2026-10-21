@@ -2841,10 +2841,16 @@ function checkIndividualDuplicateOnBlur() {
   const phoneInput = document.getElementById('ind_phone');
   const nameInput = document.getElementById('ind_fullName');
   const emailInput = document.getElementById('ind_email');
-  const noticeBox = document.getElementById('ind_dupPhoneNotice');
-  const noticeText = document.getElementById('ind_dupPhoneText');
-  const btnOpen = document.getElementById('ind_btnOpenDupTicket');
-  if (!noticeBox) return;
+  
+  // Elemen Notifikasi di Bagian Kontak
+  const phoneNoticeBox = document.getElementById('ind_dupPhoneNotice');
+  const phoneNoticeText = document.getElementById('ind_dupPhoneText');
+  const phoneBtnOpen = document.getElementById('ind_btnOpenDupTicket');
+
+  // Elemen Notifikasi di Bagian Identitas Diri (Nama Lengkap)
+  const nameNoticeBox = document.getElementById('ind_dupNameNotice');
+  const nameNoticeText = document.getElementById('ind_dupNameText');
+  const nameBtnOpen = document.getElementById('ind_btnOpenDupNameTicket');
 
   const phone = phoneInput ? phoneInput.value.trim() : '';
   const email = emailInput ? emailInput.value.trim() : '';
@@ -2877,21 +2883,28 @@ function checkIndividualDuplicateOnBlur() {
     }
 
     foundIndividualDupRecord = dup.existing;
-    if (noticeText) {
-      if (dup.matchedBy === 'email') {
-        noticeText.innerHTML = `Email sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> (${escapeHtml(dup.existing.registration_code)})`;
-      } else if (dup.matchedBy === 'phone') {
-        noticeText.innerHTML = `Nomor WhatsApp sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> (${escapeHtml(dup.existing.registration_code)})`;
-      } else {
-        noticeText.innerHTML = `Data sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> (${escapeHtml(dup.existing.registration_code)})`;
-      }
+    
+    let msg = `Data sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> <span class="dup-code-pill">${escapeHtml(dup.existing.registration_code)}</span>`;
+    if (dup.matchedBy === 'email') {
+      msg = `Alamat email ini sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> <span class="dup-code-pill">${escapeHtml(dup.existing.registration_code)}</span>`;
+    } else if (dup.matchedBy === 'phone') {
+      msg = `Nomor WhatsApp ini sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> <span class="dup-code-pill">${escapeHtml(dup.existing.registration_code)}</span>`;
+    } else if (dup.matchedBy === 'name_wilayah') {
+      msg = `Nama peserta ini sudah terdaftar resmi di kafilah <strong>${escapeHtml(dup.existing.wilayah || 'Paskas')}</strong> <span class="dup-code-pill">${escapeHtml(dup.existing.registration_code)}</span>`;
     }
-    if (btnOpen) {
-      btnOpen.onclick = () => {
-        showTicketModal(dup.existing);
-      };
-    }
-    noticeBox.style.display = 'block';
+
+    if (nameNoticeText) nameNoticeText.innerHTML = msg;
+    if (phoneNoticeText) phoneNoticeText.innerHTML = msg;
+
+    const handleOpenTicket = () => {
+      viewDuplicateTicketSafely(dup.existing);
+    };
+
+    if (nameBtnOpen) nameBtnOpen.onclick = handleOpenTicket;
+    if (phoneBtnOpen) phoneBtnOpen.onclick = handleOpenTicket;
+
+    if (nameNoticeBox) nameNoticeBox.style.display = 'block';
+    if (phoneNoticeBox) phoneNoticeBox.style.display = 'block';
   } else {
     hideIndividualDuplicateNotice();
   }
@@ -2899,8 +2912,10 @@ function checkIndividualDuplicateOnBlur() {
 
 function hideIndividualDuplicateNotice() {
   foundIndividualDupRecord = null;
-  const noticeBox = document.getElementById('ind_dupPhoneNotice');
-  if (noticeBox) noticeBox.style.display = 'none';
+  const phoneNoticeBox = document.getElementById('ind_dupPhoneNotice');
+  if (phoneNoticeBox) phoneNoticeBox.style.display = 'none';
+  const nameNoticeBox = document.getElementById('ind_dupNameNotice');
+  if (nameNoticeBox) nameNoticeBox.style.display = 'none';
 }
 
 function showDuplicatePromptModal(dup, newName, newPhone, newWilayah, newEmail) {
@@ -2980,21 +2995,27 @@ function checkSingleGroupMemberDuplicate(memberId) {
   });
 
   if (dup) {
-    if (nameInput) nameInput.style.borderColor = '#f59e0b';
+    if (nameInput) nameInput.style.borderColor = '#d97706';
     if (wrap) {
       wrap.style.display = 'block';
       wrap.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 4px; padding: 4px 8px; font-size: 11px; color: #fbbf24; margin-top: 5px;">
-          <span>
-            <i class="fa-solid fa-triangle-exclamation"></i> Sudah terdaftar: <strong>${escapeHtml(dup.existing.registration_code)}</strong> (${escapeHtml(dup.existing.full_name)})
-          </span>
-          <div style="display: flex; gap: 4px; flex-shrink: 0;">
-            <button type="button" onclick="viewDuplicateTicketSafely('${escapeHtml(dup.existing.registration_code)}')" style="background: #0284c7; color: #ffffff; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; font-weight: 600; cursor: pointer;" title="Lihat E-Tiket (Aman, form tidak akan ter-reset)">
-              <i class="fa-solid fa-ticket"></i> Cek Tiket
-            </button>
-            <button type="button" onclick="removeMemberCard(${memberId})" style="background: #ef4444; color: #ffffff; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; font-weight: 600; cursor: pointer;" title="Hapus peserta ini dari daftar rombongan">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
+        <div class="duplicate-alert-banner" style="padding: 6px 10px !important; margin-top: 5px;">
+          <div class="dup-banner-header" style="font-size: 11px; margin-bottom: 2px;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: #b45309; font-size: 12px;"></i>
+            <span>SUDAH TERDAFTAR!</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
+            <div class="dup-banner-body" style="font-size: 11px !important;">
+              Atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> <span class="dup-code-pill">${escapeHtml(dup.existing.registration_code)}</span>
+            </div>
+            <div style="display: flex; gap: 4px; flex-shrink: 0;">
+              <button type="button" class="btn-open-dup-ticket" onclick="viewDuplicateTicketSafely('${escapeHtml(dup.existing.registration_code)}')" style="padding: 3px 8px !important; font-size: 10.5px !important;" title="Lihat E-Tiket (Aman, form tidak akan ter-reset)">
+                <i class="fa-solid fa-ticket"></i> Cek Tiket
+              </button>
+              <button type="button" onclick="removeMemberCard(${memberId})" style="background: #ef4444; color: #ffffff; border: none; border-radius: 5px; padding: 3px 8px; font-size: 10.5px; font-weight: 700; cursor: pointer;" title="Hapus peserta ini dari daftar rombongan">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -3009,11 +3030,84 @@ function clearSingleGroupMemberWarning(memberId) {
   const card = document.getElementById(`memberCard-${memberId}`);
   if (card) {
     const nameInput = card.querySelector('.grp-member-name');
-    if (nameInput && nameInput.style.borderColor === 'rgb(245, 158, 11)') {
+    if (nameInput && (nameInput.style.borderColor === 'rgb(245, 158, 11)' || nameInput.style.borderColor === 'rgb(217, 119, 6)')) {
       nameInput.style.borderColor = '';
     }
   }
   const wrap = document.getElementById(`dupWarningWrap-${memberId}`);
+  if (wrap) {
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+  }
+}
+
+// Pengecekan Duplikasi Koordinator Rombongan secara Real-Time & Interaktif
+function checkSingleCoordinatorDuplicate(coordId) {
+  const card = document.getElementById(`coordCard-${coordId}`);
+  if (!card) return;
+
+  const nameInput = card.querySelector('.grp-coord-name');
+  const phoneInput = card.querySelector('.grp-coord-phone');
+  const emailInput = card.querySelector('.grp-coord-email');
+  const name = nameInput ? nameInput.value.trim() : '';
+  const phone = phoneInput ? phoneInput.value.trim() : '';
+  const email = emailInput ? emailInput.value.trim() : '';
+  const defaultWilayah = document.getElementById('grp_defaultWilayah')?.value || '';
+  const wrap = document.getElementById(`coordDupWrap-${coordId}`);
+
+  if (name.length < 3 && phone.length < 8 && (!email || !email.includes('@'))) {
+    clearSingleCoordinatorDuplicate(coordId);
+    return;
+  }
+
+  const dup = checkDuplicateRegistration({
+    full_name: name,
+    phone_number: phone,
+    email: email,
+    wilayah: defaultWilayah,
+    is_child: false,
+    isGroupMember: true,
+    leaderPhone: phone
+  });
+
+  if (dup) {
+    if (nameInput) nameInput.style.borderColor = '#d97706';
+    if (wrap) {
+      wrap.style.display = 'block';
+      wrap.innerHTML = `
+        <div class="duplicate-alert-banner" style="padding: 6px 10px !important; margin-top: 5px;">
+          <div class="dup-banner-header" style="font-size: 11px; margin-bottom: 2px;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: #b45309; font-size: 12px;"></i>
+            <span>KOORDINATOR SUDAH TERDAFTAR!</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
+            <div class="dup-banner-body" style="font-size: 11px !important;">
+              Atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> <span class="dup-code-pill">${escapeHtml(dup.existing.registration_code)}</span>
+            </div>
+            <div style="display: flex; gap: 4px; flex-shrink: 0;">
+              <button type="button" class="btn-open-dup-ticket" onclick="viewDuplicateTicketSafely('${escapeHtml(dup.existing.registration_code)}')" style="padding: 3px 8px !important; font-size: 10.5px !important;" title="Lihat E-Tiket (Aman, form tidak akan ter-reset)">
+                <i class="fa-solid fa-ticket"></i> Cek Tiket
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  clearSingleCoordinatorDuplicate(coordId);
+}
+
+function clearSingleCoordinatorDuplicate(coordId) {
+  const card = document.getElementById(`coordCard-${coordId}`);
+  if (card) {
+    const nameInput = card.querySelector('.grp-coord-name');
+    if (nameInput && (nameInput.style.borderColor === 'rgb(245, 158, 11)' || nameInput.style.borderColor === 'rgb(217, 119, 6)')) {
+      nameInput.style.borderColor = '';
+    }
+  }
+  const wrap = document.getElementById(`coordDupWrap-${coordId}`);
   if (wrap) {
     wrap.style.display = 'none';
     wrap.innerHTML = '';
@@ -3952,8 +4046,10 @@ function addGroupCoordinatorCard(opts = {}) {
       <input type="text" class="form-control form-control-sm grp-coord-name" 
              placeholder="Nama lengkap koordinator" value="${escapeHtml(initialName)}" 
              maxlength="100"
-             oninput="syncPrimaryCoordinatorHiddenFields(); syncAllGroupGuardians(); updateGroupStats();" 
+             oninput="syncPrimaryCoordinatorHiddenFields(); syncAllGroupGuardians(); updateGroupStats(); clearSingleCoordinatorDuplicate(${coordId});" 
+             onblur="checkSingleCoordinatorDuplicate(${coordId});"
              required>
+      <div class="coord-dup-warning-wrap" id="coordDupWrap-${coordId}" style="display: none; margin-top: 5px;"></div>
     </td>
     <td>
       <input type="number" class="form-control form-control-sm grp-coord-age" 
@@ -3991,7 +4087,8 @@ function addGroupCoordinatorCard(opts = {}) {
       <input type="tel" class="form-control form-control-sm grp-coord-phone" 
              placeholder="08xxxxxxxxxx" value="${escapeHtml(initialPhone)}" 
              inputmode="numeric" pattern="[0-9]*" maxlength="16" 
-             oninput="this.value = this.value.replace(/[^0-9]/g, ''); syncPrimaryCoordinatorHiddenFields();" 
+             oninput="this.value = this.value.replace(/[^0-9]/g, ''); syncPrimaryCoordinatorHiddenFields(); clearSingleCoordinatorDuplicate(${coordId});" 
+             onblur="checkSingleCoordinatorDuplicate(${coordId});"
              required title="Nomor WhatsApp aktif koordinator">
     </td>
     <td>
@@ -4711,11 +4808,24 @@ async function downloadTicketImage() {
 
   try {
     const canvas = await html2canvas(ticketCard, {
-      scale: 2.5,
+      scale: 3.2,
+      width: 860,
+      height: 278,
+      windowWidth: 1280,
+      windowHeight: 800,
       useCORS: true,
       allowTaint: true,
       backgroundColor: null,
-      logging: false
+      logging: false,
+      imageTimeout: 0,
+      onclone: (clonedDoc) => {
+        const card = clonedDoc.getElementById('printableTicket');
+        if (card) {
+          card.style.webkitFontSmoothing = 'antialiased';
+          card.style.mozOsxFontSmoothing = 'grayscale';
+          card.style.textRendering = 'optimizeLegibility';
+        }
+      }
     });
 
     const regCode = (currentTicketRecord.registration_code || 'TIKET').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -4765,11 +4875,24 @@ async function downloadAllGroupTicketsOneByOne() {
 
       const ticketCard = document.getElementById('printableTicket');
       const canvas = await html2canvas(ticketCard, {
-        scale: 2.5,
+        scale: 3.2,
+        width: 860,
+        height: 278,
+        windowWidth: 1280,
+        windowHeight: 800,
         useCORS: true,
         allowTaint: true,
         backgroundColor: null,
-        logging: false
+        logging: false,
+        imageTimeout: 0,
+        onclone: (clonedDoc) => {
+          const card = clonedDoc.getElementById('printableTicket');
+          if (card) {
+            card.style.webkitFontSmoothing = 'antialiased';
+            card.style.mozOsxFontSmoothing = 'grayscale';
+            card.style.textRendering = 'optimizeLegibility';
+          }
+        }
       });
 
       const member = currentTicketBatch[i];
@@ -5009,11 +5132,24 @@ async function sendTicketEmail() {
           statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan gambar E-Tiket & memproses pengiriman...`;
         }
         const canvas = await html2canvas(ticketCard, {
-          scale: 1.8,
+          scale: 3.2,
+          width: 860,
+          height: 278,
+          windowWidth: 1280,
+          windowHeight: 800,
           useCORS: true,
           allowTaint: true,
           backgroundColor: null,
-          logging: false
+          logging: false,
+          imageTimeout: 0,
+          onclone: (clonedDoc) => {
+            const card = clonedDoc.getElementById('printableTicket');
+            if (card) {
+              card.style.webkitFontSmoothing = 'antialiased';
+              card.style.mozOsxFontSmoothing = 'grayscale';
+              card.style.textRendering = 'optimizeLegibility';
+            }
+          }
         });
         imageBase64 = canvas.toDataURL('image/png');
       } catch (canvasErr) {
@@ -5187,6 +5323,8 @@ window.copyTicketConfirmationMessage = copyTicketConfirmationMessage;
 window.viewDuplicateTicketSafely = viewDuplicateTicketSafely;
 window.checkSingleGroupMemberDuplicate = checkSingleGroupMemberDuplicate;
 window.clearSingleGroupMemberWarning = clearSingleGroupMemberWarning;
+window.checkSingleCoordinatorDuplicate = checkSingleCoordinatorDuplicate;
+window.clearSingleCoordinatorDuplicate = clearSingleCoordinatorDuplicate;
 window.checkIndividualDuplicateOnBlur = checkIndividualDuplicateOnBlur;
 window.hideIndividualDuplicateNotice = hideIndividualDuplicateNotice;
 
