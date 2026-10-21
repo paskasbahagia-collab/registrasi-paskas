@@ -2627,7 +2627,6 @@ function renderIndividuStepPreview() {
   const clothEl = document.querySelector('input[name="ind_clothSize"]:checked');
   const clothSize = clothEl ? clothEl.value : 'L';
   const medical = document.getElementById('ind_medical')?.value.trim() || 'Tidak Ada (Sehat)';
-  const notes = document.getElementById('ind_notes')?.value.trim() || '';
 
   container.innerHTML = `
     <div class="summary-preview-notice">
@@ -2735,12 +2734,6 @@ function renderIndividuStepPreview() {
         <div class="summary-field-item">
           <span class="summary-field-label">Riwayat Kesehatan & Obat Rutin</span>
           <span class="summary-field-value">${escapeHtml(medical)}</span>
-        </div>
-        <div class="summary-field-item full-width">
-          <span class="summary-field-label">Catatan Tambahan</span>
-          <span class="summary-field-value" style="color: ${notes ? '#193222' : '#8c806d'}; font-style: ${notes ? 'normal' : 'italic'};">
-            ${notes ? escapeHtml(notes) : 'Tidak ada catatan tambahan khusus'}
-          </span>
         </div>
       </div>
     </div>
@@ -3371,8 +3364,7 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
 
     const clothEl = document.querySelector('input[name="ind_clothSize"]:checked');
     const clothSize = clothEl ? clothEl.value : 'L';
-    const medical = document.getElementById('ind_medical').value.trim();
-    const notes = document.getElementById('ind_notes').value.trim();
+    const medical = document.getElementById('ind_medical')?.value.trim() || 'Tidak Ada (Sehat)';
 
     // CEK DATA DUPLIKAT SECARA RAMAH (DAPAT KONFIRMASI DAFTARKAN ORANG LAIN)
     if (!bypassDuplicate) {
@@ -3427,7 +3419,7 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
       transport_departure: transportDeparture,
       cloth_size: clothSize,
       medical_history: medical || 'Tidak Ada (Sehat)',
-      notes: notes
+      notes: ''
     };
 
     const saved = await window.dataService.addRegistration(registrationPayload);
@@ -3642,7 +3634,7 @@ function handleKelompokPreview(e) {
       medical_history: med || 'Tidak Ada',
       phone_number: phone,
       email: email,
-      notes: `👑 ${coordRoleTitle} • Rombongan: ${groupName}`
+      notes: ''
     });
 
     coordinatorsRowsHtml += `
@@ -4803,29 +4795,20 @@ async function downloadTicketImage() {
   const origText = btn ? btn.innerHTML : '';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh...';
   }
+
+  // Microtask yield: Catat dan render perubahan tombol seketika tanpa delay
+  await new Promise(r => setTimeout(r, 40));
 
   try {
     const canvas = await html2canvas(ticketCard, {
-      scale: 3.2,
-      width: 860,
-      height: 278,
-      windowWidth: 1280,
-      windowHeight: 800,
+      scale: 2.2,
       useCORS: true,
       allowTaint: true,
       backgroundColor: null,
       logging: false,
-      imageTimeout: 0,
-      onclone: (clonedDoc) => {
-        const card = clonedDoc.getElementById('printableTicket');
-        if (card) {
-          card.style.webkitFontSmoothing = 'antialiased';
-          card.style.mozOsxFontSmoothing = 'grayscale';
-          card.style.textRendering = 'optimizeLegibility';
-        }
-      }
+      imageTimeout: 0
     });
 
     const regCode = (currentTicketRecord.registration_code || 'TIKET').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -4875,24 +4858,12 @@ async function downloadAllGroupTicketsOneByOne() {
 
       const ticketCard = document.getElementById('printableTicket');
       const canvas = await html2canvas(ticketCard, {
-        scale: 3.2,
-        width: 860,
-        height: 278,
-        windowWidth: 1280,
-        windowHeight: 800,
+        scale: 2.2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: null,
         logging: false,
-        imageTimeout: 0,
-        onclone: (clonedDoc) => {
-          const card = clonedDoc.getElementById('printableTicket');
-          if (card) {
-            card.style.webkitFontSmoothing = 'antialiased';
-            card.style.mozOsxFontSmoothing = 'grayscale';
-            card.style.textRendering = 'optimizeLegibility';
-          }
-        }
+        imageTimeout: 0
       });
 
       const member = currentTicketBatch[i];
@@ -5131,25 +5102,14 @@ async function sendTicketEmail() {
         if (statusBox) {
           statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan gambar E-Tiket & memproses pengiriman...`;
         }
+        await new Promise(r => setTimeout(r, 40));
         const canvas = await html2canvas(ticketCard, {
-          scale: 3.2,
-          width: 860,
-          height: 278,
-          windowWidth: 1280,
-          windowHeight: 800,
+          scale: 2.2,
           useCORS: true,
           allowTaint: true,
           backgroundColor: null,
           logging: false,
-          imageTimeout: 0,
-          onclone: (clonedDoc) => {
-            const card = clonedDoc.getElementById('printableTicket');
-            if (card) {
-              card.style.webkitFontSmoothing = 'antialiased';
-              card.style.mozOsxFontSmoothing = 'grayscale';
-              card.style.textRendering = 'optimizeLegibility';
-            }
-          }
+          imageTimeout: 0
         });
         imageBase64 = canvas.toDataURL('image/png');
       } catch (canvasErr) {
