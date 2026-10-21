@@ -6631,7 +6631,7 @@ function closeSettingsModal() {
 }
 
 const SETTINGS_CATEGORIES = {
-  tampilan: ['rekap', 'info', 'deadline', 'reg-content', 'wilayah', 'ticket-template', 'kamar-kelompok'],
+  tampilan: ['rekap', 'info', 'deadline', 'reg-content', 'wilayah', 'ticket-template', 'kamar-kelompok', 'pengumuman'],
   web: ['supabase', 'security', 'deploy']
 };
 
@@ -6770,6 +6770,10 @@ function switchSettingsTab(tabName) {
   }
   if (tabName === 'ticket-template') {
     loadTicketTemplateSettings();
+  }
+  if (tabName === 'pengumuman') {
+    setNowAnnouncementDate();
+    renderSettingsAnnouncementsList();
   }
 }
 

@@ -33,7 +33,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=86.0">
+  <link rel="stylesheet" href="css/style.css?v=87.0">
 </head>
 <body>
 
@@ -1593,10 +1593,17 @@
                       <div class="mag-subitem-arrow"><i class="fa-solid fa-arrow-right"></i></div>
                     </div>
 
-                    <!-- Cue Card -->
-                    <div class="mag-subitem-cue-box">
-                      <i class="fa-solid fa-arrow-down text-gold"></i>
-                      <span>Pilih salah satu kartu sub-menu di atas untuk langsung membuka dan mengedit form konfigurasinya di Gambar 3 di bawah.</span>
+                    <!-- 8. Papan Informasi & Pengumuman -->
+                    <div class="mag-subitem-card" id="subitem-pengumuman" onclick="switchSettingsTab('pengumuman'); document.getElementById('magSettingsSubtabsAnchor').scrollIntoView({ behavior: 'smooth' });">
+                      <div class="mag-subitem-icon gold"><i class="fa-solid fa-bullhorn"></i></div>
+                      <div class="mag-subitem-body">
+                        <div class="mag-subitem-top">
+                          <h5 class="mag-subitem-title">Papan Pengumuman</h5>
+                        </div>
+                        <span class="mag-subitem-subtitle">WARTA BERANDA &amp; BROADCAST</span>
+                        <p class="mag-subitem-desc">Kelola warta panitia, rilis info terkini, saklar on/off warta beranda, &amp; siaran pengumuman penting.</p>
+                      </div>
+                      <div class="mag-subitem-arrow"><i class="fa-solid fa-arrow-right"></i></div>
                     </div>
                   </div>
                 </div>
@@ -2909,104 +2916,10 @@ CREATE TABLE IF NOT EXISTS registrations (
                   <textarea id="cfg_eventDesc" class="form-control" rows="3">Selamat datang di portal resmi registrasi peserta Silaturahmi Akbar Paskas Bahagia. Mari eratkan ukhuwah, satukan langkah perjuangan, dan hadirkan senyum bahagia untuk sesama.</textarea>
                 </div>
 
-                <div class="form-divider" style="margin: 24px 0 20px;"></div>
-
-                <!-- Pengaturan Papan Informasi & Warta Pengumuman di Dashboard -->
-                <div class="settings-announcement-box" style="background: rgba(15, 23, 42, 0.75); border: 1.5px solid rgba(245, 158, 11, 0.45); border-radius: 14px; padding: 20px; margin-bottom: 26px;">
-                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                      <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; display: flex; align-items: center; justify-content: center; font-size: 16px;">
-                        <i class="fa-solid fa-bullhorn"></i>
-                      </div>
-                      <div>
-                        <strong style="font-size: 14.5px; color: #f8fafc;">Papan Informasi &amp; Pengumuman (Full Width Beranda)</strong>
-                        <div style="font-size: 11.5px; color: #94a3b8;">Kelola warta resmi panitia. Pengumuman paling atas otomatis ditandai dengan badge "TERBARU" dan tanggal rilis.</div>
-                      </div>
-                    </div>
-                    <label class="switch-toggle" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                      <input type="checkbox" id="cfg_announcementEnabled" onchange="toggleAnnouncementSetting(this.checked)">
-                      <span class="toggle-slider"></span>
-                      <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;" id="cfg_announcementStatusLabel">Aktif</span>
-                    </label>
-                  </div>
-
-                  <!-- Form Input Tambah / Edit Pengumuman -->
-                  <div style="background: rgba(8, 14, 26, 0.6); border: 1px dashed rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                      <span style="font-size: 12px; font-weight: 700; color: #fbbf24;" id="annFormModeTitle">
-                        <i class="fa-solid fa-plus-circle"></i> Tambah Pengumuman Baru
-                      </span>
-                      <button type="button" class="btn btn-xs btn-outline-cyan" id="btnCancelEditAnn" onclick="cancelEditAnnouncement()" style="display: none; padding: 2px 8px; font-size: 11px;">
-                        Batal Edit
-                      </button>
-                    </div>
-
-                    <input type="hidden" id="ann_editId" value="">
-
-                    <div class="form-row col-2" style="margin-top: 6px;">
-                      <div class="form-group" style="margin-bottom: 10px;">
-                        <label class="form-label" style="font-size: 12px;">Judul Pengumuman *</label>
-                        <input type="text" id="ann_inputTitle" class="form-control" placeholder="Contoh: Rute Penjemputan Bandara &amp; Stasiun">
-                      </div>
-                      <div class="form-group" style="margin-bottom: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                          <label class="form-label" style="font-size: 12px; margin: 0;">Tanggal &amp; Waktu Update *</label>
-                          <button type="button" class="btn btn-xs" onclick="setNowAnnouncementDate()" style="font-size: 10.5px; color: #fbbf24; background: transparent; border: none; padding: 0; cursor: pointer;">
-                            <i class="fa-regular fa-clock"></i> Sekarang
-                          </button>
-                        </div>
-                        <input type="text" id="ann_inputDate" class="form-control" placeholder="Contoh: 20 Oktober 2026, 14:00 WIB" style="margin-top: 4px;">
-                      </div>
-                    </div>
-
-                    <div class="form-row col-2" style="margin-top: 0;">
-                      <div class="form-group" style="margin-bottom: 10px;">
-                        <label class="form-label" style="font-size: 12px;">Kategori / Tag Warta</label>
-                        <input type="text" id="ann_inputCategory" class="form-control" list="ann_cat_list" placeholder="Contoh: Penjemputan &amp; Transportasi">
-                        <datalist id="ann_cat_list">
-                          <option value="Penjemputan &amp; Transportasi">
-                          <option value="Pendaftaran &amp; Seragam">
-                          <option value="Akomodasi &amp; Kamar">
-                          <option value="Jadwal &amp; Rundown">
-                          <option value="Pemberitahuan Penting">
-                          <option value="Informasi Umum">
-                        </datalist>
-                      </div>
-                      <div class="form-group" style="margin-bottom: 10px; display: flex; align-items: flex-end;">
-                        <button type="button" class="btn btn-primary btn-sm" id="btnSaveSingleAnn" onclick="saveSingleAnnouncementFromForm()" style="width: 100%; height: 38px; font-weight: 700;">
-                          <i class="fa-solid fa-paper-plane"></i> <span id="btnSaveSingleAnnText">Terbitkan Pengumuman</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 4px;">
-                      <label class="form-label" style="font-size: 12px;">Isi / Narasi Pengumuman Lengkap *</label>
-                      <textarea id="ann_inputText" class="form-control" rows="3" placeholder="Tuliskan info perubahan rute, jadwal, lokasi temu, narahubung panitia, atau arahan jemaah..."></textarea>
-                    </div>
-                  </div>
-
-                  <!-- Daftar Pengumuman Tersimpan -->
-                  <div style="margin-bottom: 14px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                      <span style="font-size: 12px; font-weight: 700; color: #cbd5e1;">
-                        <i class="fa-solid fa-list-check text-gold"></i> Daftar Pengumuman Aktif (Teratas = Terkini / TERBARU)
-                      </span>
-                      <span style="font-size: 11px; color: #94a3b8;" id="settingsAnnCountLabel">0 Pengumuman</span>
-                    </div>
-
-                    <div id="settingsAnnouncementsList" style="max-height: 280px; overflow-y: auto;">
-                      <!-- Injected via JavaScript -->
-                    </div>
-                  </div>
-
-                  <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-primary btn-sm" onclick="saveAllAnnouncementSettings()">
-                      <i class="fa-solid fa-floppy-disk"></i> Simpan Permanen ke Supabase
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="navigateTo('dashboard'); scrollToAnnouncement();">
-                      <i class="fa-solid fa-eye"></i> Lihat di Beranda
-                    </button>
-                  </div>
+                <div style="margin-top: 16px; margin-bottom: 24px;">
+                  <button type="button" class="btn btn-primary btn-sm" onclick="saveEventInfoSettings()">
+                    <i class="fa-solid fa-floppy-disk"></i> Simpan Info Acara
+                  </button>
                 </div>
 
                 <div class="form-divider" style="margin: 28px 0 22px;"></div>
@@ -3015,7 +2928,7 @@ CREATE TABLE IF NOT EXISTS registrations (
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
                   <div>
                     <h4 class="settings-item-title" style="margin: 0;">
-                      <i class="fa-solid fa-images text-gold"></i> Kelola Kartu Info, Gambar & Narasi
+                      <i class="fa-solid fa-images text-gold"></i> Kelola Kartu Info, Gambar &amp; Narasi
                     </h4>
                     <p class="settings-item-desc" style="margin-top: 4px;">
                       Atur foto latar, judul, narasi ringkas kartu, dan narasi lengkap saat kartu dibuka sesuai kebutuhan agenda kegiatan.
@@ -3036,6 +2949,110 @@ CREATE TABLE IF NOT EXISTS registrations (
                   </button>
                   <button class="btn btn-secondary btn-sm" onclick="resetCardsToDefault()">
                     <i class="fa-solid fa-rotate-left"></i> Reset ke Bawaan
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab: Papan Informasi & Pengumuman -->
+            <div class="settings-tab-panel" id="settingsPanel-pengumuman">
+              <div class="settings-card-item">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; display: flex; align-items: center; justify-content: center; font-size: 17px;">
+                      <i class="fa-solid fa-bullhorn"></i>
+                    </div>
+                    <div>
+                      <h4 class="settings-item-title" style="margin: 0; font-size: 16px;">
+                        Papan Informasi &amp; Pengumuman (Full Width Beranda)
+                      </h4>
+                      <p class="settings-item-desc" style="margin-top: 2px;">
+                        Kelola warta resmi panitia. Pengumuman paling atas otomatis ditandai dengan badge "TERBARU" dan tanggal rilis.
+                      </p>
+                    </div>
+                  </div>
+                  <label class="switch-toggle" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="cfg_announcementEnabled" onchange="toggleAnnouncementSetting(this.checked)">
+                    <span class="toggle-slider"></span>
+                    <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;" id="cfg_announcementStatusLabel">Aktif</span>
+                  </label>
+                </div>
+
+                <!-- Form Input Tambah / Edit Pengumuman -->
+                <div style="background: rgba(8, 14, 26, 0.6); border: 1px dashed rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="font-size: 12px; font-weight: 700; color: #fbbf24;" id="annFormModeTitle">
+                      <i class="fa-solid fa-plus-circle"></i> Tambah Pengumuman Baru
+                    </span>
+                    <button type="button" class="btn btn-xs btn-outline-cyan" id="btnCancelEditAnn" onclick="cancelEditAnnouncement()" style="display: none; padding: 2px 8px; font-size: 11px;">
+                      Batal Edit
+                    </button>
+                  </div>
+
+                  <input type="hidden" id="ann_editId" value="">
+
+                  <div class="form-row col-2" style="margin-top: 6px;">
+                    <div class="form-group" style="margin-bottom: 10px;">
+                      <label class="form-label" style="font-size: 12px;">Judul Pengumuman *</label>
+                      <input type="text" id="ann_inputTitle" class="form-control" placeholder="Contoh: Rute Penjemputan Bandara &amp; Stasiun">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label class="form-label" style="font-size: 12px; margin: 0;">Tanggal &amp; Waktu Update *</label>
+                        <button type="button" class="btn btn-xs" onclick="setNowAnnouncementDate()" style="font-size: 10.5px; color: #fbbf24; background: transparent; border: none; padding: 0; cursor: pointer;">
+                          <i class="fa-regular fa-clock"></i> Sekarang
+                        </button>
+                      </div>
+                      <input type="text" id="ann_inputDate" class="form-control" placeholder="Contoh: 20 Oktober 2026, 14:00 WIB" style="margin-top: 4px;">
+                    </div>
+                  </div>
+
+                  <div class="form-row col-2" style="margin-top: 0;">
+                    <div class="form-group" style="margin-bottom: 10px;">
+                      <label class="form-label" style="font-size: 12px;">Kategori / Tag Warta</label>
+                      <input type="text" id="ann_inputCategory" class="form-control" list="ann_cat_list" placeholder="Contoh: Penjemputan &amp; Transportasi">
+                      <datalist id="ann_cat_list">
+                        <option value="Penjemputan &amp; Transportasi">
+                        <option value="Pendaftaran &amp; Seragam">
+                        <option value="Akomodasi &amp; Kamar">
+                        <option value="Jadwal &amp; Rundown">
+                        <option value="Pemberitahuan Penting">
+                        <option value="Informasi Umum">
+                      </datalist>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 10px; display: flex; align-items: flex-end;">
+                      <button type="button" class="btn btn-primary btn-sm" id="btnSaveSingleAnn" onclick="saveSingleAnnouncementFromForm()" style="width: 100%; height: 38px; font-weight: 700;">
+                        <i class="fa-solid fa-paper-plane"></i> <span id="btnSaveSingleAnnText">Terbitkan Pengumuman</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 4px;">
+                    <label class="form-label" style="font-size: 12px;">Isi / Narasi Pengumuman Lengkap *</label>
+                    <textarea id="ann_inputText" class="form-control" rows="3" placeholder="Tuliskan info perubahan rute, jadwal, lokasi temu, narahubung panitia, atau arahan jemaah..."></textarea>
+                  </div>
+                </div>
+
+                <!-- Daftar Pengumuman Tersimpan -->
+                <div style="margin-bottom: 14px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-size: 12px; font-weight: 700; color: #cbd5e1;">
+                      <i class="fa-solid fa-list-check text-gold"></i> Daftar Pengumuman Aktif (Teratas = Terkini / TERBARU)
+                    </span>
+                    <span style="font-size: 11px; color: #94a3b8;" id="settingsAnnCountLabel">0 Pengumuman</span>
+                  </div>
+
+                  <div id="settingsAnnouncementsList" style="max-height: 280px; overflow-y: auto;">
+                    <!-- Injected via JavaScript -->
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-primary btn-sm" onclick="saveAllAnnouncementSettings()">
+                    <i class="fa-solid fa-floppy-disk"></i> Simpan Permanen ke Supabase
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="navigateTo('dashboard'); scrollToAnnouncement();">
+                    <i class="fa-solid fa-eye"></i> Lihat di Beranda
                   </button>
                 </div>
               </div>
@@ -4014,7 +4031,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=86.0"></script>
-  <script src="js/app.js?v=86.0"></script>
+  <script src="js/supabase-config.js?v=87.0"></script>
+  <script src="js/app.js?v=87.0"></script>
 </body>
 </html>
