@@ -8917,7 +8917,7 @@ input:checked + .slider:before {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: 999999 !important;
   display: flex;
   flex-direction: column;
   gap: 10px;

@@ -4147,6 +4147,19 @@ function showTicketModal(recordOrBatch, initialIndex = 0) {
   const waBtn = document.getElementById('btnSendTicketWa');
   if (waBtn) waBtn.remove();
 
+  // Reset status notifikasi email dan tombol
+  const statusBox = document.getElementById('ticketEmailStatusBox');
+  if (statusBox) {
+    statusBox.style.display = 'none';
+    statusBox.innerHTML = '';
+  }
+  const emailBtn = document.getElementById('btnSendTicketEmail');
+  if (emailBtn) {
+    emailBtn.disabled = false;
+    emailBtn.innerHTML = '<i class="fa-solid fa-envelope"></i> Kirim via Email';
+    emailBtn.style.background = '#0284c7';
+  }
+
   if (Array.isArray(recordOrBatch)) {
     currentTicketBatch = recordOrBatch;
   } else {
@@ -4498,21 +4511,31 @@ async function sendTicketEmail() {
   copyTicketConfirmationMessage(false);
 
   const btn = document.getElementById('btnSendTicketEmail');
+  const statusBox = document.getElementById('ticketEmailStatusBox');
   const originalText = btn ? btn.innerHTML : '';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan Email...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim E-Tiket...';
+  }
+  if (statusBox) {
+    statusBox.style.display = 'block';
+    statusBox.style.background = 'rgba(2, 132, 199, 0.2)';
+    statusBox.style.border = '1px solid #0284c7';
+    statusBox.style.color = '#38bdf8';
+    statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Sedang memproses pengiriman E-Tiket ke: <strong>${escapeHtml(destEmail)}</strong>...`;
   }
 
   try {
-    const googleScriptUrl = settings.google_email_script_url || '';
+    const fallbackUrl = 'https://script.google.com/macros/s/AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A/exec';
+    const googleScriptUrl = (settings.google_email_script_url && settings.google_email_script_url.trim())
+      ? settings.google_email_script_url.trim()
+      : fallbackUrl;
     const emailjsServiceId = settings.emailjs_service_id || '';
     const emailjsTemplateId = settings.emailjs_template_id || '';
     const emailjsPublicKey = settings.emailjs_public_key || '';
-    const isDummyScript = !googleScriptUrl || googleScriptUrl.includes('AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A');
 
-    if (googleScriptUrl && !isDummyScript) {
-      showToast(`Mengirim E-Tiket via Google Apps Script ke: ${destEmail}...`, 'info');
+    if (googleScriptUrl) {
+      showToast(`Sedang mengirim E-Tiket ke: ${destEmail}...`, 'info');
       await fetch(googleScriptUrl, {
         method: 'POST',
         mode: 'no-cors',
@@ -4528,7 +4551,21 @@ async function sendTicketEmail() {
           registration_code: currentTicketRecord.registration_code || '-'
         })
       });
-      showToast(`Alhamdulillah! E-Tiket resmi terkirim ke: ${destEmail}`, 'success');
+
+      showToast(`Alhamdulillah! E-Tiket resmi berhasil dikirim ke: ${destEmail}`, 'success');
+      if (statusBox) {
+        statusBox.style.display = 'block';
+        statusBox.style.background = 'rgba(16, 185, 129, 0.22)';
+        statusBox.style.border = '1px solid #10b981';
+        statusBox.style.color = '#34d399';
+        statusBox.innerHTML = `<i class="fa-solid fa-circle-check" style="font-size: 16px;"></i> <strong>Alhamdulillah, Tiket Berhasil Dikirim!</strong><br><span style="font-size: 13px; color: #f1f5f9;">E-Tiket resmi telah terkirim ke email: <strong>${escapeHtml(destEmail)}</strong>.<br><span style="font-size: 12px; color: #94a3b8;">Silakan periksa Kotak Masuk (Inbox) atau folder Spam pada email Anda.</span></span>`;
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tiket Terkirim!';
+        btn.style.background = '#059669';
+      }
+      return;
     } else if (window.emailjs && emailjsPublicKey && emailjsServiceId && emailjsTemplateId) {
       await window.emailjs.send(
         emailjsServiceId,
@@ -4543,6 +4580,19 @@ async function sendTicketEmail() {
         emailjsPublicKey
       );
       showToast(`Alhamdulillah! E-Tiket resmi berhasil dikirim ke: ${destEmail}`, 'success');
+      if (statusBox) {
+        statusBox.style.display = 'block';
+        statusBox.style.background = 'rgba(16, 185, 129, 0.22)';
+        statusBox.style.border = '1px solid #10b981';
+        statusBox.style.color = '#34d399';
+        statusBox.innerHTML = `<i class="fa-solid fa-circle-check" style="font-size: 16px;"></i> <strong>Alhamdulillah, Tiket Berhasil Dikirim!</strong><br><span style="font-size: 13px; color: #f1f5f9;">E-Tiket resmi telah terkirim ke email: <strong>${escapeHtml(destEmail)}</strong>.<br><span style="font-size: 12px; color: #94a3b8;">Silakan periksa Kotak Masuk (Inbox) atau folder Spam pada email Anda.</span></span>`;
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tiket Terkirim!';
+        btn.style.background = '#059669';
+      }
+      return;
     } else {
       // Buka Gmail Web / aplikasi Email dengan tujuan, subjek, dan tiket yang sudah otomatis terisi
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(destEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -4559,20 +4609,33 @@ async function sendTicketEmail() {
         window.location.href = mailtoUrl;
       }
       showToast(`Membuka Gmail ke: ${destEmail}. Rincian tiket telah disalin ke clipboard!`, 'info');
-    }
-
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Siap Dikirim!';
-      setTimeout(() => {
-        if (btn) btn.innerHTML = originalText;
-      }, 3500);
+      if (statusBox) {
+        statusBox.style.display = 'block';
+        statusBox.style.background = 'rgba(2, 132, 199, 0.2)';
+        statusBox.style.border = '1px solid #0284c7';
+        statusBox.style.color = '#38bdf8';
+        statusBox.innerHTML = `<i class="fa-solid fa-envelope-open-text"></i> Halaman Gmail telah dibuka untuk pengiriman ke: <strong>${escapeHtml(destEmail)}</strong>. Teks tiket sudah tersalin otomatis.`;
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Siap Dikirim!';
+        setTimeout(() => {
+          if (btn) btn.innerHTML = originalText;
+        }, 3500);
+      }
     }
   } catch (err) {
     console.error('Email send error:', err);
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = originalText;
+    }
+    if (statusBox) {
+      statusBox.style.display = 'block';
+      statusBox.style.background = 'rgba(239, 68, 68, 0.22)';
+      statusBox.style.border = '1px solid #ef4444';
+      statusBox.style.color = '#f87171';
+      statusBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Gagal mengirim email: ${escapeHtml(err.text || err.message || 'Periksa koneksi Anda')}`;
     }
     showToast(`Pengiriman email: ${err.text || err.message || 'Periksa koneksi'}`, 'error');
   }
