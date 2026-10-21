@@ -38,7 +38,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=96.0">
+  <link rel="stylesheet" href="css/style.css?v=97.0">
 </head>
 <body>
 
@@ -1174,43 +1174,32 @@
               </div>
             </div>
 
-            <!-- Data Koordinator / Rombongan -->
+            <!-- Data Rombongan & Identitas Kafilah -->
             <div class="form-grid-section">
               <h3 class="form-section-title">
-                <i class="fa-solid fa-crown"></i> Data Rombongan & Koordinator
+                <i class="fa-solid fa-flag text-gold"></i> Identitas Rombongan &amp; Rute Perjalanan
               </h3>
 
-              <div class="form-row col-5">
+              <div class="form-row col-2">
                 <div class="form-group">
                   <label for="grp_name" class="form-label">Nama Rombongan <span class="required">*</span></label>
                   <input type="text" id="grp_name" class="form-control" placeholder="Contoh: Rombongan Paskas Sambas" maxlength="100" required>
                 </div>
-
                 <div class="form-group">
-                  <label for="grp_leader" class="form-label">Nama Koordinator <span class="required">*</span></label>
-                  <input type="text" id="grp_leader" class="form-control" placeholder="Nama lengkap ketua / koordinator" maxlength="100" required>
-                </div>
-
-                <div class="form-group">
-                  <label for="grp_email" class="form-label">Email Koordinator</label>
-                  <input type="email" id="grp_email" class="form-control" placeholder="koordinator@email.com" maxlength="100" title="Email untuk pengiriman e-tiket rombongan">
-                </div>
-
-                <div class="form-group">
-                  <label for="grp_leaderPhone" class="form-label">No. HP Koordinator <span class="required">*</span></label>
-                  <input type="tel" id="grp_leaderPhone" class="form-control" placeholder="08xxxxxxxxxx" inputmode="numeric" pattern="[0-9]*" maxlength="16" required oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                </div>
-
-                <div class="form-group">
-                  <label for="grp_joinYear" class="form-label">Tahun Bergabung Paskas</label>
+                  <label for="grp_joinYear" class="form-label">Tahun Bergabung Paskas (Standar Rombongan)</label>
                   <input type="number" id="grp_joinYear" class="form-control" placeholder="Cth: 2021" min="2000" max="2026" title="Tahun pertama aktif di Paskas">
                 </div>
               </div>
 
+              <!-- Input tersembunyi untuk kompatibilitas script -->
+              <input type="hidden" id="grp_leader" name="grp_leader">
+              <input type="hidden" id="grp_email" name="grp_email">
+              <input type="hidden" id="grp_leaderPhone" name="grp_leaderPhone">
+
               <!-- Default template jadwal rombongan (untuk auto-fill anggota) -->
               <div class="group-preset-box">
                 <div class="preset-title">
-                  <i class="fa-solid fa-wand-magic-sparkles"></i> Jadwal & Transportasi Standar Rombongan:
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Jadwal &amp; Transportasi Standar Rombongan:
                 </div>
                 <div class="form-row col-5">
                   <div class="form-group">
@@ -1261,14 +1250,59 @@
 
             <div class="form-divider"></div>
 
-            <!-- Dynamic Member List Section: Compact Table Spreadsheet View -->
+            <!-- TABEL 1: DATA KOORDINATOR ROMBONGAN -->
             <div class="form-grid-section">
               <div class="members-section-header">
                 <div>
                   <h3 class="form-section-title" style="margin-bottom: 2px;">
-                    <i class="fa-solid fa-people-group"></i> Daftar Anggota Rombongan
+                    <i class="fa-solid fa-crown text-gold"></i> 1. Tabel Koordinator Rombongan
                   </h3>
-                  <p class="section-desc-sm">Format tabel ringkas & cepat diisi. Mudah dipantau untuk rombongan jumlah besar.</p>
+                  <p class="section-desc-sm">Penanggung jawab rombongan. Tercatat lengkap dengan ukuran seragam &amp; riwayat kesehatan (bisa ditambah bila ada koordinator pendamping).</p>
+                </div>
+                
+                <div class="group-header-actions">
+                  <button type="button" class="btn btn-gold-add-leader" onclick="addGroupCoordinatorCard()" id="btnAddCoordinator" title="Tambah koordinator pendamping atau koordinator akhwat">
+                    <i class="fa-solid fa-user-shield"></i> + Tambah Koordinator Pendamping
+                  </button>
+                </div>
+              </div>
+
+              <!-- Table Coordinators Container -->
+              <div class="group-table-card-wrap" style="border: 1.5px solid #d4af37; border-radius: 12px; overflow: hidden; margin-bottom: 8px;">
+                <div class="table-responsive">
+                  <table class="table-compact-members" id="groupCoordinatorsTable">
+                    <thead>
+                      <tr style="background: linear-gradient(90deg, #1e293b, #0f172a);">
+                        <th style="width: 72px; text-align: center;">Peran</th>
+                        <th style="min-width: 190px;">Nama Lengkap Koordinator <span class="required">*</span></th>
+                        <th style="min-width: 88px; width: 92px; text-align: center;">Usia <span class="required">*</span></th>
+                        <th style="min-width: 110px; width: 115px; text-align: center;">Tahun Paskas <span class="required">*</span></th>
+                        <th style="min-width: 130px; width: 135px;">Jenis Kelamin <span class="required">*</span></th>
+                        <th style="min-width: 90px; width: 95px;">Ukuran Baju <span class="required">*</span></th>
+                        <th style="min-width: 160px;">Riwayat Penyakit</th>
+                        <th style="min-width: 135px;">No. WhatsApp <span class="required">*</span></th>
+                        <th style="min-width: 150px;">Email (E-Tiket)</th>
+                        <th style="width: 44px; text-align: center;">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="groupCoordinatorsContainer">
+                      <!-- Injected via JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-divider"></div>
+
+            <!-- TABEL 2: DATA ANGGOTA ROMBONGAN -->
+            <div class="form-grid-section">
+              <div class="members-section-header">
+                <div>
+                  <h3 class="form-section-title" style="margin-bottom: 2px;">
+                    <i class="fa-solid fa-people-group"></i> 2. Tabel Anggota Rombongan
+                  </h3>
+                  <p class="section-desc-sm">Daftar seluruh jamaah / anggota peserta yang ikut dalam rombongan. Format tabel ringkas &amp; cepat diisi.</p>
                 </div>
                 
                 <!-- Group Quick Action Buttons -->
@@ -4078,7 +4112,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=96.0"></script>
-  <script src="js/app.js?v=96.0"></script>
+  <script src="js/supabase-config.js?v=97.0"></script>
+  <script src="js/app.js?v=97.0"></script>
 </body>
 </html>

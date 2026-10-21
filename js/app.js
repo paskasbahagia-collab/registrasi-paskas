@@ -3361,16 +3361,20 @@ function handleKelompokPreview(e) {
     return;
   }
 
+  const coordCards = document.querySelectorAll('.coord-card');
+  if (coordCards.length === 0) {
+    showToast('Harap isi minimal 1 data koordinator rombongan.', 'warning');
+    return;
+  }
   const memberCards = document.querySelectorAll('.member-card');
-  if (memberCards.length === 0) {
-    showToast('Harap tambahkan minimal 1 anggota rombongan.', 'error');
+
+  const groupName = document.getElementById('grp_name').value.trim();
+  if (!groupName) {
+    showToast('Harap isi Nama Rombongan.', 'warning');
+    document.getElementById('grp_name')?.focus();
     return;
   }
 
-  const groupName = document.getElementById('grp_name').value.trim();
-  const groupLeader = document.getElementById('grp_leader').value.trim();
-  const groupEmail = document.getElementById('grp_email')?.value.trim() || '';
-  const leaderPhone = document.getElementById('grp_leaderPhone').value.trim();
   const defaultWilayahRaw = document.getElementById('grp_defaultWilayah')?.value || '';
   const defaultWilayah = normalizeWilayahName(defaultWilayahRaw);
   const defaultDaerah = (document.getElementById('grp_defaultDaerah')?.value || '').trim() || defaultWilayah;
@@ -3401,26 +3405,143 @@ function handleKelompokPreview(e) {
   }
 
   const batchRecords = [];
-  const year = new Date().getFullYear();
-  const baseCode = Math.floor(1000 + Math.random() * 9000);
-
-  let membersRowsHtml = '';
   const seenTableNames = new Set();
+  let primaryLeaderName = '';
+  let primaryLeaderPhone = '';
+  let primaryLeaderEmail = '';
+  let coordinatorsRowsHtml = '';
+  let membersRowsHtml = '';
 
-  for (let idx = 0; idx < memberCards.length; idx++) {
-    const card = memberCards[idx];
-    const name = card.querySelector('.grp-member-name').value.trim();
+  // 1. PROSES TABEL KOORDINATOR ROMBONGAN
+  for (let cIdx = 0; cIdx < coordCards.length; cIdx++) {
+    const card = coordCards[cIdx];
+    const name = card.querySelector('.grp-coord-name')?.value.trim() || '';
     if (!name) {
-      showToast(`Mohon isi nama lengkap untuk baris ke-${idx + 1}.`, 'warning');
-      card.querySelector('.grp-member-name').focus();
+      showToast(`Mohon isi nama lengkap untuk Koordinator ke-${cIdx + 1}.`, 'warning');
+      card.querySelector('.grp-coord-name')?.focus();
       return;
     }
 
-    // 1. Cek duplikasi nama di dalam tabel rombongan ini
     const lowerName = name.toLowerCase();
     if (seenTableNames.has(lowerName)) {
-      showToast(`Nama "${name}" terdaftar lebih dari satu kali di tabel rombongan (baris ke-${idx + 1}). Mohon periksa kembali.`, 'error');
-      card.querySelector('.grp-member-name').focus();
+      showToast(`Nama "${name}" terdaftar lebih dari satu kali di rombongan ini. Mohon periksa kembali.`, 'error');
+      card.querySelector('.grp-coord-name')?.focus();
+      return;
+    }
+    seenTableNames.add(lowerName);
+
+    const rawAge = card.querySelector('.grp-coord-age')?.value;
+    const age = parseInt(rawAge || '0', 10);
+    if (!rawAge || isNaN(age) || age <= 0) {
+      showToast(`Mohon cantumkan usia untuk Koordinator "${name}".`, 'warning');
+      card.querySelector('.grp-coord-age')?.focus();
+      return;
+    }
+
+    const gender = card.querySelector('.grp-coord-gender')?.value || 'Laki-laki';
+    const cloth = card.querySelector('.grp-coord-cloth')?.value || 'L';
+    const med = card.querySelector('.grp-coord-med')?.value.trim() || '';
+    const phone = card.querySelector('.grp-coord-phone')?.value.trim() || '';
+    if (!phone) {
+      showToast(`Mohon cantumkan nomor WhatsApp untuk Koordinator "${name}".`, 'warning');
+      card.querySelector('.grp-coord-phone')?.focus();
+      return;
+    }
+    const email = card.querySelector('.grp-coord-email')?.value.trim() || '';
+
+    if (cIdx === 0) {
+      primaryLeaderName = name;
+      primaryLeaderPhone = phone;
+      primaryLeaderEmail = email;
+    }
+
+    const rawJoinYear = card.querySelector('.grp-coord-join-year')?.value;
+    const defaultJoinYear = document.getElementById('grp_joinYear')?.value || '';
+    const joinYear = parseInt(rawJoinYear || defaultJoinYear || String(new Date().getFullYear()), 10);
+
+    const dupCheck = checkDuplicateRegistration({
+      full_name: name,
+      phone_number: phone,
+      wilayah: defaultWilayah,
+      daerah: defaultDaerah,
+      is_child: false,
+      isGroupMember: true,
+      leaderPhone: phone
+    });
+
+    if (dupCheck) {
+      showToast(`Koordinator "${name}" sudah pernah terdaftar sebelumnya (${dupCheck.existing.registration_code}).`, 'warning');
+      card.querySelector('.grp-coord-name')?.focus();
+      return;
+    }
+
+    const code = generateRegistrationCode('kelompok', batchRecords.length);
+    const alloc = autoAllocateRoomAndGroup(gender, false, '', batchRecords);
+    const coordRoleTitle = (cIdx === 0) ? 'Koordinator Utama' : `Koordinator Pendamping #${cIdx + 1}`;
+
+    batchRecords.push({
+      registration_code: code,
+      registration_type: 'kelompok',
+      group_name: groupName,
+      group_code: alloc.group_code,
+      group_leader_name: primaryLeaderName || name,
+      room_number: alloc.room_number,
+      room_name: alloc.room_name,
+      building: alloc.building,
+      full_name: name,
+      age: age > 0 ? age : null,
+      join_year: joinYear > 0 ? joinYear : null,
+      is_child: false,
+      guardian_name: null,
+      gender: gender,
+      wilayah: defaultWilayah,
+      daerah: defaultDaerah,
+      arrival_date: defaultArrival,
+      arrival_time: '12:00',
+      departure_date: defaultDeparture,
+      departure_time: '14:00',
+      transport_arrival: defaultTransport,
+      transport_departure: defaultTransport,
+      cloth_size: cloth,
+      medical_history: med || 'Tidak Ada',
+      phone_number: phone,
+      email: email || primaryLeaderEmail || null,
+      notes: `👑 ${coordRoleTitle} • Rombongan: ${groupName}`
+    });
+
+    coordinatorsRowsHtml += `
+      <tr style="background: rgba(245, 158, 11, 0.08);">
+        <td style="text-align: center;">
+          <span style="font-weight: 800; color: #fbbf24;"><i class="fa-solid fa-crown text-gold"></i> #${cIdx + 1}</span>
+        </td>
+        <td>
+          <strong>${escapeHtml(name)}</strong>
+          <div style="font-size: 11px; color: #fbbf24; font-weight: 700;">${coordRoleTitle}</div>
+        </td>
+        <td style="text-align: center; font-weight: 600;">${age} th</td>
+        <td style="text-align: center; font-weight: 600; color: #38bdf8;">${joinYear > 0 ? joinYear : '-'}</td>
+        <td>${escapeHtml(gender)}</td>
+        <td><strong style="color: #fbbf24;">${cloth}</strong></td>
+        <td>${escapeHtml(med || 'Sehat')}</td>
+        <td style="font-size: 12px;">${escapeHtml(phone)}</td>
+      </tr>
+    `;
+  }
+
+  // 2. PROSES TABEL ANGGOTA ROMBONGAN
+  for (let idx = 0; idx < memberCards.length; idx++) {
+    const card = memberCards[idx];
+    const name = card.querySelector('.grp-member-name')?.value.trim() || '';
+    if (!name) {
+      showToast(`Mohon isi nama lengkap untuk Anggota baris ke-${idx + 1}.`, 'warning');
+      card.querySelector('.grp-member-name')?.focus();
+      return;
+    }
+
+    const lowerName = name.toLowerCase();
+    if (seenTableNames.has(lowerName)) {
+      showToast(`Nama "${name}" terdaftar lebih dari satu kali di rombongan ini (baris ke-${idx + 1}). Mohon periksa kembali.`, 'error');
+      card.querySelector('.grp-member-name')?.focus();
       return;
     }
     seenTableNames.add(lowerName);
@@ -3437,11 +3558,10 @@ function handleKelompokPreview(e) {
     const genderSelect = card.querySelector('.grp-member-gender');
     const genderRadio = card.querySelector('input[type="radio"]:checked');
     const gender = genderSelect ? genderSelect.value : (genderRadio ? genderRadio.value : 'Laki-laki');
-    const cloth = card.querySelector('.grp-member-cloth').value;
-    const med = card.querySelector('.grp-member-med').value.trim();
-    const phone = card.querySelector('.grp-member-phone').value.trim() || leaderPhone;
+    const cloth = card.querySelector('.grp-member-cloth')?.value || 'L';
+    const med = card.querySelector('.grp-member-med')?.value.trim() || '';
+    const phone = card.querySelector('.grp-member-phone')?.value.trim() || primaryLeaderPhone;
 
-    // 2. Cek duplikasi dengan data peserta yang sudah ada di sistem
     const dupCheck = checkDuplicateRegistration({
       full_name: name,
       phone_number: phone,
@@ -3449,11 +3569,11 @@ function handleKelompokPreview(e) {
       daerah: defaultDaerah,
       is_child: isChild,
       isGroupMember: true,
-      leaderPhone: leaderPhone
+      leaderPhone: primaryLeaderPhone
     });
 
     if (dupCheck) {
-      showToast(`Peserta "${name}" (baris ke-${idx + 1}) sudah pernah terdaftar sebelumnya (${dupCheck.existing.registration_code}). Data anggota rombongan lainnya tetap aman di formulir.`, 'warning');
+      showToast(`Peserta "${name}" (baris ke-${idx + 1}) sudah pernah terdaftar sebelumnya (${dupCheck.existing.registration_code}).`, 'warning');
       const nameInput = card.querySelector('.grp-member-name');
       if (nameInput) {
         nameInput.focus();
@@ -3471,7 +3591,7 @@ function handleKelompokPreview(e) {
     const defaultJoinYear = document.getElementById('grp_joinYear')?.value || '';
     const joinYear = parseInt(rawJoinYear || defaultJoinYear || String(new Date().getFullYear()), 10);
 
-    const code = generateRegistrationCode('kelompok', idx);
+    const code = generateRegistrationCode('kelompok', batchRecords.length);
     const alloc = autoAllocateRoomAndGroup(gender, isChild, guardianName, batchRecords);
 
     batchRecords.push({
@@ -3479,7 +3599,7 @@ function handleKelompokPreview(e) {
       registration_type: 'kelompok',
       group_name: groupName,
       group_code: alloc.group_code,
-      group_leader_name: groupLeader,
+      group_leader_name: primaryLeaderName,
       room_number: alloc.room_number,
       room_name: alloc.room_name,
       building: alloc.building,
@@ -3500,8 +3620,8 @@ function handleKelompokPreview(e) {
       cloth_size: cloth,
       medical_history: med || 'Tidak Ada',
       phone_number: phone,
-      email: groupEmail || null,
-      notes: `Rombongan: ${groupName} (Ketua: ${groupLeader})${guardianName ? ' • Ikut Ortu: ' + guardianName : ''}`
+      email: primaryLeaderEmail || null,
+      notes: `Rombongan: ${groupName} (Ketua: ${primaryLeaderName})${guardianName ? ' • Ikut Ortu: ' + guardianName : ''}`
     });
 
     membersRowsHtml += `
@@ -3528,9 +3648,9 @@ function handleKelompokPreview(e) {
   pendingRegistrationData = {
     type: 'kelompok',
     groupName: groupName,
-    groupLeader: groupLeader,
-    leaderEmail: groupEmail,
-    leaderPhone: leaderPhone,
+    groupLeader: primaryLeaderName,
+    leaderEmail: primaryLeaderEmail,
+    leaderPhone: primaryLeaderPhone,
     wilayah: defaultWilayah,
     data: batchRecords
   };
@@ -3540,7 +3660,7 @@ function handleKelompokPreview(e) {
     previewBody.innerHTML = `
       <div class="preview-summary-box">
         <div class="preview-summary-heading">
-          <i class="fa-solid fa-users"></i> Informasi Rombongan & Koordinator
+          <i class="fa-solid fa-users"></i> Informasi Rombongan &amp; Rute
           <span class="preview-badge-status kelompok" style="margin-left: auto;">Registrasi Kelompok (${batchRecords.length} Peserta)</span>
         </div>
         <div class="preview-detail-grid">
@@ -3550,22 +3670,22 @@ function handleKelompokPreview(e) {
           </div>
           <div class="preview-item">
             <span class="preview-label">Wilayah Kafilah</span>
-            <span class="preview-val">${escapeHtml(defaultWilayah)}</span>
+            <span class="preview-val">${escapeHtml(defaultWilayah)} (${escapeHtml(defaultDaerah)})</span>
           </div>
           <div class="preview-item">
-            <span class="preview-label">Ketua / Koordinator</span>
-            <span class="preview-val">${escapeHtml(groupLeader)}</span>
+            <span class="preview-label">Koordinator Utama</span>
+            <span class="preview-val">${escapeHtml(primaryLeaderName)}</span>
           </div>
           <div class="preview-item">
             <span class="preview-label">No. WA Koordinator</span>
-            <span class="preview-val">${escapeHtml(leaderPhone)}</span>
+            <span class="preview-val">${escapeHtml(primaryLeaderPhone)}</span>
           </div>
         </div>
       </div>
 
       <div class="preview-summary-box">
         <div class="preview-summary-heading">
-          <i class="fa-solid fa-calendar-days"></i> Rencana Jadwal & Transportasi Bersama
+          <i class="fa-solid fa-calendar-days"></i> Rencana Jadwal &amp; Transportasi Bersama
         </div>
         <div class="preview-detail-grid">
           <div class="preview-item">
@@ -3583,9 +3703,36 @@ function handleKelompokPreview(e) {
         </div>
       </div>
 
+      <!-- Preview Tabel Koordinator -->
+      <div class="preview-summary-box" style="border: 1.5px solid rgba(245, 158, 11, 0.5);">
+        <div class="preview-summary-heading" style="color: #fbbf24;">
+          <i class="fa-solid fa-crown text-gold"></i> 1. Koordinator Rombongan (${coordCards.length} Orang)
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="preview-members-table">
+            <thead>
+              <tr style="background: rgba(245, 158, 11, 0.15);">
+                <th style="width: 50px; text-align: center;">Peran</th>
+                <th>Nama Koordinator</th>
+                <th style="width: 70px; text-align: center;">Usia</th>
+                <th style="width: 100px; text-align: center;">Tahun Paskas</th>
+                <th>Gender</th>
+                <th>Ukuran Baju</th>
+                <th>Kesehatan</th>
+                <th>No. WhatsApp</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${coordinatorsRowsHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Preview Tabel Anggota -->
       <div class="preview-summary-box">
         <div class="preview-summary-heading">
-          <i class="fa-solid fa-list-ol"></i> Daftar Anggota Rombongan (${batchRecords.length} Orang)
+          <i class="fa-solid fa-people-group"></i> 2. Anggota Rombongan (${memberCards.length} Orang)
         </div>
         <div style="overflow-x: auto;">
           <table class="preview-members-table">
@@ -3594,14 +3741,14 @@ function handleKelompokPreview(e) {
                 <th style="width: 40px; text-align: center;">No</th>
                 <th>Nama Peserta</th>
                 <th style="width: 70px; text-align: center;">Usia</th>
-                <th style="width: 120px; text-align: center;">Tahun Bergabung Paskas</th>
+                <th style="width: 100px; text-align: center;">Tahun Paskas</th>
                 <th>Gender</th>
-                <th>Baju</th>
-                <th>Riwayat Medis</th>
+                <th>Ukuran Baju</th>
+                <th>Kesehatan</th>
               </tr>
             </thead>
             <tbody>
-              ${membersRowsHtml}
+              ${membersRowsHtml || '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 12px;">Tidak ada anggota tambahan</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -3687,29 +3834,168 @@ async function confirmAndSubmitRegistration() {
   }
 }
 
-// GROUP MEMBERS REPEATER LOGIC
+// GROUP COORDINATORS & MEMBERS REPEATER LOGIC
+let groupCoordinatorCount = 0;
 let groupMemberCount = 0;
 
+function syncPrimaryCoordinatorHiddenFields() {
+  const firstCoord = document.querySelector('#groupCoordinatorsContainer tr.coord-card');
+  const hLeader = document.getElementById('grp_leader');
+  const hPhone = document.getElementById('grp_leaderPhone');
+  const hEmail = document.getElementById('grp_email');
+
+  if (firstCoord) {
+    const name = firstCoord.querySelector('.grp-coord-name')?.value.trim() || '';
+    const phone = firstCoord.querySelector('.grp-coord-phone')?.value.trim() || '';
+    const email = firstCoord.querySelector('.grp-coord-email')?.value.trim() || '';
+    if (hLeader) hLeader.value = name;
+    if (hPhone) hPhone.value = phone;
+    if (hEmail) hEmail.value = email;
+  }
+}
+
+function reindexGroupCoordinators() {
+  const rows = document.querySelectorAll('#groupCoordinatorsContainer tr.coord-card');
+  rows.forEach((row, idx) => {
+    const badge = row.querySelector('.member-num-badge');
+    if (badge) badge.textContent = idx + 1;
+    const tag = row.querySelector('.badge-coord-primary');
+    if (tag) tag.innerHTML = `<i class="fa-solid fa-crown text-gold"></i> ${idx === 0 ? 'Utama' : 'Pendamping'}`;
+  });
+}
+
+function removeGroupCoordinatorCard(coordId) {
+  const card = document.getElementById(`coordCard-${coordId}`);
+  if (card) {
+    card.remove();
+    reindexGroupCoordinators();
+    syncPrimaryCoordinatorHiddenFields();
+    syncAllGroupGuardians();
+    updateGroupStats();
+  }
+}
+
+function addGroupCoordinatorCard(opts = {}) {
+  groupCoordinatorCount++;
+  const container = document.getElementById('groupCoordinatorsContainer');
+  if (!container) return;
+  const coordId = groupCoordinatorCount;
+  const isPrimary = container.children.length === 0;
+
+  const initialName = opts.name || '';
+  const initialAge = opts.age !== undefined ? opts.age : '';
+  const defaultJoinYear = document.getElementById('grp_joinYear')?.value || '';
+  const initialJoinYear = opts.joinYear !== undefined ? opts.joinYear : (defaultJoinYear || new Date().getFullYear());
+  const initialGender = opts.gender || (isPrimary ? 'Laki-laki' : 'Perempuan');
+  const initialCloth = opts.cloth || 'L';
+  const initialMed = opts.med !== undefined ? opts.med : '';
+  const initialPhone = opts.phone || '';
+  const initialEmail = opts.email || '';
+
+  const tr = document.createElement('tr');
+  tr.className = 'coord-card coord-row-item';
+  tr.id = `coordCard-${coordId}`;
+  tr.innerHTML = `
+    <td style="text-align: center; vertical-align: middle;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+        <span class="member-num-badge" style="background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; font-weight: 800;">${container.children.length + 1}</span>
+        <span class="badge-coord-primary" style="font-size: 9.5px; padding: 1px 4px; white-space: nowrap;">
+          <i class="fa-solid fa-crown text-gold"></i> ${isPrimary ? 'Utama' : 'Pendamping'}
+        </span>
+      </div>
+    </td>
+    <td>
+      <input type="text" class="form-control form-control-sm grp-coord-name" 
+             placeholder="Nama lengkap koordinator" value="${escapeHtml(initialName)}" 
+             maxlength="100"
+             oninput="syncPrimaryCoordinatorHiddenFields(); syncAllGroupGuardians(); updateGroupStats();" 
+             required>
+    </td>
+    <td>
+      <input type="number" class="form-control form-control-sm grp-coord-age" 
+             placeholder="Usia" min="15" max="120" value="${escapeHtml(String(initialAge))}" 
+             oninput="updateGroupStats();" required title="Usia koordinator (tahun)">
+    </td>
+    <td>
+      <input type="number" class="form-control form-control-sm grp-coord-join-year" 
+             placeholder="Tahun" min="2000" max="${new Date().getFullYear()}" value="${escapeHtml(String(initialJoinYear))}" 
+             required title="Tahun pertama aktif di Paskas">
+    </td>
+    <td>
+      <select class="form-control form-control-sm grp-coord-gender" onchange="syncAllGroupGuardians(); updateGroupStats();">
+        <option value="Laki-laki" ${initialGender === 'Laki-laki' ? 'selected' : ''}>Laki-laki (Ikhwan)</option>
+        <option value="Perempuan" ${initialGender === 'Perempuan' ? 'selected' : ''}>Perempuan (Akhwat)</option>
+      </select>
+    </td>
+    <td>
+      <select class="form-control form-control-sm grp-coord-cloth">
+        <option value="S" ${initialCloth === 'S' ? 'selected' : ''}>S</option>
+        <option value="M" ${initialCloth === 'M' ? 'selected' : ''}>M</option>
+        <option value="L" ${initialCloth === 'L' ? 'selected' : ''}>L</option>
+        <option value="XL" ${initialCloth === 'XL' ? 'selected' : ''}>XL</option>
+        <option value="XXL" ${initialCloth === 'XXL' ? 'selected' : ''}>XXL</option>
+        <option value="3XL" ${initialCloth === '3XL' ? 'selected' : ''}>3XL</option>
+        <option value="4XL" ${initialCloth === '4XL' ? 'selected' : ''}>4XL</option>
+      </select>
+    </td>
+    <td>
+      <input type="text" class="form-control form-control-sm grp-coord-med" 
+             placeholder="Cth: Maag, Alergi (Kosongkan bila sehat)" value="${escapeHtml(initialMed)}" 
+             maxlength="200">
+    </td>
+    <td>
+      <input type="tel" class="form-control form-control-sm grp-coord-phone" 
+             placeholder="08xxxxxxxxxx" value="${escapeHtml(initialPhone)}" 
+             inputmode="numeric" pattern="[0-9]*" maxlength="16" 
+             oninput="this.value = this.value.replace(/[^0-9]/g, ''); syncPrimaryCoordinatorHiddenFields();" 
+             required title="Nomor WhatsApp aktif koordinator">
+    </td>
+    <td>
+      <input type="email" class="form-control form-control-sm grp-coord-email" 
+             placeholder="email@domain.com" value="${escapeHtml(initialEmail)}" 
+             maxlength="100" 
+             oninput="syncPrimaryCoordinatorHiddenFields();"
+             title="Email koordinator (opsional)">
+    </td>
+    <td style="text-align: center; vertical-align: middle;">
+      ${!isPrimary ? `
+        <button type="button" class="btn-remove-row-circle" onclick="removeGroupCoordinatorCard(${coordId})" title="Hapus koordinator pendamping ini">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      ` : `
+        <span title="Koordinator Utama wajib ada minimal 1" style="color: #94a3b8; font-size: 13px;">
+          <i class="fa-solid fa-lock"></i>
+        </span>
+      `}
+    </td>
+  `;
+
+  container.appendChild(tr);
+  syncPrimaryCoordinatorHiddenFields();
+  syncAllGroupGuardians();
+  updateGroupStats();
+}
+
 function initGroupMembers() {
+  const coordContainer = document.getElementById('groupCoordinatorsContainer');
+  if (coordContainer) {
+    coordContainer.innerHTML = '';
+    groupCoordinatorCount = 0;
+    addGroupCoordinatorCard();
+  }
+
   const container = document.getElementById('groupMembersContainer');
   if (!container) return;
   container.innerHTML = '';
   groupMemberCount = 0;
 
-  // Bind input ketua rombongan agar otomatis terdeteksi sebagai kandidat wali/orang tua
-  const leaderInput = document.getElementById('grp_leader');
-  if (leaderInput && !leaderInput.dataset.syncBound) {
-    leaderInput.addEventListener('input', () => syncAllGroupGuardians());
-    leaderInput.dataset.syncBound = 'true';
-  }
-
-  // Bind input tahun bergabung koordinator agar otomatis menjadi default bagi baris anggota
+  // Bind input tahun bergabung koordinator agar otomatis menjadi default bagi baris anggota & koordinator
   const grpJoinYearInput = document.getElementById('grp_joinYear');
   if (grpJoinYearInput && !grpJoinYearInput.dataset.syncBound) {
     grpJoinYearInput.addEventListener('input', () => {
       const val = grpJoinYearInput.value;
       if (val && val.length === 4) {
-        document.querySelectorAll('.grp-member-join-year').forEach(inp => {
+        document.querySelectorAll('.grp-coord-join-year, .grp-member-join-year').forEach(inp => {
           if (!inp.value || inp.dataset.autoFilled === 'true') {
             inp.value = val;
             inp.dataset.autoFilled = 'true';
@@ -3720,22 +4006,29 @@ function initGroupMembers() {
     grpJoinYearInput.dataset.syncBound = 'true';
   }
 
-  // Inisialisasi 3 baris bersih siap ketik langsung
+  // Inisialisasi 3 baris anggota bersih siap ketik langsung
   addGroupMemberCard();
   addGroupMemberCard();
   addGroupMemberCard();
 }
 
 function syncAllGroupGuardians() {
+  const coordRows = document.querySelectorAll('#groupCoordinatorsContainer tr.coord-card');
   const rows = document.querySelectorAll('#groupMembersContainer tr.member-card');
   const adults = [];
 
-  // Ambil nama Ketua Rombongan dari input utama di atas tabel jika ada
-  const leaderInput = document.getElementById('grp_leader');
-  const leaderName = leaderInput ? leaderInput.value.trim() : '';
-  if (leaderName) {
-    adults.push({ name: `${leaderName} (Ketua Rombongan)`, valName: leaderName, gender: 'Laki-laki' });
-  }
+  // Kumpulkan koordinator sebagai kandidat orang tua / wali
+  coordRows.forEach((r, idx) => {
+    const name = r.querySelector('.grp-coord-name')?.value.trim();
+    const gender = r.querySelector('.grp-coord-gender')?.value || 'Laki-laki';
+    if (name) {
+      adults.push({
+        name: `${name} (${idx === 0 ? 'Koordinator Utama' : 'Koordinator Pendamping'})`,
+        valName: name,
+        gender: gender
+      });
+    }
+  });
 
   // Kumpulkan semua peserta dewasa yang namanya sudah diisi
   rows.forEach(r => {
@@ -3991,13 +4284,31 @@ function reindexMemberRows() {
 }
 
 function updateGroupStats() {
-  const rows = document.querySelectorAll('#groupMembersContainer tr.member-card');
-  const total = rows.length;
+  const coordRows = document.querySelectorAll('#groupCoordinatorsContainer tr.coord-card');
+  const memberRows = document.querySelectorAll('#groupMembersContainer tr.member-card');
+  const coordCount = coordRows.length;
+  const memberCount = memberRows.length;
+  const total = coordCount + memberCount;
   let male = 0;
   let female = 0;
   let children = 0;
 
-  rows.forEach(row => {
+  coordRows.forEach(row => {
+    const genderSel = row.querySelector('.grp-coord-gender');
+    const g = genderSel ? genderSel.value : 'Laki-laki';
+    if (g === 'Perempuan') {
+      female++;
+    } else {
+      male++;
+    }
+
+    const ageVal = parseInt(row.querySelector('.grp-coord-age')?.value || '0', 10);
+    if (ageVal > 0 && ageVal < 15) {
+      children++;
+    }
+  });
+
+  memberRows.forEach(row => {
     const genderSel = row.querySelector('.grp-member-gender');
     const genderRad = row.querySelector('input[type="radio"]:checked');
     const g = genderSel ? genderSel.value : (genderRad ? genderRad.value : 'Laki-laki');
@@ -4017,7 +4328,13 @@ function updateGroupStats() {
   if (countEl) countEl.textContent = total;
 
   const statTotalEl = document.getElementById('grpStatTotal');
-  if (statTotalEl) statTotalEl.textContent = `${total} Orang`;
+  if (statTotalEl) {
+    if (coordCount > 0) {
+      statTotalEl.textContent = `${total} Orang (${coordCount} Koord + ${memberCount} Anggota)`;
+    } else {
+      statTotalEl.textContent = `${total} Orang`;
+    }
+  }
 
   const statMaleEl = document.getElementById('grpStatMale');
   if (statMaleEl) statMaleEl.textContent = male;
