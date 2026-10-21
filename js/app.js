@@ -2818,6 +2818,17 @@ function checkIndividualDuplicateOnBlur() {
   });
 
   if (dup) {
+    // ATURAN PENTING:
+    // Jika nama yang diisi di formulir BERBEDA dengan nama data lama di database,
+    // berarti pengguna sedang mendaftarkan orang lain/keluarga menggunakan kontak ini.
+    // Sembunyikan kotak notifikasi ini agar form tetap bersih dan tidak membingungkan pengguna!
+    const currentName = name.trim().toLowerCase();
+    const existingName = (dup.existing.full_name || '').trim().toLowerCase();
+    if (currentName && existingName && currentName !== existingName) {
+      hideIndividualDuplicateNotice();
+      return;
+    }
+
     foundIndividualDupRecord = dup.existing;
     if (noticeText) {
       if (dup.matchedBy === 'email') {

@@ -33,7 +33,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=85.0">
+  <link rel="stylesheet" href="css/style.css?v=86.0">
 </head>
 <body>
 
@@ -570,7 +570,7 @@
                           </label>
                           <div class="input-with-icon">
                             <i class="fa-regular fa-user"></i>
-                            <input type="text" id="ind_fullName" name="fullName" class="form-control" placeholder="Nama lengkap sesuai KTP / tanda pengenal" maxlength="100" required>
+                            <input type="text" id="ind_fullName" name="fullName" class="form-control" placeholder="Nama lengkap sesuai KTP / tanda pengenal" maxlength="100" required onblur="checkIndividualDuplicateOnBlur()" oninput="checkIndividualDuplicateOnBlur()">
                           </div>
                         </div>
 
@@ -4014,7 +4014,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=85.0"></script>
-  <script src="js/app.js?v=85.0"></script>
+  <script src="js/supabase-config.js?v=86.0"></script>
+  <script src="js/app.js?v=86.0"></script>
 </body>
 </html>
