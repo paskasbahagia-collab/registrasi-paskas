@@ -1535,7 +1535,16 @@ function renderHeroStoryContent(idx) {
                           (card.category && card.category.toLowerCase().includes('atribut'));
 
     if (isUniformCard) {
-      bodyEl.innerHTML = renderUniformShowcaseHTML();
+      let extraNarration = '';
+      if (card.narration && card.narration.trim() && !card.narration.includes('Model Kaos Resmi Ikhwan:')) {
+        extraNarration = `
+          <div class="modal-rich-section" style="margin-top: 18px;">
+            <h4><i class="fa-solid fa-circle-info"></i> Catatan &amp; Narasi Tambahan Seragam</h4>
+            ${renderFormattedNarrationHTML(card.narration)}
+          </div>
+        `;
+      }
+      bodyEl.innerHTML = renderUniformShowcaseHTML() + extraNarration;
       return;
     }
 
@@ -9451,7 +9460,11 @@ async function saveCardsFromSettings() {
           uniform_desc_akhwat: akhwatDesc
         };
         if (typeof window.dataService.saveSettings === 'function') {
-          window.dataService.saveSettings(uPayload);
+          try {
+            await window.dataService.saveSettings(uPayload);
+          } catch (errU) {
+            console.warn('Gagal simpan spesifikasi seragam:', errU);
+          }
         }
       }
 
@@ -9481,16 +9494,30 @@ async function saveCardsFromSettings() {
     }
   });
 
+  // Buat payload kartu yang ringkas dan bersih (tanpa HTML content lama) agar hemat kuota Supabase
+  const cleanCardsPayload = DASHBOARD_CARDS.map(c => ({
+    id: c.id,
+    category: c.category || 'INFORMASI',
+    title: c.title || '',
+    subtitle: c.subtitle || '',
+    badge: c.badge || '',
+    coverImg: c.coverImg || '',
+    thumbImg: c.thumbImg || c.coverImg || '',
+    narration: c.narration || ''
+  }));
+
   try {
-    localStorage.setItem('paskas_custom_cards', JSON.stringify(DASHBOARD_CARDS));
+    localStorage.setItem('paskas_custom_cards', JSON.stringify(cleanCardsPayload));
   } catch (e) {
     console.warn('LocalStorage limit reached for custom cards:', e);
   }
 
+  let cloudSuccess = true;
   if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
     try {
-      await window.dataService.saveCloudSetting('paskas_custom_cards', DASHBOARD_CARDS);
+      await window.dataService.saveCloudSetting('paskas_custom_cards', cleanCardsPayload);
     } catch (errCloud) {
+      cloudSuccess = false;
       console.error('Gagal simpan kartu ke Supabase:', errCloud);
     }
   }
@@ -9509,7 +9536,11 @@ async function saveCardsFromSettings() {
     saveBtn.disabled = false;
     saveBtn.innerHTML = origText;
   }
-  showToast('Alhamdulillah! Perubahan kartu informasi, seragam & narasi berhasil disimpan permanen ke Cloud!', 'success');
+  if (cloudSuccess) {
+    showToast('Alhamdulillah! Perubahan kartu informasi, seragam & narasi berhasil disimpan permanen ke Cloud Supabase!', 'success');
+  } else {
+    showToast('Tersimpan di browser lokal, namun sinkronisasi Cloud Supabase tertunda. Periksa koneksi internet.', 'warning');
+  }
 }
 
 async function resetCardsToDefault() {

@@ -208,6 +208,18 @@ class PaskasDataService {
             try {
               if (row.setting_value) localStorage.setItem('paskas_announcements_list', row.setting_value);
             } catch (e) {}
+          } else if (row.setting_key === 'uniform_ikhwan_image') {
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_image', row.setting_value); } catch (e) {}
+          } else if (row.setting_key === 'uniform_akhwat_image') {
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_image', row.setting_value); } catch (e) {}
+          } else if (row.setting_key === 'uniform_title_ikhwan') {
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_title', row.setting_value); } catch (e) {}
+          } else if (row.setting_key === 'uniform_title_akhwat') {
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_title', row.setting_value); } catch (e) {}
+          } else if (row.setting_key === 'uniform_desc_ikhwan') {
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_desc', row.setting_value); } catch (e) {}
+          } else if (row.setting_key === 'uniform_desc_akhwat') {
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_desc', row.setting_value); } catch (e) {}
           }
         });
         const merged = { ...this.getSettings(), ...cloudSettings };
