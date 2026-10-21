@@ -80,19 +80,33 @@ class PaskasDataService {
     this.init();
   }
 
-  init() {
+  ensureSupabaseClient() {
+    if (this.supabaseClient && this.isSupabaseConnected) {
+      return this.supabaseClient;
+    }
     const savedUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL) || DEFAULT_SUPABASE_URL;
-    const savedKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY) || DEFAULT_SUPABASE_KEY;
+    let savedKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY);
+    if (savedKey && (savedKey.startsWith('eyJ') || savedKey.length < 20)) {
+      localStorage.removeItem(STORAGE_KEYS.SUPABASE_KEY);
+      savedKey = null;
+    }
+    const effectiveKey = savedKey || DEFAULT_SUPABASE_KEY;
 
-    if (savedUrl && savedKey && window.supabase) {
+    if (savedUrl && effectiveKey && typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
       try {
-        this.supabaseClient = window.supabase.createClient(savedUrl, savedKey);
+        this.supabaseClient = window.supabase.createClient(savedUrl, effectiveKey);
         this.isSupabaseConnected = true;
+        return this.supabaseClient;
       } catch (e) {
         console.warn('Gagal menginisialisasi Supabase client:', e);
         this.isSupabaseConnected = false;
       }
     }
+    return null;
+  }
+
+  init() {
+    this.ensureSupabaseClient();
 
     // Inisialisasi data lokal jika masih kosong atau bersihkan data dummy demo lama
     const existing = localStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
@@ -119,6 +133,7 @@ class PaskasDataService {
    * Status koneksi aktif Supabase
    */
   isSupabaseConfigured() {
+    this.ensureSupabaseClient();
     return Boolean(this.isSupabaseConnected && this.supabaseClient);
   }
 
@@ -126,6 +141,7 @@ class PaskasDataService {
    * Sinkronisasi pengaturan cloud Supabase ke localStorage
    */
   async syncSettingsFromSupabase() {
+    this.ensureSupabaseClient();
     if (!this.isSupabaseConnected || !this.supabaseClient) return null;
     try {
       const { data, error } = await this.supabaseClient.from('app_settings').select('*');
@@ -324,6 +340,7 @@ class PaskasDataService {
    * Mengambil semua pendaftaran peserta (Sinkron Cloud Supabase & Local)
    */
   async getRegistrations() {
+    this.ensureSupabaseClient();
     let cloudList = null;
     const deletedCodes = new Set(this.getDeletedCodes());
 
@@ -378,6 +395,7 @@ class PaskasDataService {
           const cleanToSync = localOnly.map(r => {
             const clean = this.sanitizeRegistrationPayload(r);
             delete clean._is_offline_pending;
+            delete clean.id; // Hindari constraint ID saat sync data baru
             return clean;
           });
           const { data: savedRows, error: upErr } = await this.supabaseClient
@@ -409,6 +427,7 @@ class PaskasDataService {
    * Menyimpan satu peserta baru (Individu) langsung ke Supabase
    */
   async addRegistration(record) {
+    this.ensureSupabaseClient();
     if (record && record.registration_code) {
       this.removeDeletedCode(record.registration_code);
     }
@@ -422,6 +441,7 @@ class PaskasDataService {
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
         const insertData = this.sanitizeRegistrationPayload(newRecord);
+        delete insertData.id;
         const { data, error } = await this.supabaseClient
           .from('registrations')
           .insert([insertData])
@@ -441,6 +461,7 @@ class PaskasDataService {
           }
           newRecord.registration_code = `PKB-${String(newSeq).padStart(3, '0')}`;
           const retryData = this.sanitizeRegistrationPayload(newRecord);
+          delete retryData.id;
           const { data: retryRes, error: retryErr } = await this.supabaseClient
             .from('registrations')
             .insert([retryData])
@@ -482,6 +503,7 @@ class PaskasDataService {
    * Menyimpan banyak peserta sekaligus (Kelompok/Rombongan) ke Supabase
    */
   async addBatchRegistrations(recordsList) {
+    this.ensureSupabaseClient();
     if (Array.isArray(recordsList)) {
       recordsList.forEach(r => {
         if (r && r.registration_code) {
@@ -498,7 +520,11 @@ class PaskasDataService {
 
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
-        const cleanList = stampedList.map(item => this.sanitizeRegistrationPayload(item));
+        const cleanList = stampedList.map(item => {
+          const clean = this.sanitizeRegistrationPayload(item);
+          delete clean.id;
+          return clean;
+        });
         const { data, error } = await this.supabaseClient
           .from('registrations')
           .insert(cleanList)
@@ -538,6 +564,7 @@ class PaskasDataService {
    * Mengupdate data pendaftaran peserta (misal: setting kamar/gedung)
    */
   async updateRegistration(id, updates) {
+    this.ensureSupabaseClient();
     const now = new Date().toISOString();
     const cleanUpdates = this.sanitizeRegistrationPayload({ ...updates, updated_at: now });
 
@@ -567,6 +594,7 @@ class PaskasDataService {
    * Menghapus pendaftaran secara tuntas berdasarkan ID & Kode Tiket di Supabase & LocalStorage
    */
   async deleteRegistration(id, registrationCode = null) {
+    this.ensureSupabaseClient();
     let codeToDelete = registrationCode;
     let idToDelete = id;
 
@@ -633,6 +661,7 @@ class PaskasDataService {
    * Sinkronisasi data lokal ke Supabase (Aman, tidak mere-insert data yang dihapus)
    */
   async syncLocalToSupabase() {
+    this.ensureSupabaseClient();
     if (!this.isSupabaseConnected || !this.supabaseClient) {
       throw new Error('Supabase belum terkoneksi. Masukkan URL dan API Key terlebih dahulu.');
     }
@@ -690,6 +719,7 @@ class PaskasDataService {
   }
 
   async saveSettings(newSettings) {
+    this.ensureSupabaseClient();
     const current = this.getSettings();
     if (newSettings && newSettings.ticket_template_image) {
       if (typeof newSettings.ticket_template_image !== 'string' || 
@@ -723,6 +753,7 @@ class PaskasDataService {
    * Menyimpan data objek/array/string langsung ke Supabase app_settings & localStorage
    */
   async saveCloudSetting(key, value) {
+    this.ensureSupabaseClient();
     const stringVal = typeof value === 'string' ? value : JSON.stringify(value);
     try {
       localStorage.setItem(key, stringVal);
