@@ -4540,6 +4540,27 @@ async function sendTicketEmail() {
     const emailjsTemplateId = settings.emailjs_template_id || '';
     const emailjsPublicKey = settings.emailjs_public_key || '';
 
+    // Render gambar kartu tiket secara otomatis untuk dilampirkan ke email
+    let imageBase64 = '';
+    const ticketCard = document.getElementById('printableTicket');
+    if (ticketCard && typeof html2canvas === 'function') {
+      try {
+        if (statusBox) {
+          statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan gambar E-Tiket & memproses pengiriman...`;
+        }
+        const canvas = await html2canvas(ticketCard, {
+          scale: 1.8,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null,
+          logging: false
+        });
+        imageBase64 = canvas.toDataURL('image/png');
+      } catch (canvasErr) {
+        console.warn('Gagal render gambar tiket untuk email:', canvasErr);
+      }
+    }
+
     if (googleScriptUrl) {
       showToast(`Sedang mengirim E-Tiket ke: ${destEmail}...`, 'info');
       await fetch(googleScriptUrl, {
@@ -4554,7 +4575,8 @@ async function sendTicketEmail() {
           subject: subject,
           message: body,
           body: body,
-          registration_code: currentTicketRecord.registration_code || '-'
+          registration_code: currentTicketRecord.registration_code || '-',
+          image_base64: imageBase64
         })
       });
 
@@ -4564,7 +4586,7 @@ async function sendTicketEmail() {
         statusBox.style.background = 'rgba(16, 185, 129, 0.22)';
         statusBox.style.border = '1px solid #10b981';
         statusBox.style.color = '#34d399';
-        statusBox.innerHTML = `<i class="fa-solid fa-circle-check" style="font-size: 16px;"></i> <strong>Alhamdulillah, Tiket Berhasil Dikirim!</strong><br><span style="font-size: 13px; color: #f1f5f9;">E-Tiket resmi telah terkirim ke email: <strong>${escapeHtml(destEmail)}</strong>.<br><span style="font-size: 12px; color: #94a3b8;">Silakan periksa Kotak Masuk (Inbox) atau folder Spam pada email Anda.</span></span>`;
+        statusBox.innerHTML = `<i class="fa-solid fa-circle-check" style="font-size: 16px;"></i> <strong>Alhamdulillah, Tiket Berhasil Dikirim!</strong><br><span style="font-size: 13px; color: #f1f5f9;">E-Tiket resmi beserta gambar boarding pass telah terkirim ke email: <strong>${escapeHtml(destEmail)}</strong>.<br><span style="font-size: 12px; color: #94a3b8;">Silakan periksa Kotak Masuk (Inbox) atau folder Spam pada email Anda.</span></span>`;
       }
       if (btn) {
         btn.disabled = false;
