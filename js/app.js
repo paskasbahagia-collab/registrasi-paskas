@@ -2712,11 +2712,12 @@ function normalizePhoneNumber(phone) {
   return cleaned;
 }
 
-function checkDuplicateRegistration({ full_name, phone_number, wilayah, is_child, excludeId = null, isGroupMember = false, leaderPhone = '' }) {
+function checkDuplicateRegistration({ full_name, phone_number, email = '', wilayah, is_child, excludeId = null, isGroupMember = false, leaderPhone = '' }) {
   if (!allRegistrations || !allRegistrations.length) return null;
 
   const targetName = (full_name || '').trim().toLowerCase();
   const targetPhone = normalizePhoneNumber(phone_number);
+  const targetEmail = (email || '').trim().toLowerCase();
   const normLeaderPhone = normalizePhoneNumber(leaderPhone);
   const targetWilayah = (wilayah || '').trim().toLowerCase();
 
@@ -2725,6 +2726,7 @@ function checkDuplicateRegistration({ full_name, phone_number, wilayah, is_child
 
     const existingName = (reg.full_name || '').trim().toLowerCase();
     const existingPhone = normalizePhoneNumber(reg.phone_number);
+    const existingEmail = (reg.email || '').trim().toLowerCase();
     const existingWilayah = (reg.wilayah || '').trim().toLowerCase();
     const existingIsChild = reg.is_child || (reg.age && parseInt(reg.age, 10) < 15);
 
@@ -2750,6 +2752,15 @@ function checkDuplicateRegistration({ full_name, phone_number, wilayah, is_child
           existing: reg
         };
       }
+    }
+
+    // Kriteria 3: Alamat Email sama persis
+    if (targetEmail && existingEmail && targetEmail.includes('@') && targetEmail === existingEmail) {
+      return {
+        matchedBy: 'email',
+        message: `Alamat email ${email} sudah terdaftar atas nama "${reg.full_name}".`,
+        existing: reg
+      };
     }
   }
 
@@ -2782,16 +2793,18 @@ let foundIndividualDupRecord = null;
 function checkIndividualDuplicateOnBlur() {
   const phoneInput = document.getElementById('ind_phone');
   const nameInput = document.getElementById('ind_fullName');
+  const emailInput = document.getElementById('ind_email');
   const noticeBox = document.getElementById('ind_dupPhoneNotice');
   const noticeText = document.getElementById('ind_dupPhoneText');
   const btnOpen = document.getElementById('ind_btnOpenDupTicket');
-  if (!phoneInput || !noticeBox) return;
+  if (!noticeBox) return;
 
-  const phone = phoneInput.value.trim();
+  const phone = phoneInput ? phoneInput.value.trim() : '';
+  const email = emailInput ? emailInput.value.trim() : '';
   const name = nameInput ? nameInput.value.trim() : '';
   const wilayah = document.getElementById('ind_wilayah')?.value || '';
 
-  if (phone.length < 8 && name.length < 3) {
+  if (phone.length < 8 && name.length < 3 && (!email || !email.includes('@'))) {
     hideIndividualDuplicateNotice();
     return;
   }
@@ -2799,6 +2812,7 @@ function checkIndividualDuplicateOnBlur() {
   const dup = checkDuplicateRegistration({
     full_name: name,
     phone_number: phone,
+    email: email,
     wilayah: wilayah,
     is_child: false
   });
@@ -2806,7 +2820,13 @@ function checkIndividualDuplicateOnBlur() {
   if (dup) {
     foundIndividualDupRecord = dup.existing;
     if (noticeText) {
-      noticeText.innerHTML = `Data sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> (${escapeHtml(dup.existing.registration_code)})`;
+      if (dup.matchedBy === 'email') {
+        noticeText.innerHTML = `Email sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> (${escapeHtml(dup.existing.registration_code)})`;
+      } else if (dup.matchedBy === 'phone') {
+        noticeText.innerHTML = `Nomor WhatsApp sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> (${escapeHtml(dup.existing.registration_code)})`;
+      } else {
+        noticeText.innerHTML = `Data sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> (${escapeHtml(dup.existing.registration_code)})`;
+      }
     }
     if (btnOpen) {
       btnOpen.onclick = () => {
@@ -2824,6 +2844,55 @@ function hideIndividualDuplicateNotice() {
   const noticeBox = document.getElementById('ind_dupPhoneNotice');
   if (noticeBox) noticeBox.style.display = 'none';
 }
+
+function showDuplicatePromptModal(dup, newName, newPhone, newWilayah, newEmail) {
+  const modal = document.getElementById('duplicatePromptModal');
+  const title = document.getElementById('dupModalTitle');
+  const desc = document.getElementById('dupModalDesc');
+  const btnNew = document.getElementById('dupBtnProceedNew');
+  const btnOpen = document.getElementById('dupBtnOpenExisting');
+  if (!modal) return;
+
+  if (dup.matchedBy === 'name_wilayah') {
+    if (title) title.textContent = 'Nama Peserta Sudah Terdaftar';
+    if (desc) {
+      desc.innerHTML = `Nama <strong>${escapeHtml(newName)}</strong> dari kafilah <strong>${escapeHtml(newWilayah || 'Umum')}</strong> sudah pernah terdaftar sebelumnya dengan kode <strong>${escapeHtml(dup.existing.registration_code)}</strong>.<br><br>Apakah ini orang yang berbeda dan Anda ingin tetap mendaftarkannya sebagai peserta baru?`;
+    }
+  } else if (dup.matchedBy === 'email') {
+    if (title) title.textContent = 'Alamat Email Sudah Terdaftar';
+    if (desc) {
+      desc.innerHTML = `Alamat email <strong>${escapeHtml(newEmail || dup.existing.email)}</strong> sebelumnya sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> (Kode: ${escapeHtml(dup.existing.registration_code)}).<br><br>Apakah Anda ingin mendaftarkan <strong>${escapeHtml(newName)}</strong> sebagai peserta baru menggunakan email ini?`;
+    }
+  } else {
+    if (title) title.textContent = 'Kontak WhatsApp Sudah Terdaftar';
+    if (desc) {
+      desc.innerHTML = `Nomor WhatsApp <strong>${escapeHtml(newPhone)}</strong> sebelumnya sudah terdaftar atas nama <strong>${escapeHtml(dup.existing.full_name)}</strong> (Kode: ${escapeHtml(dup.existing.registration_code)}).<br><br>Apakah Anda ingin mendaftarkan <strong>${escapeHtml(newName)}</strong> sebagai peserta baru menggunakan kontak ini?`;
+    }
+  }
+
+  if (btnNew) {
+    btnNew.onclick = () => {
+      closeDuplicatePromptModal();
+      handleIndividuFinalSubmit(null, true);
+    };
+  }
+
+  if (btnOpen) {
+    btnOpen.onclick = () => {
+      closeDuplicatePromptModal();
+      showTicketModal(dup.existing);
+    };
+  }
+
+  modal.classList.add('active');
+}
+
+function closeDuplicatePromptModal() {
+  const modal = document.getElementById('duplicatePromptModal');
+  if (modal) modal.classList.remove('active');
+}
+window.closeDuplicatePromptModal = closeDuplicatePromptModal;
+window.showDuplicatePromptModal = showDuplicatePromptModal;
 
 // Pengecekan Duplikasi Baris Rombongan secara Real-Time & Interaktif
 function checkSingleGroupMemberDuplicate(memberId) {
@@ -3085,7 +3154,7 @@ function generateRegistrationCode(type = 'individu', index = 0) {
   return `PKB-${seq}`;
 }
 
-async function handleIndividuFinalSubmit(e) {
+async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
   if (e && e.preventDefault) e.preventDefault();
 
   // 0. Anti-bot honeypot verification
@@ -3153,22 +3222,24 @@ async function handleIndividuFinalSubmit(e) {
     const medical = document.getElementById('ind_medical').value.trim();
     const notes = document.getElementById('ind_notes').value.trim();
 
-    // CEK DATA DUPLIKAT SEBELUM SIMPAN (ANTI-DUPLIKASI)
-    const duplicateCheck = checkDuplicateRegistration({
-      full_name: fullName,
-      phone_number: phone,
-      wilayah: wilayah,
-      is_child: isChild
-    });
+    // CEK DATA DUPLIKAT SECARA RAMAH (DAPAT KONFIRMASI DAFTARKAN ORANG LAIN)
+    if (!bypassDuplicate) {
+      const duplicateCheck = checkDuplicateRegistration({
+        full_name: fullName,
+        phone_number: phone,
+        email: email,
+        wilayah: wilayah,
+        is_child: isChild
+      });
 
-    if (duplicateCheck) {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnHtml;
+      if (duplicateCheck) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnHtml;
+        }
+        showDuplicatePromptModal(duplicateCheck, fullName, phone, wilayah, email);
+        return;
       }
-      showToast(`Data peserta "${duplicateCheck.existing.full_name}" sudah terdaftar sebelumnya (${duplicateCheck.existing.registration_code}). Mengarahkan langsung ke E-Tiket Anda...`, 'info');
-      showTicketModal(duplicateCheck.existing);
-      return;
     }
 
     // Generate Nomor Registrasi Resmi Unik

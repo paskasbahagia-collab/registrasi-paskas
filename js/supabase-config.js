@@ -427,7 +427,31 @@ class PaskasDataService {
           .insert([insertData])
           .select();
 
-        if (error) {
+        if (error && error.code === '23505') {
+          // Unique key collision, ambil sequence terbaru dari Supabase dan coba lagi
+          const { data: latest } = await this.supabaseClient
+            .from('registrations')
+            .select('registration_code')
+            .order('id', { ascending: false })
+            .limit(1);
+          let newSeq = 2;
+          if (latest && latest[0] && latest[0].registration_code) {
+            const m = String(latest[0].registration_code).match(/PKB-(\d+)/i);
+            if (m && m[1]) newSeq = parseInt(m[1], 10) + 1;
+          }
+          newRecord.registration_code = `PKB-${String(newSeq).padStart(3, '0')}`;
+          const retryData = this.sanitizeRegistrationPayload(newRecord);
+          const { data: retryRes, error: retryErr } = await this.supabaseClient
+            .from('registrations')
+            .insert([retryData])
+            .select();
+          if (!retryErr && retryRes && retryRes[0]) {
+            newRecord.id = retryRes[0].id;
+            newRecord._is_offline_pending = false;
+          } else {
+            throw retryErr || error;
+          }
+        } else if (error) {
           console.warn('Supabase insert registration error:', error);
           throw error;
         }
