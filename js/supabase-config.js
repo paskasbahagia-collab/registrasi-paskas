@@ -105,6 +105,22 @@ class PaskasDataService {
     return null;
   }
 
+  /**
+   * Menunggu hingga Supabase client siap tersambung (anti-race condition jaringan lambat / mobile)
+   */
+  async waitForSupabase(timeoutMs = 6000) {
+    if (this.ensureSupabaseClient()) return this.supabaseClient;
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+        const client = this.ensureSupabaseClient();
+        if (client) return client;
+      }
+      await new Promise(r => setTimeout(r, 120));
+    }
+    return this.ensureSupabaseClient();
+  }
+
   init() {
     this.ensureSupabaseClient();
 
@@ -126,6 +142,14 @@ class PaskasDataService {
 
     if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
+    }
+
+    // Auto-sync otomatis ketika browser/HP pengguna kembali mendapatkan sinyal online
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        console.log('Koneksi internet online kembali. Memeriksa antrean sinkronisasi Supabase...');
+        this.syncLocalToSupabase().catch(() => {});
+      });
     }
   }
 
@@ -427,7 +451,7 @@ class PaskasDataService {
    * Menyimpan satu peserta baru (Individu) langsung ke Supabase
    */
   async addRegistration(record) {
-    this.ensureSupabaseClient();
+    await this.waitForSupabase(6000);
     if (record && record.registration_code) {
       this.removeDeletedCode(record.registration_code);
     }
@@ -503,7 +527,7 @@ class PaskasDataService {
    * Menyimpan banyak peserta sekaligus (Kelompok/Rombongan) ke Supabase
    */
   async addBatchRegistrations(recordsList) {
-    this.ensureSupabaseClient();
+    await this.waitForSupabase(6000);
     if (Array.isArray(recordsList)) {
       recordsList.forEach(r => {
         if (r && r.registration_code) {
