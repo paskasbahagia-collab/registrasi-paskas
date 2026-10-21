@@ -11116,5 +11116,60 @@ input:checked + .slider:before {
   }
 }
 
+/* ===================================================================
+   WIDE SCREEN / EXPANDED LAYOUT MODE (Mode Layar Lebar Plong)
+   =================================================================== */
+.retreat-story-section.wide-mode {
+  max-width: 96% !important;
+  width: 96% !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
+.retreat-paper-form-card.wide-mode {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 30px 24px 38px 24px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 16px 48px rgba(22, 42, 31, 0.08), 0 2px 12px rgba(0, 0, 0, 0.04);
+}
 
+.btn-toggle-wide {
+  background: #fdf6ec !important;
+  border: 1.5px solid #d97706 !important;
+  color: #b45309 !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12.5px;
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-wide:hover {
+  background: #d97706 !important;
+  color: #ffffff !important;
+  border-color: #b45309 !important;
+  transform: translateY(-1px);
+}
+
+.btn-toggle-wide.is-active {
+  background: #234233 !important;
+  border-color: #234233 !important;
+  color: #ffffff !important;
+}
+
+.btn-toggle-wide.is-active:hover {
+  background: #2d5441 !important;
+}
+
+/* Table inputs comfortable padding */
+.table-compact-members td .form-control {
+  padding: 8px 10px;
+  font-size: 13.5px;
+}

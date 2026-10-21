@@ -1857,6 +1857,59 @@ function closeRegistrationSelector() {
   }
 }
 
+let isWideFormMode = false;
+
+function toggleWideFormLayout(forcedState) {
+  const storySection = document.getElementById('guidelines-container');
+  const formCard = document.getElementById('regFormCardContainer');
+  const btnTop = document.getElementById('btnToggleWideScreen');
+  const iconTop = document.getElementById('iconToggleWide');
+  const textTop = document.getElementById('btnToggleWideText');
+  const btnSec = document.getElementById('btnToggleWideSection');
+  const textSec = document.getElementById('btnToggleWideSectionText');
+
+  if (typeof forcedState === 'boolean') {
+    isWideFormMode = forcedState;
+  } else {
+    isWideFormMode = !isWideFormMode;
+  }
+
+  if (storySection) {
+    if (isWideFormMode) {
+      storySection.classList.add('wide-mode');
+    } else {
+      storySection.classList.remove('wide-mode');
+    }
+  }
+
+  if (formCard) {
+    if (isWideFormMode) {
+      formCard.classList.add('wide-mode');
+    } else {
+      formCard.classList.remove('wide-mode');
+    }
+  }
+
+  const label = isWideFormMode ? 'Mode Standar' : 'Mode Lebar (Plong)';
+  const iconClass = isWideFormMode ? 'fa-solid fa-compress' : 'fa-solid fa-up-right-and-down-left-from-center';
+
+  if (textTop) textTop.textContent = label;
+  if (iconTop) iconTop.className = iconClass;
+  if (btnTop) {
+    btnTop.classList.toggle('is-active', isWideFormMode);
+    btnTop.title = isWideFormMode ? 'Klik untuk kembali ke lebar standar' : 'Klik untuk memperluas formulir ke lebar layar penuh';
+  }
+
+  if (textSec) textSec.textContent = label;
+  if (btnSec) {
+    btnSec.classList.toggle('btn-primary', isWideFormMode);
+    btnSec.classList.toggle('btn-secondary', !isWideFormMode);
+    btnSec.title = isWideFormMode ? 'Klik untuk kembali ke lebar standar' : 'Klik untuk memperluas formulir ke lebar layar penuh';
+    const secIcon = btnSec.querySelector('i');
+    if (secIcon) secIcon.className = iconClass;
+  }
+}
+
 function resetToSelectionScreen() {
   const nativeSelect = document.getElementById('formCategorySelect');
   const formCard = document.getElementById('regFormCardContainer');
@@ -1868,6 +1921,7 @@ function resetToSelectionScreen() {
     nativeSelect.value = '';
   }
   registrationType = '';
+  toggleWideFormLayout(false);
 
   // Sembunyikan lembar form dan tampilkan kembali kartu pemilihan format kepesertaan
   if (cardIndividu) cardIndividu.classList.remove('is-selected');
@@ -1909,6 +1963,7 @@ function handleRegistrationTypeSelect(type) {
 
   if (type === 'individu') {
     registrationType = 'individu';
+    toggleWideFormLayout(false);
     
     // Otomatis sembunyikan kotak pemilihan kategori agar tinggal formulir saja di bawah foto
     if (promptBox) {
@@ -1951,6 +2006,7 @@ function handleRegistrationTypeSelect(type) {
 
   } else if (type === 'kelompok') {
     registrationType = 'kelompok';
+    toggleWideFormLayout(true); // Otomatis aktifkan mode lebar plong untuk kenyamanan tabel kelompok
 
     // Otomatis sembunyikan kotak pemilihan kategori agar tinggal formulir saja di bawah foto
     if (promptBox) {
@@ -3448,6 +3504,17 @@ function handleKelompokPreview(e) {
       return;
     }
     const email = card.querySelector('.grp-coord-email')?.value.trim() || '';
+    if (!email) {
+      showToast(`Mohon isi alamat Email untuk Koordinator "${name}".`, 'warning');
+      card.querySelector('.grp-coord-email')?.focus();
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showToast(`Format alamat Email untuk Koordinator "${name}" tidak valid.`, 'warning');
+      card.querySelector('.grp-coord-email')?.focus();
+      return;
+    }
 
     if (cIdx === 0) {
       primaryLeaderName = name;
@@ -3505,7 +3572,7 @@ function handleKelompokPreview(e) {
       cloth_size: cloth,
       medical_history: med || 'Tidak Ada',
       phone_number: phone,
-      email: email || primaryLeaderEmail || null,
+      email: email,
       notes: `👑 ${coordRoleTitle} • Rombongan: ${groupName}`
     });
 
@@ -3524,6 +3591,7 @@ function handleKelompokPreview(e) {
         <td><strong style="color: #fbbf24;">${cloth}</strong></td>
         <td>${escapeHtml(med || 'Sehat')}</td>
         <td style="font-size: 12px;">${escapeHtml(phone)}</td>
+        <td style="font-size: 12px; color: #cbd5e1;">${escapeHtml(email)}</td>
       </tr>
     `;
   }
@@ -3720,6 +3788,7 @@ function handleKelompokPreview(e) {
                 <th>Ukuran Baju</th>
                 <th>Kesehatan</th>
                 <th>No. WhatsApp</th>
+                <th>Email</th>
               </tr>
             </thead>
             <tbody>
@@ -3954,8 +4023,9 @@ function addGroupCoordinatorCard(opts = {}) {
       <input type="email" class="form-control form-control-sm grp-coord-email" 
              placeholder="email@domain.com" value="${escapeHtml(initialEmail)}" 
              maxlength="100" 
-             oninput="syncPrimaryCoordinatorHiddenFields();"
-             title="Email koordinator (opsional)">
+             oninput="syncPrimaryCoordinatorHiddenFields();" 
+             required 
+             title="Email koordinator (Wajib diisi)">
     </td>
     <td style="text-align: center; vertical-align: middle;">
       ${!isPrimary ? `

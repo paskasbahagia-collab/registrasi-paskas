@@ -38,7 +38,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=97.0">
+  <link rel="stylesheet" href="css/style.css?v=98.0">
 </head>
 <body>
 
@@ -507,7 +507,10 @@
                     Formulir Aktif: <strong>Pendaftaran Individu (Mandiri)</strong>
                   </span>
                 </div>
-                <div class="active-form-status-right">
+                <div class="active-form-status-right" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                  <button type="button" class="btn-switch-format btn-toggle-wide" id="btnToggleWideScreen" onclick="toggleWideFormLayout()" title="Perluas / perkecil tampilan formulir agar lebih leluasa dan plong">
+                    <i class="fa-solid fa-up-right-and-down-left-from-center" id="iconToggleWide"></i> <span id="btnToggleWideText">Mode Layar Lebar (Plong)</span>
+                  </button>
                   <button type="button" class="btn-switch-format" onclick="resetToSelectionScreen()" title="Ganti Format Kepesertaan">
                     <i class="fa-solid fa-arrows-rotate"></i> Ganti Format Kepesertaan
                   </button>
@@ -1260,7 +1263,10 @@
                   <p class="section-desc-sm">Penanggung jawab rombongan. Tercatat lengkap dengan ukuran seragam &amp; riwayat kesehatan (bisa ditambah bila ada koordinator pendamping).</p>
                 </div>
                 
-                <div class="group-header-actions">
+                <div class="group-header-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleWideFormLayout()" id="btnToggleWideSection" title="Perluas / perkecil tampilan formulir agar lebih leluasa dan plong">
+                    <i class="fa-solid fa-up-right-and-down-left-from-center"></i> <span id="btnToggleWideSectionText">Mode Lebar (Plong)</span>
+                  </button>
                   <button type="button" class="btn btn-gold-add-leader" onclick="addGroupCoordinatorCard()" id="btnAddCoordinator" title="Tambah koordinator pendamping atau koordinator akhwat">
                     <i class="fa-solid fa-user-shield"></i> + Tambah Koordinator Pendamping
                   </button>
@@ -1281,7 +1287,7 @@
                         <th style="min-width: 90px; width: 95px;">Ukuran Baju <span class="required">*</span></th>
                         <th style="min-width: 160px;">Riwayat Penyakit</th>
                         <th style="min-width: 135px;">No. WhatsApp <span class="required">*</span></th>
-                        <th style="min-width: 150px;">Email (E-Tiket)</th>
+                        <th style="min-width: 170px;">Email <span class="required">*</span></th>
                         <th style="width: 44px; text-align: center;">Aksi</th>
                       </tr>
                     </thead>
@@ -4112,7 +4118,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=97.0"></script>
-  <script src="js/app.js?v=97.0"></script>
+  <script src="js/supabase-config.js?v=98.0"></script>
+  <script src="js/app.js?v=98.0"></script>
 </body>
 </html>
