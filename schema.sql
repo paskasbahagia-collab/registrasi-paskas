@@ -66,11 +66,10 @@ VALUES
     ('event_location', 'Rocket Convention Hall, Sleman, D.I. Yogyakarta', 'Lokasi utama acara'),
     ('event_date', '2026-11-10 s/d 2026-11-13', 'Tanggal pelaksanaan kegiatan'),
     ('google_email_script_url', 'https://script.google.com/macros/s/AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A/exec', 'URL Apps Script Web App untuk pengiriman email otomatis dari paskasbahagia@gmail.com'),
-    ('paskas_admin_password', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Hash SHA-256 kata sandi administrator (aman terenkripsi: bawaan admin123)')
-ON CONFLICT (setting_key) DO UPDATE 
-SET setting_value = EXCLUDED.setting_value,
-    description = EXCLUDED.description,
-    updated_at = NOW();
+    ('paskas_admin_password', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Hash SHA-256 kata sandi administrator (aman terenkripsi: bawaan admin123)'),
+    ('uniform_size_chart_ikhwan', E'S: Lebar 46cm / LD 92cm\nM: Lebar 48cm / LD 96cm\nL: Lebar 50cm / LD 100cm\nXL: Lebar 52cm / LD 104cm\nXXL: Lebar 54cm / LD 108cm\n3XL: Lebar 56cm / LD 112cm\n4XL: Lebar 58cm / LD 116cm', 'Panduan standar size chart seragam ikhwan'),
+    ('uniform_size_chart_akhwat', E'S: Lebar 46cm / LD 92cm\nM: Lebar 48cm / LD 96cm\nL: Lebar 50cm / LD 100cm\nXL: Lebar 52cm / LD 104cm\nXXL: Lebar 54cm / LD 108cm\n3XL: Lebar 56cm / LD 112cm\n4XL: Lebar 58cm / LD 116cm', 'Panduan standar size chart seragam akhwat')
+ON CONFLICT (setting_key) DO NOTHING;
 
 -- Query pembaruan langsung (jika tabel app_settings sudah pernah terisi sebelumnya)
 UPDATE app_settings 

@@ -37,6 +37,8 @@ const DEFAULT_SETTINGS = {
   uniform_title_akhwat: 'Model Kaos / Tunik Resmi Akhwat',
   uniform_desc_ikhwan: 'Bahan katun combed 24s premium adem, sablon plastisol emas logo resmi Paskas Bahagia.',
   uniform_desc_akhwat: 'Model tunik lengan panjang syar\'i & anggun, bahan katun combed 24s adem dengan aksen list emas.',
+  uniform_size_chart_ikhwan: 'S: Lebar 46cm / LD 92cm\nM: Lebar 48cm / LD 96cm\nL: Lebar 50cm / LD 100cm\nXL: Lebar 52cm / LD 104cm\nXXL: Lebar 54cm / LD 108cm\n3XL: Lebar 56cm / LD 112cm\n4XL: Lebar 58cm / LD 116cm',
+  uniform_size_chart_akhwat: 'S: Lebar 46cm / LD 92cm\nM: Lebar 48cm / LD 96cm\nL: Lebar 50cm / LD 100cm\nXL: Lebar 52cm / LD 104cm\nXXL: Lebar 54cm / LD 108cm\n3XL: Lebar 56cm / LD 112cm\n4XL: Lebar 58cm / LD 116cm',
   ticket_airline_name: 'MUNZALAN AIRLINES',
   ticket_event_tag: 'KUMPUL KELUARGA',
   ticket_route_from: 'RANTAUAN',
@@ -220,6 +222,10 @@ class PaskasDataService {
             try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_desc', row.setting_value); } catch (e) {}
           } else if (row.setting_key === 'uniform_desc_akhwat') {
             try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_desc', row.setting_value); } catch (e) {}
+          } else if (row.setting_key === 'uniform_size_chart_ikhwan' || row.setting_key === 'paskas_uniform_size_chart_ikhwan') {
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_size_chart_ikhwan', row.setting_value); } catch (e) {}
+          } else if (row.setting_key === 'uniform_size_chart_akhwat' || row.setting_key === 'paskas_uniform_size_chart_akhwat') {
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_size_chart_akhwat', row.setting_value); } catch (e) {}
           }
         });
         const merged = { ...this.getSettings(), ...cloudSettings };
