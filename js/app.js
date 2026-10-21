@@ -4409,6 +4409,7 @@ Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`;
   const returnDate = formatTicketDate(record.departure_date || record.return_date || '2026-11-14');
   const arrivalTime = record.arrival_time ? record.arrival_time : (record.arrival_date ? formatTicketDate(record.arrival_date) : '15:00 AM');
   const ageVal = parseInt(record.age, 10);
+  const isChild = Boolean(record.is_child || (!isNaN(ageVal) && ageVal > 0 && ageVal < 15) || (record.attendee_type === 'anak'));
   const isAllocActive = isRoomGroupAllocationEnabled();
   const grpVal = (!isAllocActive || isChild) ? '-' : (record.group_name || (record.registration_type === 'kelompok' ? 'Kelompok' : 'Reguler'));
   
@@ -4486,46 +4487,51 @@ function sendTicketWhatsApp() {
   showToast(`Membuka WhatsApp untuk mengirim tiket ke No: ${phone}`, 'success');
 }
 async function sendTicketEmail() {
-  if (!currentTicketRecord) {
-    showToast('Tidak ada data tiket yang sedang aktif.', 'warning');
-    return;
-  }
-
-  let destEmail = (currentTicketRecord.email || '').trim();
-  if (!destEmail) {
-    const input = prompt('Kirim E-Tiket ke alamat email:\nMasukkan email peserta / koordinator:', '');
-    if (input === null) return;
-    destEmail = input.trim();
-  }
-
-  if (!destEmail) {
-    showToast('Alamat email belum diisi. Pengiriman dibatalkan.', 'warning');
-    return;
-  }
-
-  const settings = window.dataService.getSettings();
-  const subject = settings.confirmation_email_subject || `[E-TIKET RESMI] Silaturahmi Akbar Paskas Bahagia - ${currentTicketRecord.registration_code}`;
-  const body = buildConfirmationMessage(currentTicketRecord);
-
-  // Selalu salin narasi ke clipboard peserta sebagai cadangan
-  copyTicketConfirmationMessage(false);
-
   const btn = document.getElementById('btnSendTicketEmail');
   const statusBox = document.getElementById('ticketEmailStatusBox');
-  const originalText = btn ? btn.innerHTML : '';
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim E-Tiket...';
-  }
-  if (statusBox) {
-    statusBox.style.display = 'block';
-    statusBox.style.background = 'rgba(2, 132, 199, 0.2)';
-    statusBox.style.border = '1px solid #0284c7';
-    statusBox.style.color = '#38bdf8';
-    statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Sedang memproses pengiriman E-Tiket ke: <strong>${escapeHtml(destEmail)}</strong>...`;
-  }
+  const originalText = btn ? btn.innerHTML : '<i class="fa-solid fa-envelope"></i> Kirim via Email';
 
   try {
+    if (!currentTicketRecord) {
+      showToast('Tidak ada data tiket yang sedang aktif.', 'warning');
+      return;
+    }
+
+    let destEmail = (currentTicketRecord.email || '').trim();
+    if (!destEmail) {
+      const input = prompt('Kirim E-Tiket ke alamat email:\nMasukkan email peserta / koordinator:', '');
+      if (input === null) return;
+      destEmail = input.trim();
+    }
+
+    if (!destEmail) {
+      showToast('Alamat email belum diisi. Pengiriman dibatalkan.', 'warning');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim E-Tiket...';
+    }
+    if (statusBox) {
+      statusBox.style.display = 'block';
+      statusBox.style.background = 'rgba(2, 132, 199, 0.2)';
+      statusBox.style.border = '1px solid #0284c7';
+      statusBox.style.color = '#38bdf8';
+      statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Sedang memproses pengiriman E-Tiket ke: <strong>${escapeHtml(destEmail)}</strong>...`;
+    }
+
+    const settings = window.dataService.getSettings();
+    const subject = settings.confirmation_email_subject || `[E-TIKET RESMI] Silaturahmi Akbar Paskas Bahagia - ${currentTicketRecord.registration_code}`;
+    const body = buildConfirmationMessage(currentTicketRecord);
+
+    // Selalu salin narasi ke clipboard peserta sebagai cadangan
+    try {
+      copyTicketConfirmationMessage(false);
+    } catch (clipErr) {
+      console.warn('Clipboard write warning:', clipErr);
+    }
+
     const fallbackUrl = 'https://script.google.com/macros/s/AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A/exec';
     const googleScriptUrl = (settings.google_email_script_url && settings.google_email_script_url.trim())
       ? settings.google_email_script_url.trim()
