@@ -72,13 +72,30 @@ const DEFAULT_DASHBOARD_CARDS = [
     badge: '01 / 06',
     coverImg: 'images/tugu-jogja-hero.jpg',
     thumbImg: 'images/tugu-jogja-card.jpg',
-    narration: `Pertemuan akbar ini dirancang khusus untuk mempererat tali persaudaraan antar relawan Paskas dari seluruh penjuru nusantara.
+    narration: `PASKAS Bahagia merupakan rumah perjumpaan keluarga besar Pasukan Amal Sholeh dari berbagai penjuru Nusantara. Sebuah momentum untuk pulang, merajut kembali ukhuwah, berbagi inspirasi, memperkuat identitas gerakan, serta menumbuhkan semangat kolaborasi dalam menghadirkan manfaat bagi umat.
 
-Rangkaian Agenda Utama:
-• Hari Pertama (Jumat): Registrasi & Welcoming Banquet, pembagian kamar/asrama, dan malam ta'aruf akbar.
-• Hari Kedua (Sabtu): Grand Silaturahmi & Halaqah Bahagia, kajian akbar, pemaparan gerakan infaq beras, dan sharing kebahagiaan antar wilayah.
-• Hari Ketiga (Ahad): Subuh Akbar, Munajat & Pelepasan kafilah rombongan kembali ke wilayah masing-masing.
-• Waktu Pelaksanaan: 08:00 - 22:00 WIB (menyesuaikan jadwal shalat berjamaah).`,
+Selama tiga hari, para PASKAS akan mengikuti rangkaian kegiatan yang memadukan silaturahim, pembelajaran, pengabdian, kreativitas, dan penguatan kapasitas. Seperti pulang kampung, setiap peserta datang membawa kisah dan program dari daerahnya, lalu kembali dengan pengalaman bermakna dan semangat baru untuk menggerakkan kebaikan di daerah masing-masing.
+
+**RABU, 11 NOVEMBER**
+• Kedatangan dan registrasi peserta
+
+**KAMIS, 12 NOVEMBER**
+• Opening ceremony
+• Upgrading PASKAS
+• Pameran Kampong PASKAS
+• Workshop dan sharing inspirasi
+
+**JUMAT, 13 NOVEMBER**
+• SMK
+• Outbound Ukhuwah
+• Dahar Kembulan
+• Malam Puncak PASKAS Bahagia
+• Panggung Karya PASKAS
+• Sesi bersama Ayah Man
+
+**SABTU, 14 NOVEMBER**
+• Upgrading PASKAS
+• Closing Ceremony`,
     content: `
       <div class="modal-rich-section">
         <h4><i class="fa-solid fa-clock-rotate-left"></i> Rangkaian Acara Silaturahmi Akbar</h4>
@@ -1508,6 +1525,10 @@ function renderHeroStoryContent(idx) {
   if (titleEl) titleEl.textContent = card.title || '';
   if (subEl) subEl.textContent = card.subtitle || '';
 
+  if (counterEl) {
+    counterEl.textContent = `${String(idx + 1).padStart(2, '0')} / ${String(DASHBOARD_CARDS.length).padStart(2, '0')}`;
+  }
+
   if (bodyEl) {
     const isUniformCard = (card.id === 'card-4') || 
                           (card.title && card.title.toLowerCase().includes('seragam')) ||
@@ -1515,9 +1536,6 @@ function renderHeroStoryContent(idx) {
 
     if (isUniformCard) {
       bodyEl.innerHTML = renderUniformShowcaseHTML();
-      if (counterEl) {
-        counterEl.textContent = `${String(idx + 1).padStart(2, '0')} / ${String(DASHBOARD_CARDS.length).padStart(2, '0')}`;
-      }
       return;
     }
 
@@ -8422,32 +8440,53 @@ async function handleCardImageUpload(event, idx) {
 
 function renderFormattedNarrationHTML(rawText) {
   if (!rawText) return '';
-  const paras = rawText.split(/\n\s*\n/).filter(p => p.trim());
+  const paras = rawText.split(/\r?\n\s*\r?\n/).filter(p => p.trim());
   return paras.map(para => {
-    let formatted = escapeHtml(para);
-    
-    // Decode safe allowed formatting tags
-    formatted = formatted.replace(/&lt;(\/?)b&gt;/gi, '<$1b>');
-    formatted = formatted.replace(/&lt;(\/?)strong&gt;/gi, '<$1strong>');
-    formatted = formatted.replace(/&lt;(\/?)i&gt;/gi, '<$1i>');
-    formatted = formatted.replace(/&lt;(\/?)em&gt;/gi, '<$1em>');
-    formatted = formatted.replace(/&lt;(\/?)u&gt;/gi, '<$1u>');
-    formatted = formatted.replace(/&lt;mark&gt;/gi, '<mark style="background: rgba(251, 191, 36, 0.25); color: #fbbf24; padding: 2px 6px; border-radius: 4px; font-weight: 700;">');
-    formatted = formatted.replace(/&lt;\/mark&gt;/gi, '</mark>');
-    formatted = formatted.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+    const lines = para.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
-    // Markdown syntax
-    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #ffffff; font-weight: 700;">$1</strong>');
-    formatted = formatted.replace(/\*(.+?)\*/g, '<em style="color: #fde68a;">$1</em>');
-    formatted = formatted.replace(/__(.+?)__/g, '<u style="text-decoration-color: #fbbf24;">$1</u>');
+    const formattedLines = lines.map(line => {
+      let l = escapeHtml(line);
+      
+      // Decode safe allowed formatting tags
+      l = l.replace(/&lt;(\/?)b&gt;/gi, '<$1b>');
+      l = l.replace(/&lt;(\/?)strong&gt;/gi, '<$1strong>');
+      l = l.replace(/&lt;(\/?)i&gt;/gi, '<$1i>');
+      l = l.replace(/&lt;(\/?)em&gt;/gi, '<$1em>');
+      l = l.replace(/&lt;(\/?)u&gt;/gi, '<$1u>');
+      l = l.replace(/&lt;mark&gt;/gi, '<mark style="background: rgba(251, 191, 36, 0.25); color: #fbbf24; padding: 2px 6px; border-radius: 4px; font-weight: 700;">');
+      l = l.replace(/&lt;\/mark&gt;/gi, '</mark>');
+      l = l.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
 
-    // Bullet points (• or - )
-    formatted = formatted.replace(/(^|<br>)([-•])\s*(.+?)(?=(<br>|$))/g, '$1<span style="display: inline-flex; align-items: baseline; gap: 6px; margin: 2px 0;"><i class="fa-solid fa-circle-check text-gold" style="font-size: 11px;"></i> <span>$3</span></span>');
+      // Markdown syntax
+      l = l.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #ffffff; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">$1</strong>');
+      l = l.replace(/\*(.+?)\*/g, '<em style="color: #fde68a;">$1</em>');
+      l = l.replace(/__(.+?)__/g, '<u style="text-decoration-color: #fbbf24; text-underline-offset: 3px;">$1</u>');
 
-    // Line breaks within paragraph
-    formatted = formatted.replace(/\n/g, '<br>');
+      // Check if line is a bullet item: starts with •, -, *, or . followed by space
+      const bulletMatch = l.match(/^([-•*]|\.)\s+(.+)$/);
+      if (bulletMatch) {
+        return `<div class="story-narration-bullet" style="display: flex; align-items: baseline; gap: 8px; margin: 4px 0 4px 4px;">
+          <i class="fa-solid fa-circle-check text-gold" style="font-size: 12px; flex-shrink: 0; transform: translateY(1px);"></i>
+          <span style="color: #f1f5f9; font-size: 14.5px; line-height: 1.6;">${bulletMatch[2]}</span>
+        </div>`;
+      }
 
-    return `<p style="margin-bottom: 14px; line-height: 1.8; color: #e2e8f0; font-size: 15px;">${formatted}</p>`;
+      // Check if line is a day/date heading (e.g. RABU, 11 NOVEMBER or HARI PERTAMA)
+      const cleanPlain = line.replace(/\*\*/g, '').replace(/<[^>]+>/g, '').trim();
+      const isDayHeading = /^(RABU|KAMIS|JUMAT|SABTU|AHAD|MINGGU|SENIN|SELASA|HARI\s+[A-Z0-9]+)/i.test(cleanPlain);
+      const isSectionHeading = /^([A-Z0-9\s,&'\/\-]{4,}):?$/.test(cleanPlain) && cleanPlain.length <= 60 && !cleanPlain.includes('.');
+
+      if (isDayHeading || isSectionHeading) {
+        return `<div class="story-narration-heading" style="font-size: 15px; font-weight: 800; color: #fbbf24; margin: 18px 0 6px 0; letter-spacing: 0.03em; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid ${isDayHeading ? 'fa-calendar-day' : 'fa-circle-info'}" style="font-size: 13px; color: #fbbf24;"></i>
+          <span>${l}</span>
+        </div>`;
+      }
+
+      return `<div style="line-height: 1.75; color: #e2e8f0; font-size: 14.5px;">${l}</div>`;
+    });
+
+    return `<div class="story-narration-para" style="margin-bottom: 14px;">${formattedLines.join('')}</div>`;
   }).join('');
 }
 
@@ -8482,9 +8521,17 @@ function applyTextFormatting(btnEl, formatType) {
       cursorOffset = 2;
       break;
     case 'bullet':
-      replacement = selectedText 
-        ? selectedText.split('\n').map(l => l.startsWith('• ') ? l : `• ${l}`).join('\n') 
-        : `\n• Poin penting: `;
+      if (selectedText) {
+        replacement = selectedText.split('\n').map(l => {
+          const trimmed = l.trim();
+          if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('. ') || trimmed.startsWith('* ')) {
+            return `• ${trimmed.replace(/^([•\-\.\*]\s*)/, '')}`;
+          }
+          return `• ${l}`;
+        }).join('\n');
+      } else {
+        replacement = `\n• Poin penting: `;
+      }
       cursorOffset = replacement.length;
       break;
     case 'highlight':
@@ -8515,22 +8562,22 @@ function getFormattingToolbarHTML(hintText = 'Pilih kata lalu klik tombol format
         <span style="font-size: 11px; font-weight: 700; color: #475569; margin-right: 4px; display: inline-flex; align-items: center; gap: 4px;">
           <i class="fa-solid fa-pen-nib text-gold"></i> Format:
         </span>
-        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'bold')" title="Tebalkan Tulisan (Bold: **teks**)">
+        <button type="button" class="btn-format-tool" onmousedown="event.preventDefault()" onclick="applyTextFormatting(this, 'bold')" title="Tebalkan Tulisan (Bold: **teks**)">
           <i class="fa-solid fa-bold"></i> <b>Tebal</b>
         </button>
-        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'italic')" title="Miringkan Tulisan (Italic: *teks*)">
+        <button type="button" class="btn-format-tool" onmousedown="event.preventDefault()" onclick="applyTextFormatting(this, 'italic')" title="Miringkan Tulisan (Italic: *teks*)">
           <i class="fa-solid fa-italic"></i> <i>Miring</i>
         </button>
-        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'underline')" title="Garis Bawahi Tulisan (Underline: <u>teks</u>)">
+        <button type="button" class="btn-format-tool" onmousedown="event.preventDefault()" onclick="applyTextFormatting(this, 'underline')" title="Garis Bawahi Tulisan (Underline: <u>teks</u>)">
           <i class="fa-solid fa-underline"></i> <u>Garis Bawah</u>
         </button>
-        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'paragraph')" title="Ganti Baris / Paragraf Baru (Enter)">
+        <button type="button" class="btn-format-tool" onmousedown="event.preventDefault()" onclick="applyTextFormatting(this, 'paragraph')" title="Ganti Baris / Paragraf Baru (Enter)">
           <i class="fa-solid fa-paragraph"></i> Baris Baru
         </button>
-        <button type="button" class="btn-format-tool" onclick="applyTextFormatting(this, 'bullet')" title="Tambahkan Simbol Poin (•)">
+        <button type="button" class="btn-format-tool" onmousedown="event.preventDefault()" onclick="applyTextFormatting(this, 'bullet')" title="Tambahkan Simbol Poin (•)">
           <i class="fa-solid fa-list-ul"></i> Poin (•)
         </button>
-        <button type="button" class="btn-format-tool tool-highlight" onclick="applyTextFormatting(this, 'highlight')" title="Sorot Teks Warna Emas (<mark>)">
+        <button type="button" class="btn-format-tool tool-highlight" onmousedown="event.preventDefault()" onclick="applyTextFormatting(this, 'highlight')" title="Sorot Teks Warna Emas (<mark>)">
           <i class="fa-solid fa-highlighter"></i> Sorot
         </button>
       </div>

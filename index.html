@@ -38,7 +38,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=95.0">
+  <link rel="stylesheet" href="css/style.css?v=96.0">
 </head>
 <body>
 
@@ -213,10 +213,21 @@
           
           <!-- Top Floating Action Bar -->
           <div class="story-top-bar">
-            <button class="btn btn-glass-cyan btn-back-dashboard" onclick="closeHeroStory()">
+            <button type="button" class="btn btn-glass-cyan btn-back-dashboard" onclick="closeHeroStory()">
               <i class="fa-solid fa-arrow-left"></i>
-              <span>Kembali ke Beranda</span>
+              <span>Kembali ke Semua Kartu</span>
             </button>
+            <div class="story-top-nav-controls" style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" class="btn btn-glass-cyan btn-sm" onclick="navigateHeroStory('prev')" title="Kartu Sebelumnya" style="padding: 8px 14px;">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <span class="story-counter-pill" id="storyCounterPill" style="font-size: 13px; font-weight: 800; color: #fbbf24; background: rgba(0,0,0,0.5); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(251,191,36,0.3); letter-spacing: 0.05em;">
+                01 / 06
+              </span>
+              <button type="button" class="btn btn-glass-cyan btn-sm" onclick="navigateHeroStory('next')" title="Kartu Berikutnya" style="padding: 8px 14px;">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
           </div>
 
           <!-- Story Content Area -->
@@ -234,6 +245,9 @@
               </div>
 
               <div class="story-action-footer">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeHeroStory()">
+                  <i class="fa-solid fa-table-cells-large"></i> Tutup &amp; Lihat Kartu Lain
+                </button>
                 <button class="btn btn-primary btn-glow" onclick="navigateTo('registration')">
                   <i class="fa-solid fa-ticket"></i> Daftar Kegiatan Sekarang
                 </button>
@@ -4064,7 +4078,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=95.0"></script>
-  <script src="js/app.js?v=95.0"></script>
+  <script src="js/supabase-config.js?v=96.0"></script>
+  <script src="js/app.js?v=96.0"></script>
 </body>
 </html>
