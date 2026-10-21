@@ -10840,17 +10840,26 @@ input:checked + .slider:before {
 
 /* Gaya Pengelola Pengumuman di Settings */
 .settings-ann-item-box {
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #fdfbf7;
+  border: 1.5px solid #e2dac9;
   border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 12px;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(60, 45, 20, 0.03);
+}
+
+.settings-ann-item-box:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(60, 45, 20, 0.06);
 }
 
 .settings-ann-item-box.is-latest {
-  border-left: 3.5px solid #f59e0b;
-  background: rgba(245, 158, 11, 0.05);
+  border-left: 4.5px solid #d97706;
+  border-top: 1.5px solid #fcd34d;
+  border-right: 1.5px solid #fcd34d;
+  border-bottom: 1.5px solid #fcd34d;
+  background: #fffdf5;
 }
 
 .settings-ann-item-header {

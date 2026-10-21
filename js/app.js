@@ -7189,32 +7189,32 @@ function renderSettingsAnnouncementsList() {
         <div class="settings-ann-item-header">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             ${isLatest ? `
-              <span class="settings-chip-badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px;">
+              <span class="settings-chip-badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px;">
                 <i class="fa-solid fa-sparkles"></i> #1 TERBARU
               </span>
             ` : `
-              <span class="settings-chip-badge" style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
+              <span class="settings-chip-badge" style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px;">
                 #${idx + 1}
               </span>
             `}
-            <span style="font-size: 11.5px; color: #fbbf24; font-weight: 600;">
+            <span style="font-size: 11.5px; color: ${isLatest ? '#b45309' : '#64748b'}; font-weight: 700;">
               <i class="fa-regular fa-calendar-check"></i> ${escapeHtml(item.date || '-')}
             </span>
-            <span style="font-size: 11px; background: rgba(255, 255, 255, 0.06); padding: 2px 8px; border-radius: 4px; color: #94a3b8;">
+            <span style="font-size: 11px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 4px; color: #475569; font-weight: 600;">
               ${escapeHtml(item.category || 'Umum')}
             </span>
           </div>
           <div class="settings-ann-item-actions">
-            <button type="button" class="btn btn-secondary btn-xs" onclick="editAnnouncementFromSettings('${escapeHtml(item.id)}')" style="padding: 3px 8px; font-size: 11px;" title="Edit Pengumuman">
+            <button type="button" class="btn btn-xs" onclick="editAnnouncementFromSettings('${escapeHtml(item.id)}')" style="background: #ffffff; border: 1.5px solid #cbd5e1; color: #1e293b; font-weight: 700; padding: 4px 10px; border-radius: 5px; cursor: pointer;" title="Edit Pengumuman">
               <i class="fa-solid fa-pen-to-square"></i> Edit
             </button>
-            <button type="button" class="btn btn-danger btn-xs" onclick="deleteAnnouncementFromSettings('${escapeHtml(item.id)}')" style="padding: 3px 8px; font-size: 11px;" title="Hapus Pengumuman">
+            <button type="button" class="btn btn-xs" onclick="deleteAnnouncementFromSettings('${escapeHtml(item.id)}')" style="background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; font-weight: 700; padding: 4px 8px; border-radius: 5px; cursor: pointer;" title="Hapus Pengumuman">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </div>
         </div>
-        <div style="font-size: 13.5px; font-weight: 700; color: #f8fafc; margin-bottom: 4px;">${escapeHtml(item.title || '')}</div>
-        <div style="font-size: 12px; color: #94a3b8; line-height: 1.5; max-height: 48px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.content || '')}</div>
+        <div style="font-size: 14.5px; font-weight: 800; color: #1e293b; margin-bottom: 5px; line-height: 1.35;">${escapeHtml(item.title || '')}</div>
+        <div style="font-size: 12.5px; color: #475569; line-height: 1.55; max-height: 52px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.content || '')}</div>
       </div>
     `;
   }).join('');
