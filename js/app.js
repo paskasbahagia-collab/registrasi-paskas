@@ -1857,56 +1857,22 @@ function closeRegistrationSelector() {
   }
 }
 
-let isWideFormMode = false;
-
-function toggleWideFormLayout(forcedState) {
+function toggleWideFormLayout(enableWide) {
   const storySection = document.getElementById('guidelines-container');
   const formCard = document.getElementById('regFormCardContainer');
-  const btnTop = document.getElementById('btnToggleWideScreen');
-  const iconTop = document.getElementById('iconToggleWide');
-  const textTop = document.getElementById('btnToggleWideText');
-  const btnSec = document.getElementById('btnToggleWideSection');
-  const textSec = document.getElementById('btnToggleWideSectionText');
-
-  if (typeof forcedState === 'boolean') {
-    isWideFormMode = forcedState;
-  } else {
-    isWideFormMode = !isWideFormMode;
-  }
-
   if (storySection) {
-    if (isWideFormMode) {
+    if (enableWide) {
       storySection.classList.add('wide-mode');
     } else {
       storySection.classList.remove('wide-mode');
     }
   }
-
   if (formCard) {
-    if (isWideFormMode) {
+    if (enableWide) {
       formCard.classList.add('wide-mode');
     } else {
       formCard.classList.remove('wide-mode');
     }
-  }
-
-  const label = isWideFormMode ? 'Mode Standar' : 'Mode Lebar (Plong)';
-  const iconClass = isWideFormMode ? 'fa-solid fa-compress' : 'fa-solid fa-up-right-and-down-left-from-center';
-
-  if (textTop) textTop.textContent = label;
-  if (iconTop) iconTop.className = iconClass;
-  if (btnTop) {
-    btnTop.classList.toggle('is-active', isWideFormMode);
-    btnTop.title = isWideFormMode ? 'Klik untuk kembali ke lebar standar' : 'Klik untuk memperluas formulir ke lebar layar penuh';
-  }
-
-  if (textSec) textSec.textContent = label;
-  if (btnSec) {
-    btnSec.classList.toggle('btn-primary', isWideFormMode);
-    btnSec.classList.toggle('btn-secondary', !isWideFormMode);
-    btnSec.title = isWideFormMode ? 'Klik untuk kembali ke lebar standar' : 'Klik untuk memperluas formulir ke lebar layar penuh';
-    const secIcon = btnSec.querySelector('i');
-    if (secIcon) secIcon.className = iconClass;
   }
 }
 

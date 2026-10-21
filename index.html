@@ -38,7 +38,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=98.0">
+  <link rel="stylesheet" href="css/style.css?v=99.0">
 </head>
 <body>
 
@@ -507,10 +507,7 @@
                     Formulir Aktif: <strong>Pendaftaran Individu (Mandiri)</strong>
                   </span>
                 </div>
-                <div class="active-form-status-right" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                  <button type="button" class="btn-switch-format btn-toggle-wide" id="btnToggleWideScreen" onclick="toggleWideFormLayout()" title="Perluas / perkecil tampilan formulir agar lebih leluasa dan plong">
-                    <i class="fa-solid fa-up-right-and-down-left-from-center" id="iconToggleWide"></i> <span id="btnToggleWideText">Mode Layar Lebar (Plong)</span>
-                  </button>
+                <div class="active-form-status-right">
                   <button type="button" class="btn-switch-format" onclick="resetToSelectionScreen()" title="Ganti Format Kepesertaan">
                     <i class="fa-solid fa-arrows-rotate"></i> Ganti Format Kepesertaan
                   </button>
@@ -1183,48 +1180,46 @@
                 <i class="fa-solid fa-flag text-gold"></i> Identitas Rombongan &amp; Rute Perjalanan
               </h3>
 
-              <div class="form-row col-2">
-                <div class="form-group">
-                  <label for="grp_name" class="form-label">Nama Rombongan <span class="required">*</span></label>
-                  <input type="text" id="grp_name" class="form-control" placeholder="Contoh: Rombongan Paskas Sambas" maxlength="100" required>
-                </div>
-                <div class="form-group">
-                  <label for="grp_joinYear" class="form-label">Tahun Bergabung Paskas (Standar Rombongan)</label>
-                  <input type="number" id="grp_joinYear" class="form-control" placeholder="Cth: 2021" min="2000" max="2026" title="Tahun pertama aktif di Paskas">
-                </div>
-              </div>
-
               <!-- Input tersembunyi untuk kompatibilitas script -->
               <input type="hidden" id="grp_leader" name="grp_leader">
               <input type="hidden" id="grp_email" name="grp_email">
               <input type="hidden" id="grp_leaderPhone" name="grp_leaderPhone">
+              <input type="hidden" id="grp_joinYear" value="">
 
               <!-- Default template jadwal rombongan (untuk auto-fill anggota) -->
               <div class="group-preset-box">
                 <div class="preset-title">
-                  <i class="fa-solid fa-wand-magic-sparkles"></i> Jadwal &amp; Transportasi Standar Rombongan:
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Data &amp; Jadwal Perjalanan Rombongan:
                 </div>
-                <div class="form-row col-5">
+
+                <div class="form-row col-2" style="margin-bottom: 12px;">
                   <div class="form-group">
-                    <label class="form-label-xs">Wilayah</label>
+                    <label for="grp_name" class="form-label-xs">Nama Rombongan / Kafilah <span class="required">*</span></label>
+                    <input type="text" id="grp_name" class="form-control form-control-sm" placeholder="Contoh: Rombongan Paskas Sambas" maxlength="100" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label-xs">Wilayah Kafilah <span class="required">*</span></label>
                     <select id="grp_defaultWilayah" class="form-control form-control-sm" required>
                       <option value="">-- Pilih Wilayah --</option>
                     </select>
                   </div>
+                </div>
+
+                <div class="form-row col-4">
                   <div class="form-group">
-                    <label class="form-label-xs">Daerah Asal (Kota/Kab)</label>
+                    <label class="form-label-xs">Daerah Asal (Kota/Kab) <span class="required">*</span></label>
                     <input type="text" id="grp_defaultDaerah" class="form-control form-control-sm" placeholder="Contoh: Pontianak, Sambas" maxlength="100" required>
                   </div>
                   <div class="form-group">
-                    <label class="form-label-xs">Tgl Datang</label>
+                    <label class="form-label-xs">Tgl Datang <span class="required">*</span></label>
                     <input type="date" id="grp_defaultArrival" class="form-control form-control-sm" value="2026-11-10" required>
                   </div>
                   <div class="form-group">
-                    <label class="form-label-xs">Tgl Pulang</label>
+                    <label class="form-label-xs">Tgl Pulang <span class="required">*</span></label>
                     <input type="date" id="grp_defaultDeparture" class="form-control form-control-sm" value="2026-11-13" required>
                   </div>
                   <div class="form-group">
-                    <label class="form-label-xs">Kendaraan</label>
+                    <label class="form-label-xs">Kendaraan <span class="required">*</span></label>
                     <select id="grp_defaultTransport" class="form-control form-control-sm" onchange="handleGroupTransportChange()">
                       <option value="Bus Panitia">Bus Panitia</option>
                       <option value="Mobil Pribadi">Mobil Pribadi</option>
@@ -1263,10 +1258,7 @@
                   <p class="section-desc-sm">Penanggung jawab rombongan. Tercatat lengkap dengan ukuran seragam &amp; riwayat kesehatan (bisa ditambah bila ada koordinator pendamping).</p>
                 </div>
                 
-                <div class="group-header-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleWideFormLayout()" id="btnToggleWideSection" title="Perluas / perkecil tampilan formulir agar lebih leluasa dan plong">
-                    <i class="fa-solid fa-up-right-and-down-left-from-center"></i> <span id="btnToggleWideSectionText">Mode Lebar (Plong)</span>
-                  </button>
+                <div class="group-header-actions">
                   <button type="button" class="btn btn-gold-add-leader" onclick="addGroupCoordinatorCard()" id="btnAddCoordinator" title="Tambah koordinator pendamping atau koordinator akhwat">
                     <i class="fa-solid fa-user-shield"></i> + Tambah Koordinator Pendamping
                   </button>
@@ -4118,7 +4110,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=98.0"></script>
-  <script src="js/app.js?v=98.0"></script>
+  <script src="js/supabase-config.js?v=99.0"></script>
+  <script src="js/app.js?v=99.0"></script>
 </body>
 </html>
