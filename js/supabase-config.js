@@ -139,7 +139,7 @@ class PaskasDataService {
             localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cleaned));
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
@@ -150,7 +150,7 @@ class PaskasDataService {
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
         console.log('Koneksi internet online kembali. Memeriksa antrean sinkronisasi Supabase...');
-        this.syncLocalToSupabase().catch(() => {});
+        this.syncLocalToSupabase().catch(() => { });
       });
     }
   }
@@ -181,51 +181,51 @@ class PaskasDataService {
           if (row.setting_key === 'paskas_rooms_data' || row.setting_key === 'master_rooms') {
             try {
               if (row.setting_value) localStorage.setItem('paskas_rooms_data', row.setting_value);
-            } catch (e) {}
+            } catch (e) { }
           } else if (row.setting_key === 'paskas_groups_data' || row.setting_key === 'master_groups') {
             try {
               if (row.setting_value) localStorage.setItem('paskas_groups_data', row.setting_value);
-            } catch (e) {}
+            } catch (e) { }
           } else if (row.setting_key === 'paskas_master_wilayah' || row.setting_key === 'master_wilayah') {
             try {
               if (row.setting_value) localStorage.setItem('paskas_master_wilayah', row.setting_value);
-            } catch (e) {}
+            } catch (e) { }
           } else if (row.setting_key === 'paskas_custom_cards' || row.setting_key === 'dashboard_cards') {
             try {
               if (row.setting_value) localStorage.setItem('paskas_custom_cards', row.setting_value);
-            } catch (e) {}
+            } catch (e) { }
           } else if (row.setting_key === 'paskas_reg_content' || row.setting_key === 'reg_content') {
             try {
               if (row.setting_value) localStorage.setItem('paskas_reg_content', row.setting_value);
-            } catch (e) {}
+            } catch (e) { }
           } else if (row.setting_key === 'paskas_admin_password') {
             try {
               if (row.setting_value) localStorage.setItem('paskas_admin_password', row.setting_value);
-            } catch (e) {}
+            } catch (e) { }
           } else if (row.setting_key === 'is_room_group_enabled' || row.setting_key === 'paskas_room_group_enabled') {
             try {
               if (row.setting_value) localStorage.setItem('paskas_room_group_enabled', row.setting_value);
-            } catch (e) {}
+            } catch (e) { }
           } else if (row.setting_key === 'paskas_announcements_list' || row.setting_key === 'announcements_list') {
             try {
               if (row.setting_value) localStorage.setItem('paskas_announcements_list', row.setting_value);
-            } catch (e) {}
+            } catch (e) { }
           } else if (row.setting_key === 'uniform_ikhwan_image') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_image', row.setting_value); } catch (e) {}
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_image', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_akhwat_image') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_image', row.setting_value); } catch (e) {}
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_image', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_title_ikhwan') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_title', row.setting_value); } catch (e) {}
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_title', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_title_akhwat') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_title', row.setting_value); } catch (e) {}
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_title', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_desc_ikhwan') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_desc', row.setting_value); } catch (e) {}
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_desc', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_desc_akhwat') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_desc', row.setting_value); } catch (e) {}
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_desc', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_size_chart_ikhwan' || row.setting_key === 'paskas_uniform_size_chart_ikhwan') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_size_chart_ikhwan', row.setting_value); } catch (e) {}
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_size_chart_ikhwan', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_size_chart_akhwat' || row.setting_key === 'paskas_uniform_size_chart_akhwat') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_size_chart_akhwat', row.setting_value); } catch (e) {}
+            try { if (row.setting_value) localStorage.setItem('paskas_uniform_size_chart_akhwat', row.setting_value); } catch (e) { }
           }
         });
         const merged = { ...this.getSettings(), ...cloudSettings };
@@ -427,9 +427,9 @@ class PaskasDataService {
 
       // 2. Gabungkan data lokal yang belum tersinkron ke cloud (dan bukan data yang sengaja dihapus)
       const cloudCodes = new Set(cloudList.map(r => r.registration_code));
-      const localOnly = local.filter(r => 
-        r && 
-        r.registration_code && 
+      const localOnly = local.filter(r =>
+        r &&
+        r.registration_code &&
         !deletedCodes.has(r.registration_code) &&
         !cloudCodes.has(r.registration_code)
       );
@@ -685,8 +685,8 @@ class PaskasDataService {
 
     // Cari dari data lokal jika salah satu belum diketahui
     const current = this.getLocalRegistrations();
-    const target = current.find(item => 
-      (idToDelete && String(item.id) === String(idToDelete)) || 
+    const target = current.find(item =>
+      (idToDelete && String(item.id) === String(idToDelete)) ||
       (codeToDelete && item.registration_code === codeToDelete)
     );
 
@@ -755,9 +755,9 @@ class PaskasDataService {
     const deletedCodes = new Set(this.getDeletedCodes());
 
     // Filter hanya data yang sah dan belum pernah dihapus
-    const validData = localData.filter(item => 
-      item && 
-      item.registration_code && 
+    const validData = localData.filter(item =>
+      item &&
+      item.registration_code &&
       !deletedCodes.has(item.registration_code)
     );
 
@@ -787,11 +787,11 @@ class PaskasDataService {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
       const res = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS };
-      if (!res.ticket_template_image || 
-          typeof res.ticket_template_image !== 'string' || 
-          res.ticket_template_image.includes('[object') || 
-          res.ticket_template_image.includes('boarding-pass-template.png') ||
-          res.ticket_template_image.trim() === '') {
+      if (!res.ticket_template_image ||
+        typeof res.ticket_template_image !== 'string' ||
+        res.ticket_template_image.includes('[object') ||
+        res.ticket_template_image.includes('boarding-pass-template.png') ||
+        res.ticket_template_image.trim() === '') {
         res.ticket_template_image = 'images/boarding-pass-canva.png';
       }
       if (!res.google_email_script_url || typeof res.google_email_script_url !== 'string' || res.google_email_script_url.trim() === '') {
@@ -807,9 +807,9 @@ class PaskasDataService {
     this.ensureSupabaseClient();
     const current = this.getSettings();
     if (newSettings && newSettings.ticket_template_image) {
-      if (typeof newSettings.ticket_template_image !== 'string' || 
-          newSettings.ticket_template_image.includes('[object') ||
-          newSettings.ticket_template_image.trim() === '') {
+      if (typeof newSettings.ticket_template_image !== 'string' ||
+        newSettings.ticket_template_image.includes('[object') ||
+        newSettings.ticket_template_image.trim() === '') {
         newSettings.ticket_template_image = 'images/boarding-pass-canva.png';
       }
     }
@@ -842,7 +842,7 @@ class PaskasDataService {
     const stringVal = typeof value === 'string' ? value : JSON.stringify(value);
     try {
       localStorage.setItem(key, stringVal);
-    } catch (e) {}
+    } catch (e) { }
 
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
