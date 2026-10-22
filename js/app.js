@@ -4783,12 +4783,19 @@ function renderActiveTicket(record) {
   if (photoUrl && ticketCard) {
     ticketCard.classList.add('has-photo');
     if (photoImg) {
-      photoImg.src = photoUrl;
       photoImg.style.display = 'block';
+      // Jika gambar gagal load (URL tidak valid / akses ditolak), sembunyikan frame
+      photoImg.onerror = function() {
+        this.style.display = 'none';
+        this.src = '';
+        if (ticketCard) ticketCard.classList.remove('has-photo');
+      };
+      photoImg.src = photoUrl;
     }
   } else if (ticketCard) {
     ticketCard.classList.remove('has-photo');
     if (photoImg) {
+      photoImg.onerror = null;
       photoImg.src = '';
       photoImg.style.display = 'none';
     }
