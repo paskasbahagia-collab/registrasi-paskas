@@ -385,7 +385,8 @@ class PaskasDataService {
    * Mengambil semua pendaftaran peserta (Sinkron Cloud Supabase & Local)
    */
   async getRegistrations() {
-    this.ensureSupabaseClient();
+    // Tunggu Supabase client siap (anti race-condition saat CDN belum fully loaded)
+    await this.waitForSupabase(8000);
     let cloudList = null;
     const deletedCodes = new Set(this.getDeletedCodes());
 
@@ -398,6 +399,8 @@ class PaskasDataService {
 
         if (!error && Array.isArray(data)) {
           cloudList = data;
+        } else if (error) {
+          console.warn('Supabase getRegistrations error:', error.message || error);
         }
       } catch (e) {
         console.warn('Gagal query Supabase, membaca dari LocalStorage:', e);

@@ -3476,7 +3476,7 @@ function generateRegistrationCode(type = 'individu', index = 0) {
   });
 
   try {
-    const raw = localStorage.getItem('paskas_registrations');
+    const raw = localStorage.getItem('paskas_registrations_data');
     const local = raw ? JSON.parse(raw) : [];
     if (Array.isArray(local)) {
       local.forEach(r => {
