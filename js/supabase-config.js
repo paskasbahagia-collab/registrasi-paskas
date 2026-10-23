@@ -429,10 +429,13 @@ class PaskasDataService {
       });
 
       // 2. Gabungkan data lokal yang belum tersinkron ke cloud (dan bukan data yang sengaja dihapus)
+      // Hanya data yang ditandai _is_offline_pending (gagal tersimpan ke cloud) yang boleh di-sync ulang,
+      // agar cache lama dari perangkat lain tidak membangkitkan kembali data yang sudah dihapus.
       const cloudCodes = new Set(cloudList.map(r => r.registration_code));
       const localOnly = local.filter(r =>
         r &&
         r.registration_code &&
+        r._is_offline_pending === true &&
         !deletedCodes.has(r.registration_code) &&
         !cloudCodes.has(r.registration_code)
       );
