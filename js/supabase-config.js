@@ -860,10 +860,21 @@ class PaskasDataService {
         return true;
       } catch (err) {
         console.warn(`Gagal simpan ${key} ke Supabase:`, err);
+        this.showCloudSaveWarning();
         throw err;
       }
     }
     return false;
+  }
+
+  showCloudSaveWarning() {
+    if (typeof document === 'undefined' || document.getElementById('cloudSaveWarning')) return;
+    const el = document.createElement('div');
+    el.id = 'cloudSaveWarning';
+    el.textContent = '⚠️ Perubahan GAGAL tersimpan ke cloud (Supabase) dan hanya ada di perangkat ini. Hubungi admin untuk cek izin database.';
+    el.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#b91c1c;color:#fff;padding:12px 18px;border-radius:10px;font:600 14px sans-serif;max-width:90vw;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 8000);
   }
 }
 
