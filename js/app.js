@@ -5912,14 +5912,16 @@ function renderRekapTable() {
           : `<span style="font-size: 13px; font-weight: 700; color: #1e293b;">${ageVal} th</span>`)
       : `<span style="color: #64748b;">-</span>`;
 
+    const photoSrc = [item.photo_url, item.photo_data].find(p => typeof p === 'string' && p.trim() !== '') || '';
+    const safeFullName = String(item.full_name || '');
     return `
       <tr>
         <td style="color: #475569; font-weight: 700; text-align: center;">${rowNo}</td>
         <td><span class="badge-table-code">${item.registration_code}</span></td>
         <td>
           <div style="display: flex; align-items: center; gap: 10px;">
-            ${item.photo_url || item.photo_data
-              ? `<img src="${item.photo_url || item.photo_data}" class="rekap-avatar-img" alt="${escapeHtml(item.full_name)}" onclick="openPhotoPreviewLightbox('${(item.photo_url || item.photo_data).replace(/'/g, "\\'")}', '${escapeHtml(item.full_name).replace(/'/g, "\\'")}')" title="Klik untuk perbesar pas foto">`
+            ${photoSrc
+              ? `<img src="${photoSrc}" class="rekap-avatar-img" alt="${escapeHtml(safeFullName)}" onclick="openPhotoPreviewLightbox('${photoSrc.replace(/'/g, "\\'")}', '${escapeHtml(safeFullName).replace(/'/g, "\\'")}')" title="Klik untuk perbesar pas foto">`
               : `<div class="rekap-avatar-placeholder" title="Belum ada pas foto"><i class="fa-solid fa-user"></i></div>`
             }
             <div style="min-width: 0;">

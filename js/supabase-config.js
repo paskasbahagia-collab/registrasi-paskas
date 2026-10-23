@@ -344,6 +344,9 @@ class PaskasDataService {
         clean[key] = val;
       }
     }
+    if (clean.photo_url !== undefined && clean.photo_url !== null && typeof clean.photo_url !== 'string') {
+      delete clean.photo_url;
+    }
     return clean;
   }
 
