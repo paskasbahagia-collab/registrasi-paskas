@@ -5898,6 +5898,7 @@ function renderRekapTable() {
 
   tbody.innerHTML = currentItems.map((item, index) => {
     const rowNo = startIndex + index + 1;
+    try {
     const isMale = item.gender === 'Laki-laki';
     const isSpecialMed = item.medical_history && 
                          !item.medical_history.toLowerCase().includes('tidak ada') && 
@@ -5962,6 +5963,10 @@ function renderRekapTable() {
         </td>
       </tr>
     `;
+    } catch (rowErr) {
+      console.error('Gagal render baris rekap:', item && item.registration_code, rowErr);
+      return `<tr><td style="text-align:center;">${rowNo}</td><td>${escapeHtml(String((item && item.registration_code) || '-'))}</td><td colspan="10" style="color:#b91c1c;">Data peserta ini gagal ditampilkan (format data tidak valid)</td></tr>`;
+    }
   }).join('');
 
   // Update Pagination Info
