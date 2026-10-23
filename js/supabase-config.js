@@ -760,15 +760,17 @@ class PaskasDataService {
     const localData = this.getLocalRegistrations();
     const deletedCodes = new Set(this.getDeletedCodes());
 
-    // Filter hanya data yang sah dan belum pernah dihapus
+    // Filter hanya data yang sah, belum pernah dihapus, dan memang belum tersimpan ke cloud (offline pending).
+    // Data lama hasil cache dari cloud tidak dikirim ulang agar data yang sudah dihapus tidak muncul kembali.
     const validData = localData.filter(item =>
       item &&
       item.registration_code &&
+      item._is_offline_pending === true &&
       !deletedCodes.has(item.registration_code)
     );
 
     if (!validData.length) {
-      return { count: 0, message: 'Tidak ada data lokal valid untuk disinkronkan.' };
+      return { count: 0, message: 'Tidak ada data lokal tertunda untuk disinkronkan.' };
     }
 
     // Ambil data tanpa ID auto-increment lokal agar tidak konflik primary key
@@ -783,6 +785,16 @@ class PaskasDataService {
       .select();
 
     if (error) throw error;
+
+    // Tandai data lokal sudah tersinkron agar tidak dikirim berulang
+    const savedMap = new Map((data || []).map(s => [s.registration_code, s]));
+    const updatedLocal = localData.map(item =>
+      item && savedMap.has(item.registration_code)
+        ? { ...item, id: savedMap.get(item.registration_code).id, _is_offline_pending: false }
+        : item
+    );
+    localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(updatedLocal));
+
     return { count: cleanedData.length, message: `Berhasil sinkronisasi ${cleanedData.length} data ke Supabase!` };
   }
 
