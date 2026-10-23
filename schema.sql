@@ -116,7 +116,6 @@ DROP POLICY IF EXISTS "Allow public update for app_settings" ON app_settings;
 CREATE POLICY "Allow public update for app_settings" 
 ON app_settings FOR UPDATE USING (true);
 
-DROP POLICY IF EXISTS "Allow public update for app_settings" ON app_settings;
 DROP POLICY IF EXISTS "Allow public delete for app_settings" ON app_settings;
 
 -- Selesai! Skema database siap & aman digunakan oleh frontend PASKAS BAHAGIA.
