@@ -385,6 +385,30 @@ class PaskasDataService {
   }
 
   /**
+   * Upload pas foto (base64) ke Supabase Storage bucket 'foto-peserta' dan kembalikan link publiknya.
+   * Jika gagal, kembalikan data asli agar foto tidak hilang.
+   */
+  async uploadPhotoIfNeeded(photo, registrationCode) {
+    if (typeof photo !== 'string' || !photo.startsWith('data:image')) return photo;
+    if (!this.isSupabaseConnected || !this.supabaseClient) return photo;
+    try {
+      const blob = await (await fetch(photo)).blob();
+      const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      const safeCode = String(registrationCode || 'PKB').replace(/[^a-zA-Z0-9-]/g, '_');
+      const path = `${safeCode}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      const { error } = await this.supabaseClient.storage
+        .from('foto-peserta')
+        .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
+      if (error) throw error;
+      const { data } = this.supabaseClient.storage.from('foto-peserta').getPublicUrl(path);
+      return (data && data.publicUrl) || photo;
+    } catch (err) {
+      console.warn('Gagal upload foto ke Supabase Storage, simpan base64 sebagai cadangan:', err);
+      return photo;
+    }
+  }
+
+  /**
    * Mengambil semua pendaftaran peserta (Sinkron Cloud Supabase & Local)
    */
   async getRegistrations() {
@@ -494,6 +518,7 @@ class PaskasDataService {
 
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
+        newRecord.photo_url = await this.uploadPhotoIfNeeded(newRecord.photo_url, newRecord.registration_code);
         const insertData = this.sanitizeRegistrationPayload(newRecord);
         delete insertData.id;
         const { data, error } = await this.supabaseClient
@@ -591,6 +616,9 @@ class PaskasDataService {
 
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
+        for (const item of stampedList) {
+          item.photo_url = await this.uploadPhotoIfNeeded(item.photo_url, item.registration_code);
+        }
         const cleanList = stampedList.map(item => {
           const clean = this.sanitizeRegistrationPayload(item);
           delete clean.id;

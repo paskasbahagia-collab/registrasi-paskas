@@ -4777,28 +4777,13 @@ function renderActiveTicket(record) {
     ticketCard.style.backgroundRepeat = 'no-repeat';
   }
 
-  // Handle Pas Foto Peserta pada Kartu Tiket Boarding Pass (Matches User Mockup Gambar 2)
+  // Pas foto peserta TIDAK ditampilkan di tiket (foto hanya disimpan di Supabase untuk keperluan panitia)
   const photoImg = document.getElementById('ticketBpPhotoImg');
-  const photoUrl = record.photo_url || record.photo_data || '';
-  if (photoUrl && ticketCard) {
-    ticketCard.classList.add('has-photo');
-    if (photoImg) {
-      photoImg.style.display = 'block';
-      // Jika gambar gagal load (URL tidak valid / akses ditolak), sembunyikan frame
-      photoImg.onerror = function() {
-        this.style.display = 'none';
-        this.src = '';
-        if (ticketCard) ticketCard.classList.remove('has-photo');
-      };
-      photoImg.src = photoUrl;
-    }
-  } else if (ticketCard) {
-    ticketCard.classList.remove('has-photo');
-    if (photoImg) {
-      photoImg.onerror = null;
-      photoImg.src = '';
-      photoImg.style.display = 'none';
-    }
+  if (ticketCard) ticketCard.classList.remove('has-photo');
+  if (photoImg) {
+    photoImg.onerror = null;
+    photoImg.src = '';
+    photoImg.style.display = 'none';
   }
 
   // Kop Maskapai & Tagline
@@ -5392,7 +5377,7 @@ async function sendTicketEmail() {
           body: body,
           registration_code: currentTicketRecord.registration_code || '-',
           image_base64: imageBase64,
-          photo_base64: currentTicketRecord.photo_url || currentTicketRecord.photo_data || ''
+          photo_base64: [currentTicketRecord.photo_url, currentTicketRecord.photo_data].find(p => typeof p === 'string' && p.startsWith('data:image')) || ''
         })
       });
 
