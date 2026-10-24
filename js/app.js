@@ -1405,9 +1405,21 @@ function renderUniformShowcaseHTML() {
             </div>
           </div>
 
-          <div class="uniform-card-content" style="padding: 18px 22px 22px; text-align: center;">
-            <h5 class="uniform-card-title" style="font-size: 17px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; letter-spacing: -0.2px;">${escapeHtml(uniforms.ikhwanTitle)}</h5>
-            ${uniforms.ikhwanDesc ? `<p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.65; margin: 0; font-weight: 400;">${escapeHtml(uniforms.ikhwanDesc)}</p>` : ''}
+          <div class="uniform-card-content" style="padding: 18px 20px 22px; text-align: left;">
+            <div style="text-align: center; margin-bottom: 10px;">
+              <h5 class="uniform-card-title" style="font-size: 17px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; letter-spacing: -0.2px;">${escapeHtml(uniforms.ikhwanTitle)}</h5>
+              <span style="font-size: 11.5px; color: #38bdf8; font-weight: 600;"><i class="fa-solid fa-mars"></i> Seragam Kaos Resmi Ikhwan</span>
+            </div>
+            ${uniforms.ikhwanDesc ? `
+              <div class="uniform-card-notes-box" style="background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(56, 189, 248, 0.35); border-radius: 10px; padding: 12px 14px; margin-top: 10px;">
+                <div style="font-size: 11.5px; font-weight: 700; color: #38bdf8; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-clipboard-list text-gold"></i> Catatan &amp; Spesifikasi Baju Ikhwan:
+                </div>
+                <div style="font-size: 13px; color: #e2e8f0; line-height: 1.65;">
+                  ${renderFormattedNarrationHTML(uniforms.ikhwanDesc)}
+                </div>
+              </div>
+            ` : ''}
           </div>
         </div>
 
@@ -1431,9 +1443,21 @@ function renderUniformShowcaseHTML() {
             </div>
           </div>
 
-          <div class="uniform-card-content" style="padding: 18px 22px 22px; text-align: center;">
-            <h5 class="uniform-card-title" style="font-size: 17px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; letter-spacing: -0.2px;">${escapeHtml(uniforms.akhwatTitle)}</h5>
-            ${uniforms.akhwatDesc ? `<p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.65; margin: 0; font-weight: 400;">${escapeHtml(uniforms.akhwatDesc)}</p>` : ''}
+          <div class="uniform-card-content" style="padding: 18px 20px 22px; text-align: left;">
+            <div style="text-align: center; margin-bottom: 10px;">
+              <h5 class="uniform-card-title" style="font-size: 17px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; letter-spacing: -0.2px;">${escapeHtml(uniforms.akhwatTitle)}</h5>
+              <span style="font-size: 11.5px; color: #f472b6; font-weight: 600;"><i class="fa-solid fa-venus"></i> Seragam Rompi / Outer Resmi Akhwat</span>
+            </div>
+            ${uniforms.akhwatDesc ? `
+              <div class="uniform-card-notes-box" style="background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(244, 114, 182, 0.35); border-radius: 10px; padding: 12px 14px; margin-top: 10px;">
+                <div style="font-size: 11.5px; font-weight: 700; color: #f472b6; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-clipboard-list text-gold"></i> Catatan &amp; Spesifikasi Rompi Akhwat:
+                </div>
+                <div style="font-size: 13px; color: #e2e8f0; line-height: 1.65;">
+                  ${renderFormattedNarrationHTML(uniforms.akhwatDesc)}
+                </div>
+              </div>
+            ` : ''}
           </div>
         </div>
       </div>
@@ -1600,16 +1624,7 @@ function renderHeroStoryContent(idx) {
                           (card.category && card.category.toLowerCase().includes('atribut'));
 
     if (isUniformCard) {
-      let extraNarration = '';
-      if (card.narration && card.narration.trim() && !card.narration.includes('Model Kaos Resmi Ikhwan:')) {
-        extraNarration = `
-          <div class="modal-rich-section" style="margin-top: 18px;">
-            <h4><i class="fa-solid fa-circle-info"></i> Catatan &amp; Narasi Tambahan Seragam</h4>
-            ${renderFormattedNarrationHTML(card.narration)}
-          </div>
-        `;
-      }
-      bodyEl.innerHTML = renderUniformShowcaseHTML() + extraNarration;
+      bodyEl.innerHTML = renderUniformShowcaseHTML();
       return;
     }
 
@@ -9554,9 +9569,11 @@ function renderSettingsCardsManager() {
                 </div>
 
                 <div class="form-group" style="margin: 0;">
-                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px;">Narasi Khusus Baju Ikhwan</label>
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px; font-weight: 700; color: #0284c7;">
+                    <i class="fa-solid fa-clipboard-list"></i> Catatan &amp; Spesifikasi Baju Ikhwan (Tampil di Kartu Ikhwan)
+                  </label>
                   ${getFormattingToolbarHTML('Pilih teks lalu format:')}
-                  <textarea class="form-control card-uniform-ikhwan-desc textarea-with-toolbar" rows="6" placeholder="Tuliskan spesifikasi bahan, warna, sablon khusus ikhwan..." style="padding: 10px 12px; font-size: 13px; line-height: 1.5; min-height: 140px; resize: vertical;">${escapeHtml(uniforms.ikhwanDesc)}</textarea>
+                  <textarea class="form-control card-uniform-ikhwan-desc textarea-with-toolbar" rows="6" placeholder="Tuliskan spesifikasi bahan kaos, kenyamanan, sirkulasi udara, logo PASKAS untuk ikhwan..." style="padding: 10px 12px; font-size: 13px; line-height: 1.5; min-height: 140px; resize: vertical;">${escapeHtml(uniforms.ikhwanDesc)}</textarea>
                 </div>
 
                 <!-- Size Chart Ikhwan Input -->
@@ -9610,9 +9627,11 @@ function renderSettingsCardsManager() {
                 </div>
 
                 <div class="form-group" style="margin: 0;">
-                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px;">Narasi Khusus Baju Akhwat</label>
+                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px; font-weight: 700; color: #db2777;">
+                    <i class="fa-solid fa-clipboard-list"></i> Catatan &amp; Spesifikasi Rompi Akhwat (Tampil di Kartu Akhwat)
+                  </label>
                   ${getFormattingToolbarHTML('Pilih teks lalu format:')}
-                  <textarea class="form-control card-uniform-akhwat-desc textarea-with-toolbar" rows="6" placeholder="Tuliskan spesifikasi tunik panjang syar'i, bahan, aksen emas..." style="padding: 10px 12px; font-size: 13px; line-height: 1.5; min-height: 140px; resize: vertical;">${escapeHtml(uniforms.akhwatDesc)}</textarea>
+                  <textarea class="form-control card-uniform-akhwat-desc textarea-with-toolbar" rows="6" placeholder="Tuliskan spesifikasi model rompi/outer, keserasian, kerapian, keleluasaan bergerak untuk akhwat..." style="padding: 10px 12px; font-size: 13px; line-height: 1.5; min-height: 140px; resize: vertical;">${escapeHtml(uniforms.akhwatDesc)}</textarea>
                 </div>
 
                 <!-- Size Chart Akhwat Input -->
