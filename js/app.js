@@ -7961,11 +7961,16 @@ function renderAnnouncementUI() {
             ${previous.map((item, idx) => `
               <div class="broadcast-history-card">
                 <div class="broadcast-history-card-header">
-                  <span class="broadcast-date-badge" style="font-size: 11.5px; padding: 3px 10px;">
-                    <i class="fa-regular fa-calendar-days text-gold"></i> ${escapeHtml(item.date || '-')}
-                  </span>
-                  <span class="broadcast-category-badge" style="font-size: 11px; padding: 3px 8px;">
-                    ${escapeHtml(item.category || 'Umum')}
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span class="broadcast-date-badge" style="font-size: 11.5px; padding: 4px 12px;">
+                      <i class="fa-regular fa-calendar-days text-gold"></i> ${escapeHtml(item.date || '-')}
+                    </span>
+                    <span class="broadcast-category-badge" style="font-size: 11px; padding: 4px 10px;">
+                      <i class="fa-solid fa-tag text-gold"></i> ${escapeHtml(item.category || 'Umum')}
+                    </span>
+                  </div>
+                  <span style="font-size: 11px; color: #94a3b8; font-weight: 700; background: rgba(255,255,255,0.05); padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.08);">
+                    <i class="fa-solid fa-box-archive text-gold"></i> Warta Sebelumnya #${idx + 2}
                   </span>
                 </div>
                 <h4 class="broadcast-history-card-title">${escapeHtml(item.title || '')}</h4>
