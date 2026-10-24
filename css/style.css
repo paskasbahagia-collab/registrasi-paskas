@@ -4494,11 +4494,36 @@ h1, h2, h3, h4, h5, h6 {
     gap: 28px;
   }
   .hanging-photos-track {
-    gap: 12px;
+    gap: 16px 12px;
   }
   .hanging-photo-item {
     max-width: 170px;
   }
+}
+
+/* Tampilan HP / Layar Sempit: Susunan Polaroid Gantung 2 Kolom Rapi (2 di atas, 2 di bawah) */
+@media (max-width: 768px) {
+  .hanging-photos-track {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 30px 14px !important;
+    justify-items: center !important;
+    max-width: 390px !important;
+    margin: 0 auto !important;
+    padding: 0 6px !important;
+  }
+  .hanging-photo-item {
+    width: 100% !important;
+    max-width: 175px !important;
+    flex: none !important;
+  }
+  .hanging-photo-item:last-child:nth-child(odd) {
+    grid-column: 1 / -1 !important;
+    max-width: 175px !important;
+  }
+}
+
+@media (max-width: 991px) {
   .rf-category-dropdown-box {
     width: 100%;
     justify-content: space-between;
@@ -11862,6 +11887,79 @@ input:checked + .slider:before {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.badge-closeup-req {
+  font-size: 11px;
+  background: #fef3c7;
+  color: #b45309;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  border: 1px solid #fde68a;
+  letter-spacing: 0.2px;
+}
+
+/* Responsif Pas Foto Peserta untuk Layar HP (Tersusun Vertikal, Rapi & Elegan) */
+@media (max-width: 680px) {
+  .photo-upload-card-wrapper {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 14px !important;
+    padding: 18px 14px !important;
+  }
+
+  .photo-preview-slot {
+    width: 105px !important;
+    height: 135px !important;
+    margin: 0 auto !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22) !important;
+  }
+
+  .photo-instruction-meta {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .photo-instruction-title {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    text-align: center !important;
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .photo-instruction-desc {
+    text-align: center !important;
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+    margin-bottom: 14px !important;
+    padding: 0 4px !important;
+    color: #475569 !important;
+  }
+
+  .photo-instruction-actions {
+    justify-content: center !important;
+    width: 100% !important;
+    display: flex !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .photo-instruction-actions button {
+    width: 100% !important;
+    max-width: 260px !important;
+    justify-content: center !important;
+    padding: 9px 16px !important;
+    font-size: 13px !important;
+  }
 }
 
 /* Avatar in Rekap Data Table */
