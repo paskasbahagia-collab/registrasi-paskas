@@ -7102,18 +7102,65 @@ function exportToExcel() {
     ws['!rows'] = rowHeights;
   }
 
+  // Helper: Kategori Indikator Keanggotaan Paskas
+  const currentYear = new Date().getFullYear();
+  function getPaskasCategory(item) {
+    let joinYear = null;
+    if (item.join_year) {
+      const p = parseInt(item.join_year, 10);
+      if (!isNaN(p) && p > 1900 && p <= currentYear + 1) joinYear = p;
+    }
+    if (!joinYear && item.created_at) {
+      const cYear = new Date(item.created_at).getFullYear();
+      if (!isNaN(cYear)) joinYear = cYear;
+    }
+    if (!joinYear) joinYear = currentYear;
+
+    const diff = Math.max(0, currentYear - joinYear);
+    if (diff < 1) {
+      return {
+        level: 'PASKAS Baru',
+        desc: '< 1 Tahun',
+        years: diff,
+        joinYear: joinYear,
+        badgeColor: '0369A1', // Sky/Cyan Blue
+        bgColor: 'E0F2FE'     // Light Soft Blue
+      };
+    } else if (diff < 5) {
+      return {
+        level: 'PASKAS Madya',
+        desc: `${diff} Tahun`,
+        years: diff,
+        joinYear: joinYear,
+        badgeColor: 'B45309', // Amber Gold
+        bgColor: 'FEF3C7'     // Light Soft Amber
+      };
+    } else {
+      return {
+        level: 'PASKAS Senior',
+        desc: `${diff} Tahun`,
+        years: diff,
+        joinYear: joinYear,
+        badgeColor: '15803D', // Emerald Green
+        bgColor: 'DCFCE7'     // Light Soft Green
+      };
+    }
+  }
+
   // ===================================================================
   // 1. HALAMAN PERTAMA: REKAP KESELURUHAN
   // ===================================================================
   const s1Headers = [
     'No', 'Kode Tiket', 'Tipe Registrasi', 'Nama Kelompok', 'Koordinator Kelompok', 
-    'Nama Peserta', 'Usia', 'Kategori Usia', 'Orang Tua / Wali', 'Gedung / Asrama', 
-    'Kamar / Tenda', 'Jenis Kelamin', 'Wilayah', 'Daerah', 'Email', 
-    'No WhatsApp', 'No HP Darurat', 'Tgl Kedatangan', 'Jam Kedatangan', 'Transport Berangkat', 
-    'Tgl Kepulangan', 'Jam Kepulangan', 'Transport Pulang', 'Ukuran Baju', 'Riwayat Medis', 'Catatan'
+    'Nama Peserta', 'Usia', 'Kategori Usia', 'Tahun Bergabung', 'Indikator Keanggotaan', 
+    'Orang Tua / Wali', 'Gedung / Asrama', 'Kamar / Tenda', 'Jenis Kelamin', 'Wilayah', 
+    'Daerah', 'Email', 'No WhatsApp', 'No HP Darurat', 'Tgl Kedatangan', 'Jam Kedatangan', 
+    'Transport Berangkat', 'Tgl Kepulangan', 'Jam Kepulangan', 'Transport Pulang', 
+    'Ukuran Baju', 'Riwayat Medis', 'Catatan'
   ];
   const s1Rows = [s1Headers];
   sourceData.forEach((item, idx) => {
+    const cat = getPaskasCategory(item);
     s1Rows.push([
       idx + 1,
       sanitizeSpreadsheetValue(item.registration_code),
@@ -7123,6 +7170,8 @@ function exportToExcel() {
       sanitizeSpreadsheetValue(item.full_name),
       item.age ? `${item.age} Th` : '-',
       (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
+      cat.joinYear || '-',
+      cat.level,
       sanitizeSpreadsheetValue(item.guardian_name || '-'),
       sanitizeSpreadsheetValue(item.building || '-'),
       sanitizeSpreadsheetValue(item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-')),
@@ -7144,7 +7193,16 @@ function exportToExcel() {
     ]);
   });
   const ws1 = XLSX.utils.aoa_to_sheet(s1Rows);
-  formatSheet(ws1, s1Rows, [0], '165B33');
+  formatSheet(ws1, s1Rows, [0], '165B33', (rIdx, cIdx, val, row) => {
+    if (cIdx === 9) { // Indikator Keanggotaan
+      const catVal = row[9];
+      if (catVal === 'PASKAS Senior') return createDataStyle(rIdx % 2 === 0, 'center', 'DCFCE7', '15803D', true);
+      if (catVal === 'PASKAS Madya') return createDataStyle(rIdx % 2 === 0, 'center', 'FEF3C7', 'B45309', true);
+      if (catVal === 'PASKAS Baru') return createDataStyle(rIdx % 2 === 0, 'center', 'E0F2FE', '0369A1', true);
+    }
+    if (cIdx === 8) return createDataStyle(rIdx % 2 === 0, 'center');
+    return null;
+  });
   XLSX.utils.book_append_sheet(workbook, ws1, 'Rekap Keseluruhan');
 
   // ===================================================================
@@ -7465,11 +7523,178 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, ws6, 'Rekap Kesehatan');
 
   // ===================================================================
-  // UNDUH FILE WORKBOOK EXCEL LENGKAP 6 HALAMAN
+  // 7. HALAMAN KETUJUH: REKAPITULASI WILAYAH & INDIKATOR KEANGGOTAAN
+  // ===================================================================
+  const wilayahMap = new Map();
+  sourceData.forEach(item => {
+    const w = (item.wilayah || 'Belum Ditentukan').trim();
+    if (!wilayahMap.has(w)) wilayahMap.set(w, []);
+    wilayahMap.get(w).push(item);
+  });
+
+  // Urutkan wilayah berdasarkan total peserta terbanyak
+  const sortedWilayahList = Array.from(wilayahMap.entries()).sort((a, b) => b[1].length - a[1].length);
+
+  const s7Rows = [];
+  const s7HeaderIndexes = [];
+  const s7BannerIndexes = [];
+  const s7Merges = [];
+
+  // BAGIAN 1: RINGKASAN REKAPITULASI WILAYAH
+  const rSumTitleIdx = s7Rows.length;
+  s7Rows.push(['RINGKASAN REKAPITULASI PESERTA PASKAS PER WILAYAH', '', '', '', '', '']);
+  s7BannerIndexes.push({ rIdx: rSumTitleIdx, color: '0F766E' });
+  s7Merges.push({ s: { r: rSumTitleIdx, c: 0 }, e: { r: rSumTitleIdx, c: 5 } });
+
+  const rSumHeadIdx = s7Rows.length;
+  s7Rows.push(['No', 'Nama Wilayah', 'Total Peserta', 'PASKAS Baru (< 1 Th)', 'PASKAS Madya (1-4 Th)', 'PASKAS Senior (≥ 5 Th)']);
+  s7HeaderIndexes.push(rSumHeadIdx);
+
+  let grandTotal = 0, grandBaru = 0, grandMadya = 0, grandSenior = 0;
+  sortedWilayahList.forEach(([wName, wItems], idx) => {
+    let cBaru = 0, cMadya = 0, cSenior = 0;
+    wItems.forEach(i => {
+      const cat = getPaskasCategory(i);
+      if (cat.level === 'PASKAS Baru') cBaru++;
+      else if (cat.level === 'PASKAS Madya') cMadya++;
+      else cSenior++;
+    });
+    grandTotal += wItems.length;
+    grandBaru += cBaru;
+    grandMadya += cMadya;
+    grandSenior += cSenior;
+
+    s7Rows.push([idx + 1, wName, wItems.length, cBaru, cMadya, cSenior]);
+  });
+
+  // Baris Total Ringkasan
+  const rTotalIdx = s7Rows.length;
+  s7Rows.push(['TOTAL KESELURUHAN', '', grandTotal, grandBaru, grandMadya, grandSenior]);
+  s7Merges.push({ s: { r: rTotalIdx, c: 0 }, e: { r: rTotalIdx, c: 1 } });
+
+  // Jeda baris pemisah antar tabel
+  s7Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
+  s7Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
+
+  // BAGIAN 2: RINCIAN PESERTA PER WILAYAH
+  const detailWilayahHeaders = [
+    'No', 'Indikator Keanggotaan', 'Tahun Bergabung', 'Masa Keanggotaan', 
+    'Nama Peserta', 'Daerah / Kota', 'Jenis Kelamin', 'Usia', 
+    'Kategori Usia', 'Tipe Registrasi', 'Nama Kelompok', 'No WhatsApp', 'Gedung / Kamar'
+  ];
+
+  sortedWilayahList.forEach(([wName, wItems]) => {
+    // Urutkan data peserta dalam wilayah ini:
+    // 1. Daerah (kota/kabupaten)
+    // 2. Masa keanggotaan (Senior -> Madya -> Baru)
+    // 3. Nama peserta
+    const sortedItems = [...wItems].sort((a, b) => {
+      const dCmp = (a.daerah || '').localeCompare(b.daerah || '');
+      if (dCmp !== 0) return dCmp;
+      const catA = getPaskasCategory(a);
+      const catB = getPaskasCategory(b);
+      if (catB.years !== catA.years) return catB.years - catA.years; // Senior di atas
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    });
+
+    let wBaru = 0, wMadya = 0, wSenior = 0;
+    sortedItems.forEach(i => {
+      const c = getPaskasCategory(i);
+      if (c.level === 'PASKAS Baru') wBaru++;
+      else if (c.level === 'PASKAS Madya') wMadya++;
+      else wSenior++;
+    });
+
+    const rBannerIdx = s7Rows.length;
+    s7Rows.push([
+      `WILAYAH: ${wName.toUpperCase()} — TOTAL: ${sortedItems.length} PESERTA (Baru: ${wBaru} | Madya: ${wMadya} | Senior: ${wSenior})`,
+      '', '', '', '', '', '', '', '', '', '', '', ''
+    ]);
+    s7BannerIndexes.push({ rIdx: rBannerIdx, color: '0F766E' });
+    s7Merges.push({ s: { r: rBannerIdx, c: 0 }, e: { r: rBannerIdx, c: detailWilayahHeaders.length - 1 } });
+
+    const rHeadIdx = s7Rows.length;
+    s7Rows.push([...detailWilayahHeaders]);
+    s7HeaderIndexes.push(rHeadIdx);
+
+    sortedItems.forEach((item, idx) => {
+      const cat = getPaskasCategory(item);
+      const roomInfo = item.building 
+        ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+        : (item.room_name || item.room_number || '-');
+      s7Rows.push([
+        idx + 1,
+        cat.level,
+        cat.joinYear,
+        cat.desc,
+        sanitizeSpreadsheetValue(item.full_name),
+        sanitizeSpreadsheetValue(item.daerah || '-'),
+        sanitizeSpreadsheetValue(item.gender),
+        item.age ? `${item.age} Th` : '-',
+        (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
+        sanitizeSpreadsheetValue(item.registration_type),
+        sanitizeSpreadsheetValue(item.group_name || '-'),
+        sanitizeSpreadsheetValue(item.phone_number || '-'),
+        sanitizeSpreadsheetValue(roomInfo)
+      ]);
+    });
+
+    // Jeda 1 baris setelah tiap wilayah
+    s7Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
+  });
+
+  const ws7 = XLSX.utils.aoa_to_sheet(s7Rows);
+  ws7['!merges'] = s7Merges;
+
+  formatSheet(ws7, s7Rows, s7HeaderIndexes, '115E59', (rIdx, cIdx, val, row) => {
+    // Styling Banner Judul / Wilayah
+    const banner = s7BannerIndexes.find(b => b.rIdx === rIdx);
+    if (banner) {
+      return {
+        fill: { fgColor: { rgb: banner.color } },
+        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      };
+    }
+
+    // Baris Total Ringkasan
+    if (rIdx === rTotalIdx) {
+      return {
+        fill: { fgColor: { rgb: 'CCFBF1' } },
+        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '0F766E' } },
+        alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : 'center', vertical: 'center' },
+        border: {
+          top: { style: 'medium', color: { rgb: '0F766E' } },
+          bottom: { style: 'double', color: { rgb: '0F766E' } },
+          left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+          right: { style: 'thin', color: { rgb: 'D1D5DB' } }
+        }
+      };
+    }
+
+    // Styling Indikator Keanggotaan pada tabel detail (kolom indeks 1)
+    if (cIdx === 1) {
+      const catVal = row[1];
+      if (catVal === 'PASKAS Senior') return createDataStyle(rIdx % 2 === 0, 'center', 'DCFCE7', '15803D', true);
+      if (catVal === 'PASKAS Madya') return createDataStyle(rIdx % 2 === 0, 'center', 'FEF3C7', 'B45309', true);
+      if (catVal === 'PASKAS Baru') return createDataStyle(rIdx % 2 === 0, 'center', 'E0F2FE', '0369A1', true);
+    }
+
+    // Rata tengah untuk kolom Tahun, Masa, Gender, Usia
+    if (cIdx === 2 || cIdx === 3 || cIdx === 6 || cIdx === 7) {
+      return createDataStyle(rIdx % 2 === 0, 'center');
+    }
+
+    return null;
+  });
+  XLSX.utils.book_append_sheet(workbook, ws7, 'Rekapitulasi Wilayah');
+
+  // ===================================================================
+  // UNDUH FILE WORKBOOK EXCEL LENGKAP 7 HALAMAN
   // ===================================================================
   const dateStr = new Date().toISOString().split('T')[0];
   XLSX.writeFile(workbook, `Rekap_Peserta_Paskas_Bahagia_${dateStr}.xlsx`);
-  showToast('File Excel 6 halaman berhasil diunduh (terlindungi formula injection & format rapi)!', 'success');
+  showToast('File Excel 7 halaman (termasuk Rekapitulasi Wilayah) berhasil diunduh!', 'success');
 }
 
 function exportToCSV() {
