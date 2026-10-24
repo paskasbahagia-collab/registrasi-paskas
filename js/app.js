@@ -6302,6 +6302,32 @@ function populateWilayahFilter() {
   }
 }
 
+/**
+ * Helper terstandarisasi untuk memeriksa apakah seorang peserta memiliki catatan medis khusus.
+ * Mengabaikan nilai kosong, strip (-), nihil, none, serta kata-kata 'sehat', 'prima', 'normal', 'baik', 'tidak ada', 'aman'.
+ */
+function hasParticipantMedicalIssue(itemOrMed) {
+  if (!itemOrMed) return false;
+  const raw = (typeof itemOrMed === 'object') ? itemOrMed.medical_history : itemOrMed;
+  if (!raw) return false;
+  const s = String(raw).trim().toLowerCase();
+  if (!s || s === '-' || s === '--' || s === '---' || s === 'none' || s === 'nihil' || s === 'null' || s === 'tidak' || s === 'tdk') {
+    return false;
+  }
+  if (
+    s.includes('tidak ada') ||
+    s.includes('sehat') ||
+    s.includes('normal') ||
+    s.includes('prima') ||
+    s.includes('baik') ||
+    s.includes('bugar') ||
+    s.includes('aman')
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function updateSummaryMetrics() {
   const totalOrang = allRegistrations.length;
   const individuCount = allRegistrations.filter(r => r.registration_type === 'individu').length;
@@ -6384,11 +6410,8 @@ function updateSummaryMetrics() {
     }
   }
 
-  // Medical notes with real concerns (not "Tidak Ada")
-  const medicalSpecial = allRegistrations.filter(r => {
-    const med = (r.medical_history || '').toLowerCase();
-    return med && !med.includes('tidak ada') && !med.includes('sehat');
-  }).length;
+  // Medical notes with real concerns (terstandarisasi)
+  const medicalSpecial = allRegistrations.filter(r => hasParticipantMedicalIssue(r)).length;
 
   // KPI Percentages
   const pctMandiri = totalOrang > 0 ? Math.round((individuCount / totalOrang) * 100) : 0;
@@ -6601,9 +6624,7 @@ function renderRekapTable() {
     const rowNo = startIndex + index + 1;
     try {
     const isMale = item.gender === 'Laki-laki';
-    const isSpecialMed = item.medical_history && 
-                         !item.medical_history.toLowerCase().includes('tidak ada') && 
-                         !item.medical_history.toLowerCase().includes('sehat');
+    const isSpecialMed = hasParticipantMedicalIssue(item);
 
     const ageVal = item.age ? parseInt(item.age, 10) : null;
     const isChild = ageVal !== null && ageVal < 15;
@@ -7108,19 +7129,9 @@ function renderCharts() {
   // Render Rekapitulasi Peserta per Daerah Table
   renderRekapWilayahSummaryTable(sortedWilayahList, totalOrang, male, female, individu, kelompok);
 
-  // Health computation
-  function checkHasMedicalIssue(r) {
-    if (!r || !r.medical_history) return false;
-    const s = String(r.medical_history).trim().toLowerCase();
-    if (!s || s === '-' || s === 'none' || s === 'nihil' || s === 'null') return false;
-    if (s.includes('tidak ada') || s.includes('sehat') || s.includes('normal') || s.includes('prima') || s.includes('baik')) {
-      return false;
-    }
-    return true;
-  }
-
-  const healthyList = allRegistrations.filter(r => !checkHasMedicalIssue(r));
-  const healthIssueList = allRegistrations.filter(r => checkHasMedicalIssue(r));
+  // Health computation (terstandarisasi)
+  const healthyList = allRegistrations.filter(r => !hasParticipantMedicalIssue(r));
+  const healthIssueList = allRegistrations.filter(r => hasParticipantMedicalIssue(r));
   const healthyCount = healthyList.length;
   const issueCount = healthIssueList.length;
   const healthyPct = totalOrang > 0 ? Math.round((healthyCount / totalOrang) * 100) : 0;
@@ -7184,27 +7195,26 @@ function renderCharts() {
 
   const listCloth = document.getElementById('clothInsightList');
   if (listCloth) {
+    const sizeItemsHtml = Object.entries(clothCounts).map(([size, count]) => {
+      const pct = totalOrang > 0 ? Math.round((count / totalOrang) * 100) : 0;
+      const isTop = (count === topClothCount && topClothCount > 0);
+      return `
+        <div class="insight-item" style="${isTop ? 'border-color: #2d6a4f; background: #f0fdf4;' : ''}">
+          <span class="insight-item-name">
+            <i class="fa-solid fa-shirt" style="${isTop ? 'color: #15803d;' : 'color: #64748b;'}"></i>
+            Ukuran ${size} ${isTop ? '<span style="font-size: 10px; background: #2d6a4f; color: #fff; padding: 1px 7px; border-radius: 999px; margin-left: 4px; font-weight: 700;">Terbanyak</span>' : ''}
+          </span>
+          <span class="insight-item-val" style="${isTop ? 'color: #15803d; font-weight: 800;' : ''}">${count} Orang (${pct}%)</span>
+        </div>
+      `;
+    }).join('');
+
     listCloth.innerHTML = `
-      <div class="insight-item">
-        <span class="insight-item-name"><i class="fa-solid fa-users text-green"></i> Total Kebutuhan Pakaian</span>
-        <span class="insight-item-val">${totalOrang} Potong</span>
+      <div class="insight-item" style="background: #eaf4ee; border-color: #b7dfc8;">
+        <span class="insight-item-name" style="font-weight: 700; color: #132a1c;"><i class="fa-solid fa-boxes-stacked text-green"></i> Total Kebutuhan Pakaian</span>
+        <span class="insight-item-val" style="font-weight: 800; color: #132a1c; font-size: 13.5px;">${totalOrang} Potong</span>
       </div>
-      <div class="insight-item">
-        <span class="insight-item-name"><i class="fa-solid fa-award text-green"></i> Ukuran Terbanyak</span>
-        <span class="insight-item-val">${topCloth} (${topClothCount} Orang / ${topClothPct}%)</span>
-      </div>
-      <div class="insight-item">
-        <span class="insight-item-name"><i class="fa-solid fa-circle-check text-green"></i> Ukuran Standar (M, L, XL)</span>
-        <span class="insight-item-val">${sumStd} Orang (${stdPct}%)</span>
-      </div>
-      <div class="insight-item">
-        <span class="insight-item-name"><i class="fa-solid fa-arrow-up-right-dots text-green"></i> Ukuran Ekstra (XXL - 4XL)</span>
-        <span class="insight-item-val">${sumBig} Orang (${bigPct}%)</span>
-      </div>
-      <div class="insight-item">
-        <span class="insight-item-name"><i class="fa-solid fa-shirt text-green"></i> Ukuran Kecil (S)</span>
-        <span class="insight-item-val">${clothCounts['S'] || 0} Orang</span>
-      </div>
+      ${sizeItemsHtml}
     `;
   }
 
