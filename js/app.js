@@ -9143,25 +9143,30 @@ async function handleCardImageUpload(event, idx) {
   if (!file) return;
 
   try {
-    showToast('Memproses file foto kualitas tinggi...', 'info');
+    showToast('Memproses dan mengunggah foto ke Cloud Supabase Storage...', 'info');
     const res = await compressImageFile(file, 1920, 0.86);
+
+    let finalUrl = res.dataUrl;
+    if (window.dataService && typeof window.dataService.uploadAssetFile === 'function') {
+      try {
+        finalUrl = await window.dataService.uploadAssetFile(res.dataUrl, 'cards', `card-${idx + 1}`);
+      } catch (uploadErr) {
+        console.warn('Gagal upload kartu ke storage, menggunakan base64:', uploadErr);
+      }
+    }
 
     const box = document.querySelector(`.settings-card-item-box[data-card-idx="${idx}"]`);
     if (box) {
       const inputCover = box.querySelector('.card-input-cover');
       if (inputCover) {
-        inputCover.value = res.dataUrl;
+        inputCover.value = finalUrl;
       }
       const img = box.querySelector('.settings-card-preview-thumb');
       if (img) {
-        img.src = res.dataUrl;
+        img.src = finalUrl;
       }
     }
-    if (res.isLowRes) {
-      showToast(`⚠️ Peringatan: Gambar sumber berukuran kecil (${res.width}x${res.height}px), gambar di layar besar mungkin akan buram/pecah. Disarankan gunakan foto asli beresolusi min 1000px.`, 'warning');
-    } else {
-      showToast('Foto kualitas tajam berhasil dimuat! Klik "Simpan Perubahan Kartu" untuk menerapkan.', 'success');
-    }
+    showToast('Foto latar kartu berhasil diunggah ke Supabase! Klik "Simpan Perubahan Kartu".', 'success');
   } catch (err) {
     console.error('Gagal upload gambar:', err);
     showToast('Gagal memproses file foto. Pastikan format file gambar valid.', 'error');
@@ -9588,7 +9593,7 @@ function renderSettingsCardsManager() {
                 <div style="font-size: 11px; color: #94a3b8;">Opsional, secara otomatis memakai foto seragam atau banner atribut.</div>
               </div>
               <div style="display: flex; gap: 6px; align-items: center; width: 100%; max-width: 380px;">
-                <input type="text" class="form-control card-input-cover" value="${card.coverImg || uniforms.ikhwanImg || ''}" placeholder="URL foto latar kartu" style="padding: 5px 10px; font-size: 12px;" oninput="updateCardThumbPreview(this, ${idx})">
+                <input type="text" class="form-control card-input-cover" value="${escapeHtml(card.coverImg || '')}" placeholder="URL foto latar kartu atau klik tombol Upload" style="padding: 5px 10px; font-size: 12px;" oninput="updateCardThumbPreview(this, ${idx})">
                 <label class="btn btn-secondary btn-xs" style="cursor: pointer; padding: 5px 8px; font-size: 11px; margin: 0; white-space: nowrap;">
                   <i class="fa-solid fa-upload"></i> Upload
                   <input type="file" accept="image/*" style="display: none;" onchange="handleCardImageUpload(event, ${idx})">
@@ -9667,60 +9672,54 @@ async function handleUniformSettingsUpload(event, genderType, cardIdx) {
     return;
   }
 
-  showToast(`Memproses foto seragam ${genderType === 'ikhwan' ? 'Ikhwan' : 'Akhwat'}...`, 'info');
+  showToast(`Mengunggah foto seragam ${genderType === 'ikhwan' ? 'Ikhwan' : 'Akhwat'} ke Supabase Storage...`, 'info');
 
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const base64Data = e.target.result;
-    if (typeof base64Data !== 'string' || !base64Data.startsWith('data:image/')) {
-      showToast('Format file gambar tidak valid.', 'error');
-      return;
+  try {
+    const res = await compressImageFile(file, 1600, 0.88);
+    let finalUrl = res.dataUrl;
+    if (window.dataService && typeof window.dataService.uploadAssetFile === 'function') {
+      try {
+        finalUrl = await window.dataService.uploadAssetFile(res.dataUrl, 'uniforms', `uniform-${genderType}`);
+      } catch (upErr) {
+        console.warn('Gagal upload seragam ke storage, memakai base64:', upErr);
+      }
     }
 
     const key = genderType === 'ikhwan' ? 'uniform_ikhwan_image' : 'uniform_akhwat_image';
     const localKey = genderType === 'ikhwan' ? 'paskas_uniform_ikhwan_image' : 'paskas_uniform_akhwat_image';
 
     try {
-      localStorage.setItem(localKey, base64Data);
-    } catch(err) {
+      localStorage.setItem(localKey, finalUrl);
+    } catch (err) {
       console.warn('Storage quota warning for uniform image:', err);
     }
 
     if (window.dataService) {
       if (typeof window.dataService.saveSettings === 'function') {
-        try { await window.dataService.saveSettings({ [key]: base64Data }); } catch (err) {}
+        try { await window.dataService.saveSettings({ [key]: finalUrl }); } catch (err) { }
       }
       if (typeof window.dataService.saveCloudSetting === 'function') {
-        try { await window.dataService.saveCloudSetting(key, base64Data); } catch (err) {}
+        try { await window.dataService.saveCloudSetting(key, finalUrl); } catch (err) { }
       }
     }
 
     // Update settings thumbnail and input
     const thumbEl = document.getElementById(genderType === 'ikhwan' ? 'cfg_cardUniformIkhwanThumb' : 'cfg_cardUniformAkhwatThumb');
-    if (thumbEl) thumbEl.src = base64Data;
+    if (thumbEl) thumbEl.src = finalUrl;
     const inputEl = document.getElementById(genderType === 'ikhwan' ? 'cfg_cardUniformIkhwanImg' : 'cfg_cardUniformAkhwatImg');
-    if (inputEl) inputEl.value = base64Data;
-
-    // Update header preview if it's the seragam card
-    const cardEl = document.querySelector(`.settings-card-item-box[data-card-idx="${cardIdx}"]`);
-    if (cardEl) {
-      const mainThumb = cardEl.querySelector('.settings-card-preview-thumb');
-      if (mainThumb) mainThumb.src = base64Data;
-      const coverInput = cardEl.querySelector('.card-input-cover');
-      if (coverInput && (!coverInput.value || coverInput.value.includes('unsplash') || coverInput.value.includes('seragam'))) {
-        coverInput.value = base64Data;
-      }
-    }
+    if (inputEl) inputEl.value = finalUrl;
 
     // Also sync existing DOM elements elsewhere
     const storyImg = document.getElementById(genderType === 'ikhwan' ? 'storyUniformImgIkhwan' : 'storyUniformImgAkhwat');
-    if (storyImg) storyImg.src = base64Data;
+    if (storyImg) storyImg.src = finalUrl;
     const cfgImg = document.getElementById(genderType === 'ikhwan' ? 'cfg_uniformIkhwanThumb' : 'cfg_uniformAkhwatThumb');
-    if (cfgImg) cfgImg.src = base64Data;
+    if (cfgImg) cfgImg.src = finalUrl;
 
-    showToast(`Foto baju ${genderType === 'ikhwan' ? 'Ikhwan' : 'Akhwat'} berhasil di-upload! Klik "Simpan Perubahan Kartu" untuk menerapkan.`, 'success');
-  };
-  reader.readAsDataURL(file);
+    showToast(`Foto baju ${genderType === 'ikhwan' ? 'Ikhwan' : 'Akhwat'} berhasil disimpan ke Supabase!`, 'success');
+  } catch (err) {
+    console.error('Gagal upload seragam:', err);
+    showToast('Gagal memproses foto seragam.', 'error');
+  }
 }
 
 function updateUniformThumbPreview(input, genderType) {
@@ -9823,18 +9822,51 @@ async function saveCardsFromSettings() {
     const title = el.querySelector('.card-input-title')?.value.trim() || `Info ${idx + 1}`;
     const category = el.querySelector('.card-input-category')?.value.trim() || 'INFORMASI';
     const subtitle = el.querySelector('.card-input-subtitle')?.value.trim() || '';
-    let cover = el.querySelector('.card-input-cover')?.value.trim() || 'images/rocket-convention-hall.jpg';
+    let cover = el.querySelector('.card-input-cover')?.value.trim() || '';
     let narration = el.querySelector('.card-input-narration')?.value.trim() || '';
 
+    // Jika cover masih berupa base64, unggah langsung ke Supabase Storage (bucket 'paskas bahagia')
+    if (cover && cover.startsWith('data:image/')) {
+      if (window.dataService && typeof window.dataService.uploadAssetFile === 'function') {
+        try {
+          cover = await window.dataService.uploadAssetFile(cover, 'cards', `card-${idx + 1}`);
+          const inCov = el.querySelector('.card-input-cover');
+          if (inCov) inCov.value = cover;
+        } catch (errCov) {
+          console.warn('Gagal upload cover ke storage:', errCov);
+        }
+      }
+    }
+
     if (isUniform) {
-      const ikhwanImg = el.querySelector('.card-uniform-ikhwan-img')?.value.trim() || '';
-      const akhwatImg = el.querySelector('.card-uniform-akhwat-img')?.value.trim() || '';
+      let ikhwanImg = el.querySelector('.card-uniform-ikhwan-img')?.value.trim() || '';
+      let akhwatImg = el.querySelector('.card-uniform-akhwat-img')?.value.trim() || '';
       const ikhwanTitle = el.querySelector('.card-uniform-ikhwan-title')?.value.trim() || 'Model Kaos Resmi Ikhwan';
       const akhwatTitle = el.querySelector('.card-uniform-akhwat-title')?.value.trim() || 'Model Kaos / Tunik Resmi Akhwat';
       const ikhwanDesc = el.querySelector('.card-uniform-ikhwan-desc')?.value.trim() || '';
       const akhwatDesc = el.querySelector('.card-uniform-akhwat-desc')?.value.trim() || '';
       const ikhwanSizeChart = el.querySelector('.card-uniform-ikhwan-size-chart')?.value.trim() || '';
       const akhwatSizeChart = el.querySelector('.card-uniform-akhwat-size-chart')?.value.trim() || '';
+
+      // Upload seragam ke storage jika masih base64
+      if (ikhwanImg && ikhwanImg.startsWith('data:image/')) {
+        if (window.dataService && typeof window.dataService.uploadAssetFile === 'function') {
+          try {
+            ikhwanImg = await window.dataService.uploadAssetFile(ikhwanImg, 'uniforms', 'uniform-ikhwan');
+            const inIkh = el.querySelector('.card-uniform-ikhwan-img');
+            if (inIkh) inIkh.value = ikhwanImg;
+          } catch (e) {}
+        }
+      }
+      if (akhwatImg && akhwatImg.startsWith('data:image/')) {
+        if (window.dataService && typeof window.dataService.uploadAssetFile === 'function') {
+          try {
+            akhwatImg = await window.dataService.uploadAssetFile(akhwatImg, 'uniforms', 'uniform-akhwat');
+            const inAkh = el.querySelector('.card-uniform-akhwat-img');
+            if (inAkh) inAkh.value = akhwatImg;
+          } catch (e) {}
+        }
+      }
 
       if (ikhwanImg) localStorage.setItem('paskas_uniform_ikhwan_image', ikhwanImg);
       if (akhwatImg) localStorage.setItem('paskas_uniform_akhwat_image', akhwatImg);
@@ -9873,11 +9905,16 @@ async function saveCardsFromSettings() {
         }
       }
 
+      // Prioritaskan cover kustom yang diinput user, jangan ditimpa seragam ikhwan bila sudah ada
       if (!cover) {
-        cover = ikhwanImg || 'images/seragam-ikhwan.jpg';
+        cover = DASHBOARD_CARDS[idx]?.coverImg || ikhwanImg || 'images/seragam-ikhwan.jpg';
       }
 
       narration = `${ikhwanTitle}:\n${ikhwanDesc}\n\n${akhwatTitle}:\n${akhwatDesc}`;
+    }
+
+    if (!cover) {
+      cover = DASHBOARD_CARDS[idx]?.coverImg || 'images/rocket-convention-hall.jpg';
     }
 
     // Auto-sanitize jika terinput link Google Maps
@@ -9891,6 +9928,21 @@ async function saveCardsFromSettings() {
       DASHBOARD_CARDS[idx].thumbImg = cover || DASHBOARD_CARDS[idx].thumbImg;
       DASHBOARD_CARDS[idx].narration = narration;
       DASHBOARD_CARDS[idx].badge = `${String(idx + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
+    }
+  }
+
+  // Pastikan tidak ada satupun cover kartu yang tertinggal sebagai Base64 sebelum disimpan
+  for (let i = 0; i < DASHBOARD_CARDS.length; i++) {
+    const c = DASHBOARD_CARDS[i];
+    if (c.coverImg && c.coverImg.startsWith('data:image/')) {
+      if (window.dataService && typeof window.dataService.uploadAssetFile === 'function') {
+        try {
+          c.coverImg = await window.dataService.uploadAssetFile(c.coverImg, 'cards', `card-${c.id || i + 1}`);
+        } catch (e) {}
+      }
+    }
+    if (c.thumbImg && c.thumbImg.startsWith('data:image/')) {
+      c.thumbImg = c.coverImg;
     }
   }
 

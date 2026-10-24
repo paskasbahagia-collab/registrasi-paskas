@@ -423,6 +423,47 @@ class PaskasDataService {
   }
 
   /**
+   * Upload file gambar / dataUrl ke Supabase Storage (bucket 'paskas bahagia')
+   * folder: 'cards', 'uniforms', 'polaroids', dll.
+   * Mengembalikan URL publik permanen dari Supabase Storage.
+   */
+  async uploadAssetFile(fileOrDataUrl, folder = 'assets', prefix = 'img') {
+    if (!fileOrDataUrl) return fileOrDataUrl;
+    if (typeof fileOrDataUrl === 'string' && !fileOrDataUrl.startsWith('data:image')) {
+      return fileOrDataUrl; // Sudah berbentuk link URL
+    }
+    this.ensureSupabaseClient();
+    if (!this.isSupabaseConnected || !this.supabaseClient) return fileOrDataUrl;
+    try {
+      let blob;
+      let ext = 'jpg';
+      if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:image/')) {
+        const res = await fetch(fileOrDataUrl);
+        blob = await res.blob();
+        ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
+        blob = fileOrDataUrl;
+        ext = (fileOrDataUrl.type?.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      } else {
+        return fileOrDataUrl;
+      }
+
+      const safePrefix = String(prefix || 'asset').replace(/[^a-zA-Z0-9-]/g, '_');
+      const path = `${folder}/${safePrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      const bucketName = 'paskas bahagia';
+      const { error } = await this.supabaseClient.storage
+        .from(bucketName)
+        .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: true });
+      if (error) throw error;
+      const { data } = this.supabaseClient.storage.from(bucketName).getPublicUrl(path);
+      return (data && data.publicUrl) || fileOrDataUrl;
+    } catch (err) {
+      console.warn('Gagal upload asset ke Supabase Storage:', err);
+      return fileOrDataUrl;
+    }
+  }
+
+  /**
    * Mengambil semua pendaftaran peserta (Sinkron Cloud Supabase & Local)
    */
   async getRegistrations() {
