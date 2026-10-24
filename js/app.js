@@ -7028,42 +7028,448 @@ function exportToExcel() {
     return;
   }
 
-  const exportData = filteredRegistrations.map((item, idx) => ({
-    'No': idx + 1,
-    'Kode Tiket': sanitizeSpreadsheetValue(item.registration_code),
-    'Tipe Registrasi': sanitizeSpreadsheetValue(item.registration_type),
-    'Nama Kelompok': sanitizeSpreadsheetValue(item.group_name || '-'),
-    'Koordinator Kelompok': sanitizeSpreadsheetValue(item.group_leader_name || '-'),
-    'Nama Peserta': sanitizeSpreadsheetValue(item.full_name),
-    'Usia': item.age ? `${item.age} Th` : '-',
-    'Kategori Usia': (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
-    'Orang Tua / Wali': sanitizeSpreadsheetValue(item.guardian_name || '-'),
-    'Gedung / Asrama': sanitizeSpreadsheetValue(item.building || '-'),
-    'Kamar / Tenda': sanitizeSpreadsheetValue(item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-')),
-    'Jenis Kelamin': sanitizeSpreadsheetValue(item.gender),
-    'Wilayah': sanitizeSpreadsheetValue(item.wilayah),
-    'Daerah': sanitizeSpreadsheetValue(item.daerah || '-'),
-    'Email': sanitizeSpreadsheetValue(item.email || '-'),
-    'No WhatsApp': sanitizeSpreadsheetValue(item.phone_number || '-'),
-    'No HP Darurat': sanitizeSpreadsheetValue(item.emergency_phone || '-'),
-    'Tgl Kedatangan': sanitizeSpreadsheetValue(item.arrival_date),
-    'Jam Kedatangan': sanitizeSpreadsheetValue(item.arrival_time),
-    'Transport Berangkat': sanitizeSpreadsheetValue(item.transport_arrival),
-    'Tgl Kepulangan': sanitizeSpreadsheetValue(item.departure_date),
-    'Jam Kepulangan': sanitizeSpreadsheetValue(item.departure_time),
-    'Transport Pulang': sanitizeSpreadsheetValue(item.transport_departure),
-    'Ukuran Baju': sanitizeSpreadsheetValue(item.cloth_size),
-    'Riwayat Medis': sanitizeSpreadsheetValue(item.medical_history || 'Tidak Ada'),
-    'Catatan': sanitizeSpreadsheetValue(item.notes || '-')
-  }));
+  const sourceData = (filteredRegistrations && filteredRegistrations.length > 0)
+    ? filteredRegistrations
+    : (allRegistrations && allRegistrations.length > 0 ? allRegistrations : []);
 
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  if (sourceData.length === 0) {
+    showToast('Tidak ada data peserta untuk diunduh.', 'warning');
+    return;
+  }
+
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Peserta Paskas');
-  
+
+  // Helper Styling
+  function createHeaderStyle(hexColor) {
+    return {
+      fill: { fgColor: { rgb: hexColor } },
+      font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: {
+        top: { style: 'thin', color: { rgb: 'D1D5DB' } },
+        bottom: { style: 'medium', color: { rgb: '1F2937' } },
+        left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+        right: { style: 'thin', color: { rgb: 'D1D5DB' } }
+      }
+    };
+  }
+
+  function createDataStyle(isEven, align = 'left', customBg = null, customColor = null, isBold = false) {
+    return {
+      fill: { fgColor: { rgb: customBg || (isEven ? 'FFFFFF' : 'F9FAFB') } },
+      font: { name: 'Calibri', sz: 10, color: { rgb: customColor || '111827' }, bold: isBold },
+      alignment: { horizontal: align, vertical: 'center', wrapText: true },
+      border: {
+        top: { style: 'thin', color: { rgb: 'E5E7EB' } },
+        bottom: { style: 'thin', color: { rgb: 'E5E7EB' } },
+        left: { style: 'thin', color: { rgb: 'E5E7EB' } },
+        right: { style: 'thin', color: { rgb: 'E5E7EB' } }
+      }
+    };
+  }
+
+  function formatSheet(ws, aoaData, headerRowIndexes, headerColor, getCellCustomStyle = null) {
+    const colWidths = [];
+    const numCols = Math.max(...aoaData.map(r => r.length));
+    for (let c = 0; c < numCols; c++) colWidths[c] = 12;
+
+    const rowHeights = [];
+
+    aoaData.forEach((row, rIdx) => {
+      const isHeader = headerRowIndexes.includes(rIdx);
+      rowHeights.push({ hpt: isHeader ? 26 : 20 });
+
+      row.forEach((cellVal, cIdx) => {
+        const valStr = cellVal !== null && cellVal !== undefined ? String(cellVal) : '';
+        if (valStr.length + 3 > colWidths[cIdx]) {
+          colWidths[cIdx] = Math.min(Math.max(colWidths[cIdx], valStr.length + 3), 45);
+        }
+        const cellRef = XLSX.utils.encode_cell({ r: rIdx, c: cIdx });
+        if (!ws[cellRef]) ws[cellRef] = { t: 's', v: valStr };
+
+        if (isHeader) {
+          ws[cellRef].s = createHeaderStyle(headerColor);
+        } else if (getCellCustomStyle) {
+          const customStyle = getCellCustomStyle(rIdx, cIdx, cellVal, row);
+          ws[cellRef].s = customStyle || createDataStyle(rIdx % 2 === 0, cIdx === 0 ? 'center' : 'left');
+        } else {
+          ws[cellRef].s = createDataStyle(rIdx % 2 === 0, cIdx === 0 ? 'center' : 'left');
+        }
+      });
+    });
+
+    ws['!cols'] = colWidths.map(w => ({ wch: w }));
+    ws['!rows'] = rowHeights;
+  }
+
+  // ===================================================================
+  // 1. HALAMAN PERTAMA: REKAP KESELURUHAN
+  // ===================================================================
+  const s1Headers = [
+    'No', 'Kode Tiket', 'Tipe Registrasi', 'Nama Kelompok', 'Koordinator Kelompok', 
+    'Nama Peserta', 'Usia', 'Kategori Usia', 'Orang Tua / Wali', 'Gedung / Asrama', 
+    'Kamar / Tenda', 'Jenis Kelamin', 'Wilayah', 'Daerah', 'Email', 
+    'No WhatsApp', 'No HP Darurat', 'Tgl Kedatangan', 'Jam Kedatangan', 'Transport Berangkat', 
+    'Tgl Kepulangan', 'Jam Kepulangan', 'Transport Pulang', 'Ukuran Baju', 'Riwayat Medis', 'Catatan'
+  ];
+  const s1Rows = [s1Headers];
+  sourceData.forEach((item, idx) => {
+    s1Rows.push([
+      idx + 1,
+      sanitizeSpreadsheetValue(item.registration_code),
+      sanitizeSpreadsheetValue(item.registration_type),
+      sanitizeSpreadsheetValue(item.group_name || '-'),
+      sanitizeSpreadsheetValue(item.group_leader_name || '-'),
+      sanitizeSpreadsheetValue(item.full_name),
+      item.age ? `${item.age} Th` : '-',
+      (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
+      sanitizeSpreadsheetValue(item.guardian_name || '-'),
+      sanitizeSpreadsheetValue(item.building || '-'),
+      sanitizeSpreadsheetValue(item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-')),
+      sanitizeSpreadsheetValue(item.gender),
+      sanitizeSpreadsheetValue(item.wilayah),
+      sanitizeSpreadsheetValue(item.daerah || '-'),
+      sanitizeSpreadsheetValue(item.email || '-'),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      sanitizeSpreadsheetValue(item.emergency_phone || '-'),
+      sanitizeSpreadsheetValue(item.arrival_date),
+      sanitizeSpreadsheetValue(item.arrival_time),
+      sanitizeSpreadsheetValue(item.transport_arrival),
+      sanitizeSpreadsheetValue(item.departure_date),
+      sanitizeSpreadsheetValue(item.departure_time),
+      sanitizeSpreadsheetValue(item.transport_departure),
+      sanitizeSpreadsheetValue(item.cloth_size),
+      sanitizeSpreadsheetValue(item.medical_history || 'Tidak Ada'),
+      sanitizeSpreadsheetValue(item.notes || '-')
+    ]);
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet(s1Rows);
+  formatSheet(ws1, s1Rows, [0], '165B33');
+  XLSX.utils.book_append_sheet(workbook, ws1, 'Rekap Keseluruhan');
+
+  // ===================================================================
+  // 2. HALAMAN KEDUA: KEDATANGAN & TRANSPORTASI (DIURUTKAN DARI TERBANYAK)
+  // ===================================================================
+  const arrivalCounts = {};
+  sourceData.forEach(i => {
+    const m = (i.transport_arrival || 'Belum Ditentukan').trim();
+    arrivalCounts[m] = (arrivalCounts[m] || 0) + 1;
+  });
+
+  const sortedArrival = [...sourceData].sort((a, b) => {
+    const cA = arrivalCounts[(a.transport_arrival || 'Belum Ditentukan').trim()] || 0;
+    const cB = arrivalCounts[(b.transport_arrival || 'Belum Ditentukan').trim()] || 0;
+    if (cB !== cA) return cB - cA; // Terbanyak ke tersedikit
+    const tCmp = (a.transport_arrival || '').localeCompare(b.transport_arrival || '');
+    if (tCmp !== 0) return tCmp;
+    const dCmp = (a.arrival_date || '').localeCompare(b.arrival_date || '');
+    if (dCmp !== 0) return dCmp;
+    const timeCmp = (a.arrival_time || '').localeCompare(b.arrival_time || '');
+    if (timeCmp !== 0) return timeCmp;
+    return (a.full_name || '').localeCompare(b.full_name || '');
+  });
+
+  const s2Headers = [
+    'No', 'Moda Transportasi', 'Tgl Kedatangan', 'Jam Kedatangan', 'Nama Peserta', 
+    'Jenis Kelamin', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan Kedatangan'
+  ];
+  const s2Rows = [s2Headers];
+  sortedArrival.forEach((item, idx) => {
+    const roomInfo = item.building 
+      ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+      : (item.room_name || item.room_number || '-');
+    s2Rows.push([
+      idx + 1,
+      sanitizeSpreadsheetValue(item.transport_arrival || 'Belum Ditentukan'),
+      sanitizeSpreadsheetValue(item.arrival_date || '-'),
+      sanitizeSpreadsheetValue(item.arrival_time || '-'),
+      sanitizeSpreadsheetValue(item.full_name),
+      sanitizeSpreadsheetValue(item.gender),
+      sanitizeSpreadsheetValue(item.wilayah),
+      sanitizeSpreadsheetValue(item.daerah || '-'),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      sanitizeSpreadsheetValue(roomInfo),
+      sanitizeSpreadsheetValue(item.notes || '-')
+    ]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(s2Rows);
+  formatSheet(ws2, s2Rows, [0], '1D4ED8', (rIdx, cIdx) => {
+    if (cIdx === 1) { // Kolom Moda Transportasi bold & center
+      return createDataStyle(rIdx % 2 === 0, 'center', null, '1D4ED8', true);
+    }
+    if (cIdx === 2 || cIdx === 3) {
+      return createDataStyle(rIdx % 2 === 0, 'center');
+    }
+    return null;
+  });
+  XLSX.utils.book_append_sheet(workbook, ws2, 'Kedatangan & Transport');
+
+  // ===================================================================
+  // 3. HALAMAN KETIGA: JENIS KELAMIN (IKHWAN & AKHWAT DIPISAH)
+  // ===================================================================
+  const ikhwanList = sourceData.filter(i => /laki|ikhwan|^l$/i.test(String(i.gender || '')));
+  const akhwatList = sourceData.filter(i => /perempuan|akhwat|^p$/i.test(String(i.gender || '')));
+
+  // Urutkan alfabetis nama
+  ikhwanList.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  akhwatList.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+
+  const s3Headers = [
+    'No', 'Kode Tiket', 'Nama Peserta', 'Jenis Kelamin', 'Usia', 
+    'Kategori Usia', 'Gedung / Asrama', 'Kamar / Tenda', 'Wilayah', 'Daerah', 
+    'No WhatsApp', 'Orang Tua / Wali', 'Catatan'
+  ];
+  const s3Rows = [];
+
+  // Seksi 1: Ikhwan
+  const rIkhwanTitleIdx = s3Rows.length;
+  s3Rows.push([`DATA PESERTA IKHWAN (LAKI-LAKI) - TOTAL: ${ikhwanList.length} PESERTA`, '', '', '', '', '', '', '', '', '', '', '', '']);
+  const rIkhwanHeaderIdx = s3Rows.length;
+  s3Rows.push([...s3Headers]);
+  ikhwanList.forEach((item, idx) => {
+    s3Rows.push([
+      idx + 1,
+      sanitizeSpreadsheetValue(item.registration_code),
+      sanitizeSpreadsheetValue(item.full_name),
+      sanitizeSpreadsheetValue(item.gender),
+      item.age ? `${item.age} Th` : '-',
+      (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
+      sanitizeSpreadsheetValue(item.building || '-'),
+      sanitizeSpreadsheetValue(item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-')),
+      sanitizeSpreadsheetValue(item.wilayah),
+      sanitizeSpreadsheetValue(item.daerah || '-'),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      sanitizeSpreadsheetValue(item.guardian_name || '-'),
+      sanitizeSpreadsheetValue(item.notes || '-')
+    ]);
+  });
+
+  // Jeda baris pemisah antar seksi
+  s3Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
+
+  // Seksi 2: Akhwat
+  const rAkhwatTitleIdx = s3Rows.length;
+  s3Rows.push([`DATA PESERTA AKHWAT (PEREMPUAN) - TOTAL: ${akhwatList.length} PESERTA`, '', '', '', '', '', '', '', '', '', '', '', '']);
+  const rAkhwatHeaderIdx = s3Rows.length;
+  s3Rows.push([...s3Headers]);
+  akhwatList.forEach((item, idx) => {
+    s3Rows.push([
+      idx + 1,
+      sanitizeSpreadsheetValue(item.registration_code),
+      sanitizeSpreadsheetValue(item.full_name),
+      sanitizeSpreadsheetValue(item.gender),
+      item.age ? `${item.age} Th` : '-',
+      (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
+      sanitizeSpreadsheetValue(item.building || '-'),
+      sanitizeSpreadsheetValue(item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-')),
+      sanitizeSpreadsheetValue(item.wilayah),
+      sanitizeSpreadsheetValue(item.daerah || '-'),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      sanitizeSpreadsheetValue(item.guardian_name || '-'),
+      sanitizeSpreadsheetValue(item.notes || '-')
+    ]);
+  });
+
+  const ws3 = XLSX.utils.aoa_to_sheet(s3Rows);
+  ws3['!merges'] = [
+    { s: { r: rIkhwanTitleIdx, c: 0 }, e: { r: rIkhwanTitleIdx, c: s3Headers.length - 1 } },
+    { s: { r: rAkhwatTitleIdx, c: 0 }, e: { r: rAkhwatTitleIdx, c: s3Headers.length - 1 } }
+  ];
+
+  formatSheet(ws3, s3Rows, [rIkhwanHeaderIdx, rAkhwatHeaderIdx], '1E40AF', (rIdx, cIdx) => {
+    if (rIdx === rIkhwanTitleIdx) {
+      return {
+        fill: { fgColor: { rgb: '1E3A8A' } },
+        font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      };
+    }
+    if (rIdx === rAkhwatTitleIdx) {
+      return {
+        fill: { fgColor: { rgb: '831843' } },
+        font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      };
+    }
+    if (rIdx === rAkhwatHeaderIdx) {
+      return createHeaderStyle('9D174D');
+    }
+    return null;
+  });
+  XLSX.utils.book_append_sheet(workbook, ws3, 'Ikhwan & Akhwat');
+
+  // ===================================================================
+  // 4. HALAMAN KEEMPAT: REKAP BAJU (DIURUTKAN PER UKURAN)
+  // ===================================================================
+  const sizeOrder = ['ANAK', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', 'XXXL', '3XL', '4XL', '5XL'];
+  function getSizeRank(s) {
+    if (!s) return 999;
+    const clean = String(s).toUpperCase().trim();
+    const idx = sizeOrder.findIndex(o => clean === o || clean.includes(o));
+    return idx >= 0 ? idx : 500;
+  }
+
+  const sortedBaju = [...sourceData].sort((a, b) => {
+    const rA = getSizeRank(a.cloth_size);
+    const rB = getSizeRank(b.cloth_size);
+    if (rA !== rB) return rA - rB;
+    const gCmp = (a.gender || '').localeCompare(b.gender || '');
+    if (gCmp !== 0) return gCmp;
+    return (a.full_name || '').localeCompare(b.full_name || '');
+  });
+
+  const s4Headers = [
+    'No', 'Ukuran Baju', 'Nama Peserta', 'Jenis Kelamin', 'Usia', 
+    'Kategori Usia', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan'
+  ];
+  const s4Rows = [s4Headers];
+  sortedBaju.forEach((item, idx) => {
+    const roomInfo = item.building 
+      ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+      : (item.room_name || item.room_number || '-');
+    s4Rows.push([
+      idx + 1,
+      sanitizeSpreadsheetValue(item.cloth_size || '-'),
+      sanitizeSpreadsheetValue(item.full_name),
+      sanitizeSpreadsheetValue(item.gender),
+      item.age ? `${item.age} Th` : '-',
+      (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
+      sanitizeSpreadsheetValue(item.wilayah),
+      sanitizeSpreadsheetValue(item.daerah || '-'),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      sanitizeSpreadsheetValue(roomInfo),
+      sanitizeSpreadsheetValue(item.notes || '-')
+    ]);
+  });
+  const ws4 = XLSX.utils.aoa_to_sheet(s4Rows);
+  formatSheet(ws4, s4Rows, [0], 'B45309', (rIdx, cIdx) => {
+    if (cIdx === 1) { // Ukuran baju diberi warna font & rata tengah
+      return createDataStyle(rIdx % 2 === 0, 'center', null, 'B45309', true);
+    }
+    return null;
+  });
+  XLSX.utils.book_append_sheet(workbook, ws4, 'Rekap Baju');
+
+  // ===================================================================
+  // 5. HALAMAN KELIMA: KEPULANGAN & TRANSPORTASI (DIURUTKAN DARI TERBANYAK)
+  // ===================================================================
+  const departureCounts = {};
+  sourceData.forEach(i => {
+    const m = (i.transport_departure || 'Belum Ditentukan').trim();
+    departureCounts[m] = (departureCounts[m] || 0) + 1;
+  });
+
+  const sortedDeparture = [...sourceData].sort((a, b) => {
+    const cA = departureCounts[(a.transport_departure || 'Belum Ditentukan').trim()] || 0;
+    const cB = departureCounts[(b.transport_departure || 'Belum Ditentukan').trim()] || 0;
+    if (cB !== cA) return cB - cA; // Terbanyak ke tersedikit
+    const tCmp = (a.transport_departure || '').localeCompare(b.transport_departure || '');
+    if (tCmp !== 0) return tCmp;
+    const dCmp = (a.departure_date || '').localeCompare(b.departure_date || '');
+    if (dCmp !== 0) return dCmp;
+    const timeCmp = (a.departure_time || '').localeCompare(b.departure_time || '');
+    if (timeCmp !== 0) return timeCmp;
+    return (a.full_name || '').localeCompare(b.full_name || '');
+  });
+
+  const s5Headers = [
+    'No', 'Moda Transportasi Pulang', 'Tgl Kepulangan', 'Jam Kepulangan', 'Nama Peserta', 
+    'Jenis Kelamin', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan Kepulangan'
+  ];
+  const s5Rows = [s5Headers];
+  sortedDeparture.forEach((item, idx) => {
+    const roomInfo = item.building 
+      ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+      : (item.room_name || item.room_number || '-');
+    s5Rows.push([
+      idx + 1,
+      sanitizeSpreadsheetValue(item.transport_departure || 'Belum Ditentukan'),
+      sanitizeSpreadsheetValue(item.departure_date || '-'),
+      sanitizeSpreadsheetValue(item.departure_time || '-'),
+      sanitizeSpreadsheetValue(item.full_name),
+      sanitizeSpreadsheetValue(item.gender),
+      sanitizeSpreadsheetValue(item.wilayah),
+      sanitizeSpreadsheetValue(item.daerah || '-'),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      sanitizeSpreadsheetValue(roomInfo),
+      sanitizeSpreadsheetValue(item.notes || '-')
+    ]);
+  });
+  const ws5 = XLSX.utils.aoa_to_sheet(s5Rows);
+  formatSheet(ws5, s5Rows, [0], '4338CA', (rIdx, cIdx) => {
+    if (cIdx === 1) { // Kolom Moda Transportasi Pulang bold & center
+      return createDataStyle(rIdx % 2 === 0, 'center', null, '4338CA', true);
+    }
+    if (cIdx === 2 || cIdx === 3) {
+      return createDataStyle(rIdx % 2 === 0, 'center');
+    }
+    return null;
+  });
+  XLSX.utils.book_append_sheet(workbook, ws5, 'Kepulangan & Transport');
+
+  // ===================================================================
+  // 6. HALAMAN KEENAM: REKAP KESEHATAN (DIUTAMAKAN RIWAYAT MEDIS)
+  // ===================================================================
+  function hasMedicalIssue(item) {
+    if (!item.medical_history) return false;
+    const str = String(item.medical_history).trim().toLowerCase();
+    return str !== '' && str !== 'tidak ada' && str !== '-' && str !== 'sehat' && str !== 'none' && str !== 'nihil';
+  }
+
+  const sortedHealth = [...sourceData].sort((a, b) => {
+    const hA = hasMedicalIssue(a) ? 1 : 0;
+    const hB = hasMedicalIssue(b) ? 1 : 0;
+    if (hB !== hA) return hB - hA; // Yang memiliki riwayat medis berada paling atas
+    return (a.full_name || '').localeCompare(b.full_name || '');
+  });
+
+  const s6Headers = [
+    'No', 'Status Kesehatan', 'Riwayat Medis / Sakit', 'Nama Peserta', 'Usia', 
+    'Jenis Kelamin', 'Gedung / Asrama', 'Kamar / Tenda', 'No WhatsApp', 'No HP Darurat', 'Catatan Medis'
+  ];
+  const s6Rows = [s6Headers];
+  sortedHealth.forEach((item, idx) => {
+    const isIssue = hasMedicalIssue(item);
+    s6Rows.push([
+      idx + 1,
+      isIssue ? '⚠️ PERHATIAN MEDIS' : '✅ Normal',
+      sanitizeSpreadsheetValue(item.medical_history || 'Tidak Ada'),
+      sanitizeSpreadsheetValue(item.full_name),
+      item.age ? `${item.age} Th` : '-',
+      sanitizeSpreadsheetValue(item.gender),
+      sanitizeSpreadsheetValue(item.building || '-'),
+      sanitizeSpreadsheetValue(item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-')),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      sanitizeSpreadsheetValue(item.emergency_phone || '-'),
+      sanitizeSpreadsheetValue(item.notes || '-')
+    ]);
+  });
+  const ws6 = XLSX.utils.aoa_to_sheet(s6Rows);
+  formatSheet(ws6, s6Rows, [0], '991B1B', (rIdx, cIdx, val, row) => {
+    const statusVal = row[1];
+    if (statusVal === '⚠️ PERHATIAN MEDIS') {
+      return {
+        fill: { fgColor: { rgb: rIdx % 2 === 0 ? 'FEE2E2' : 'FECACA' } },
+        font: { name: 'Calibri', sz: 10, bold: (cIdx === 1 || cIdx === 2), color: { rgb: '991B1B' } },
+        alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'center' : 'left', vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: 'FCA5A5' } },
+          bottom: { style: 'thin', color: { rgb: 'FCA5A5' } },
+          left: { style: 'thin', color: { rgb: 'FCA5A5' } },
+          right: { style: 'thin', color: { rgb: 'FCA5A5' } }
+        }
+      };
+    }
+    return null;
+  });
+  XLSX.utils.book_append_sheet(workbook, ws6, 'Rekap Kesehatan');
+
+  // ===================================================================
+  // UNDUH FILE WORKBOOK EXCEL LENGKAP 6 HALAMAN
+  // ===================================================================
   const dateStr = new Date().toISOString().split('T')[0];
   XLSX.writeFile(workbook, `Rekap_Peserta_Paskas_Bahagia_${dateStr}.xlsx`);
-  showToast('File Excel berhasil diunduh (terlindungi formula injection)!', 'success');
+  showToast('File Excel 6 halaman berhasil diunduh (terlindungi formula injection & format rapi)!', 'success');
 }
 
 function exportToCSV() {
