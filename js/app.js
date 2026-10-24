@@ -7840,6 +7840,18 @@ function renderAnnouncementUI() {
   if (isEnabled && announcements.length > 0) {
     if (heroBtn) heroBtn.style.display = 'inline-flex';
 
+    // Badge jumlah pengumuman (hanya muncul di awal sampai user membukanya di sesi ini)
+    const hasSeenAnnouncements = sessionStorage.getItem('paskas_announcement_seen') === 'true';
+    const badge = document.getElementById('heroAnnBadgeCount');
+    if (badge) {
+      if (!hasSeenAnnouncements && announcements.length > 0) {
+        badge.textContent = String(announcements.length);
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
     // Pengumuman paling atas adalah pengumuman TERBARU
     const latest = announcements[0];
     const previous = announcements.slice(1);
@@ -7973,6 +7985,13 @@ function renderAnnouncementUI() {
 }
 
 function openHeroAnnouncement() {
+  // Tandai sudah dibuka dalam sesi browser ini agar badge jumlah pengumuman langsung hilang
+  sessionStorage.setItem('paskas_announcement_seen', 'true');
+  const badge = document.getElementById('heroAnnBadgeCount');
+  if (badge) {
+    badge.style.display = 'none';
+  }
+
   const hero = document.getElementById('heroWrapper');
   if (hero) {
     hero.classList.remove('story-active');
@@ -8126,6 +8145,7 @@ async function saveSingleAnnouncementFromForm() {
   }
 
   cancelEditAnnouncement();
+  sessionStorage.removeItem('paskas_announcement_seen');
   renderSettingsAnnouncementsList();
   renderAnnouncementUI();
 }

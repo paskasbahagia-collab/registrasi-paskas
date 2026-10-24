@@ -11465,6 +11465,33 @@ input:checked + .slider:before {
   font-size: 14px;
 }
 
+/* Badge Notifikasi Jumlah Pengumuman */
+.hero-ann-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+  margin-left: 6px;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.55);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  line-height: 1;
+  letter-spacing: -0.2px;
+  animation: pulseHeroBadge 2.2s infinite ease-in-out;
+}
+
+@keyframes pulseHeroBadge {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  60% { transform: scale(1.08); box-shadow: 0 0 0 7px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
 /* Gaya Pengelola Pengumuman di Settings */
 .settings-ann-item-box {
   background: #fdfbf7;
