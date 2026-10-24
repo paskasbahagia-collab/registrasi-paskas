@@ -6479,9 +6479,13 @@ function renderCharts() {
 
   // Health computation
   function checkHasMedicalIssue(r) {
-    if (!r.medical_history) return false;
+    if (!r || !r.medical_history) return false;
     const s = String(r.medical_history).trim().toLowerCase();
-    return s !== '' && s !== 'tidak ada' && s !== '-' && s !== 'sehat' && s !== 'none' && s !== 'nihil';
+    if (!s || s === '-' || s === 'none' || s === 'nihil' || s === 'null') return false;
+    if (s.includes('tidak ada') || s.includes('sehat') || s.includes('normal') || s.includes('prima') || s.includes('baik')) {
+      return false;
+    }
+    return true;
   }
 
   const healthyList = allRegistrations.filter(r => !checkHasMedicalIssue(r));
@@ -7825,9 +7829,13 @@ function exportToExcel() {
   // 6. HALAMAN KEENAM: REKAP KESEHATAN (DIUTAMAKAN RIWAYAT MEDIS)
   // ===================================================================
   function hasMedicalIssue(item) {
-    if (!item.medical_history) return false;
+    if (!item || !item.medical_history) return false;
     const str = String(item.medical_history).trim().toLowerCase();
-    return str !== '' && str !== 'tidak ada' && str !== '-' && str !== 'sehat' && str !== 'none' && str !== 'nihil';
+    if (!str || str === '-' || str === 'none' || str === 'nihil' || str === 'null') return false;
+    if (str.includes('tidak ada') || str.includes('sehat') || str.includes('normal') || str.includes('prima') || str.includes('baik')) {
+      return false;
+    }
+    return true;
   }
 
   const sortedHealth = [...sourceData].sort((a, b) => {
