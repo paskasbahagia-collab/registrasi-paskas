@@ -11188,7 +11188,10 @@ input:checked + .slider:before {
   line-height: 1.75;
   color: #cbd5e1;
   margin: 0;
-  white-space: pre-line;
+}
+
+.broadcast-featured-text .story-narration-para:last-child {
+  margin-bottom: 0 !important;
 }
 
 .broadcast-main-action-footer {
@@ -11355,7 +11358,10 @@ input:checked + .slider:before {
   line-height: 1.65;
   color: #94a3b8;
   margin: 0;
-  white-space: pre-line;
+}
+
+.broadcast-history-card-desc .story-narration-para:last-child {
+  margin-bottom: 0 !important;
 }
 
 /* -------------------------------------------------------------

@@ -7915,7 +7915,7 @@ function renderAnnouncementUI() {
             <h3 class="broadcast-featured-title">${escapeHtml(latest.title || 'Pengumuman Resmi')}</h3>
             
             <div class="broadcast-featured-content-wrap">
-              <p class="broadcast-featured-text">${escapeHtml(latest.content || '')}</p>
+              <div class="broadcast-featured-text">${renderFormattedNarrationHTML(latest.content || '')}</div>
             </div>
 
             <div class="broadcast-main-action-footer">
@@ -7957,7 +7957,7 @@ function renderAnnouncementUI() {
                   </span>
                 </div>
                 <h4 class="broadcast-history-card-title">${escapeHtml(item.title || '')}</h4>
-                <p class="broadcast-history-card-desc">${escapeHtml(item.content || '')}</p>
+                <div class="broadcast-history-card-desc">${renderFormattedNarrationHTML(item.content || '')}</div>
               </div>
             `).join('')}
           </div>
@@ -8048,7 +8048,7 @@ function renderSettingsAnnouncementsList() {
           </div>
         </div>
         <div style="font-size: 14.5px; font-weight: 800; color: #1e293b; margin-bottom: 5px; line-height: 1.35;">${escapeHtml(item.title || '')}</div>
-        <div style="font-size: 12.5px; color: #475569; line-height: 1.55; max-height: 52px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.content || '')}</div>
+        <div style="font-size: 12.5px; color: #475569; line-height: 1.55; max-height: 52px; overflow: hidden; text-overflow: ellipsis;">${renderPreviewTextHTML(item.content || '')}</div>
       </div>
     `;
   }).join('');
@@ -9261,6 +9261,23 @@ async function handleCardImageUpload(event, idx) {
    HELPER FORMAT TEKS & REORDER KARTU INFORMASI DASHBOARD
    =================================================================== */
 
+function renderPreviewTextHTML(rawText) {
+  if (!rawText) return '';
+  let str = escapeHtml(rawText);
+  str = str.replace(/&lt;(\/?)b&gt;/gi, '<$1b>');
+  str = str.replace(/&lt;(\/?)strong&gt;/gi, '<$1strong>');
+  str = str.replace(/&lt;(\/?)i&gt;/gi, '<$1i>');
+  str = str.replace(/&lt;(\/?)em&gt;/gi, '<$1em>');
+  str = str.replace(/&lt;(\/?)u&gt;/gi, '<$1u>');
+  str = str.replace(/&lt;mark&gt;/gi, '<mark>');
+  str = str.replace(/&lt;\/mark&gt;/gi, '</mark>');
+  str = str.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+  str = str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  str = str.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  str = str.replace(/__(.+?)__/g, '<u>$1</u>');
+  return str;
+}
+
 function renderFormattedNarrationHTML(rawText) {
   if (!rawText) return '';
   const paras = rawText.split(/\r?\n\s*\r?\n/).filter(p => p.trim());
@@ -9280,10 +9297,19 @@ function renderFormattedNarrationHTML(rawText) {
       l = l.replace(/&lt;\/mark&gt;/gi, '</mark>');
       l = l.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
 
-      // Markdown syntax
+      // Markdown syntax (bold, italic, underline)
       l = l.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #ffffff; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">$1</strong>');
       l = l.replace(/\*(.+?)\*/g, '<em style="color: #fde68a;">$1</em>');
       l = l.replace(/__(.+?)__/g, '<u style="text-decoration-color: #fbbf24; text-underline-offset: 3px;">$1</u>');
+
+      // Markdown Headings: #, ##, ###
+      const headingMatch = l.match(/^(#{1,3})\s+(.+)$/);
+      if (headingMatch) {
+        const hLevel = headingMatch[1].length;
+        const hText = headingMatch[2];
+        const hSize = hLevel === 1 ? '17px' : (hLevel === 2 ? '15.5px' : '14.5px');
+        return `<div class="story-narration-heading" style="font-size: ${hSize}; font-weight: 800; color: #fbbf24; margin: 14px 0 6px 0; letter-spacing: 0.02em;">${hText}</div>`;
+      }
 
       // Check if line is a bullet item: starts with •, -, *, or . followed by space
       const bulletMatch = l.match(/^([-•*]|\.)\s+(.+)$/);
@@ -9294,13 +9320,13 @@ function renderFormattedNarrationHTML(rawText) {
         </div>`;
       }
 
-      // Check if line is a day/date heading (e.g. RABU, 11 NOVEMBER or HARI PERTAMA)
+      // Check if line is a day/date heading (e.g. RABU, 11 NOVEMBER or HARI PERTAMA) or section ending with colon
       const cleanPlain = line.replace(/\*\*/g, '').replace(/<[^>]+>/g, '').trim();
       const isDayHeading = /^(RABU|KAMIS|JUMAT|SABTU|AHAD|MINGGU|SENIN|SELASA|HARI\s+[A-Z0-9]+)/i.test(cleanPlain);
-      const isSectionHeading = /^([A-Z0-9\s,&'\/\-]{4,}):?$/.test(cleanPlain) && cleanPlain.length <= 60 && !cleanPlain.includes('.');
+      const isSectionHeading = /^([A-Z0-9\s,&'\/\-]{3,}):$/.test(cleanPlain) && cleanPlain.length <= 60 && !cleanPlain.includes('.');
 
       if (isDayHeading || isSectionHeading) {
-        return `<div class="story-narration-heading" style="font-size: 15px; font-weight: 800; color: #fbbf24; margin: 18px 0 6px 0; letter-spacing: 0.03em; display: flex; align-items: center; gap: 8px;">
+        return `<div class="story-narration-heading" style="font-size: 15px; font-weight: 800; color: #fbbf24; margin: 14px 0 6px 0; letter-spacing: 0.03em; display: flex; align-items: center; gap: 8px;">
           <i class="fa-solid ${isDayHeading ? 'fa-calendar-day' : 'fa-circle-info'}" style="font-size: 13px; color: #fbbf24;"></i>
           <span>${l}</span>
         </div>`;
