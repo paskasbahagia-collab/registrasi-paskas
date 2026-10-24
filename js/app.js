@@ -1353,13 +1353,36 @@ function renderSizeChartPills(rawText, genderType = 'ikhwan') {
   const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
   const badgeClass = genderType === 'ikhwan' ? 'ikhwan' : 'akhwat';
   return lines.map(line => {
+    let code = '';
+    let val = line;
     const colonIdx = line.indexOf(':');
     if (colonIdx !== -1) {
-      const code = line.substring(0, colonIdx).trim();
-      const val = line.substring(colonIdx + 1).trim();
-      return `<div class="size-pill-item"><span class="size-pill-code ${badgeClass}">${escapeHtml(code)}</span><span class="size-pill-val">${escapeHtml(val)}</span></div>`;
+      code = line.substring(0, colonIdx).trim();
+      val = line.substring(colonIdx + 1).trim();
     }
-    return `<div class="size-pill-item"><span class="size-pill-val">${escapeHtml(line)}</span></div>`;
+
+    const parts = val.split(/[\/\&•|;]/).map(p => p.trim()).filter(Boolean);
+    let specsHtml = '';
+    if (parts.length > 0) {
+      specsHtml = parts.map(p => {
+        const m = p.match(/^([A-Za-z]+)\s*(.*)$/);
+        if (m && m[1] && m[2]) {
+          return `<span class="size-metric-badge"><span class="metric-key">${escapeHtml(m[1])}</span><span class="metric-val">${escapeHtml(m[2])}</span></span>`;
+        }
+        return `<span class="size-metric-badge single-metric">${escapeHtml(p)}</span>`;
+      }).join('');
+    } else {
+      specsHtml = `<span class="size-metric-badge single-metric">${escapeHtml(val)}</span>`;
+    }
+
+    return `
+      <div class="size-row-card size-row-${badgeClass}">
+        ${code ? `<div class="size-code-badge">${escapeHtml(code)}</div>` : ''}
+        <div class="size-specs-group">
+          ${specsHtml}
+        </div>
+      </div>
+    `;
   }).join('');
 }
 
@@ -1405,17 +1428,20 @@ function renderUniformShowcaseHTML() {
             </div>
           </div>
 
-          <div class="uniform-card-content" style="padding: 18px 20px 22px; text-align: left;">
-            <div style="text-align: center; margin-bottom: 10px;">
-              <h5 class="uniform-card-title" style="font-size: 17px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; letter-spacing: -0.2px;">${escapeHtml(uniforms.ikhwanTitle)}</h5>
-              <span style="font-size: 11.5px; color: #38bdf8; font-weight: 600;"><i class="fa-solid fa-mars"></i> Seragam Kaos Resmi Ikhwan</span>
+          <div class="uniform-card-content">
+            <div class="uniform-card-header-meta">
+              <h5 class="uniform-card-title">${escapeHtml(uniforms.ikhwanTitle)}</h5>
+              <div class="uniform-card-subtitle-badge ikhwan">
+                <i class="fa-solid fa-mars"></i> Seragam Kaos Resmi Ikhwan
+              </div>
             </div>
             ${uniforms.ikhwanDesc ? `
-              <div class="uniform-card-notes-box" style="background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(56, 189, 248, 0.35); border-radius: 10px; padding: 12px 14px; margin-top: 10px;">
-                <div style="font-size: 11.5px; font-weight: 700; color: #38bdf8; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-                  <i class="fa-solid fa-clipboard-list text-gold"></i> Catatan &amp; Spesifikasi Baju Ikhwan:
+              <div class="uniform-card-notes-box uniform-notes-box-ikhwan">
+                <div class="uniform-notes-tag">
+                  <i class="fa-solid fa-clipboard-list"></i>
+                  <span>Catatan &amp; Spesifikasi Baju Ikhwan</span>
                 </div>
-                <div style="font-size: 13px; color: #e2e8f0; line-height: 1.65;">
+                <div class="uniform-notes-body">
                   ${renderFormattedNarrationHTML(uniforms.ikhwanDesc)}
                 </div>
               </div>
@@ -1443,17 +1469,20 @@ function renderUniformShowcaseHTML() {
             </div>
           </div>
 
-          <div class="uniform-card-content" style="padding: 18px 20px 22px; text-align: left;">
-            <div style="text-align: center; margin-bottom: 10px;">
-              <h5 class="uniform-card-title" style="font-size: 17px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; letter-spacing: -0.2px;">${escapeHtml(uniforms.akhwatTitle)}</h5>
-              <span style="font-size: 11.5px; color: #f472b6; font-weight: 600;"><i class="fa-solid fa-venus"></i> Seragam Rompi / Outer Resmi Akhwat</span>
+          <div class="uniform-card-content">
+            <div class="uniform-card-header-meta">
+              <h5 class="uniform-card-title">${escapeHtml(uniforms.akhwatTitle)}</h5>
+              <div class="uniform-card-subtitle-badge akhwat">
+                <i class="fa-solid fa-venus"></i> Seragam Rompi / Outer Resmi Akhwat
+              </div>
             </div>
             ${uniforms.akhwatDesc ? `
-              <div class="uniform-card-notes-box" style="background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(244, 114, 182, 0.35); border-radius: 10px; padding: 12px 14px; margin-top: 10px;">
-                <div style="font-size: 11.5px; font-weight: 700; color: #f472b6; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-                  <i class="fa-solid fa-clipboard-list text-gold"></i> Catatan &amp; Spesifikasi Rompi Akhwat:
+              <div class="uniform-card-notes-box uniform-notes-box-akhwat">
+                <div class="uniform-notes-tag">
+                  <i class="fa-solid fa-clipboard-list"></i>
+                  <span>Catatan &amp; Spesifikasi Rompi Akhwat</span>
                 </div>
-                <div style="font-size: 13px; color: #e2e8f0; line-height: 1.65;">
+                <div class="uniform-notes-body">
                   ${renderFormattedNarrationHTML(uniforms.akhwatDesc)}
                 </div>
               </div>
@@ -1462,53 +1491,59 @@ function renderUniformShowcaseHTML() {
         </div>
       </div>
 
-      <!-- Size Chart Guide Banner (Ikhwan & Akhwat Terpisah Rapi) -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 18px;">
+      <!-- Size Chart Guide Banner (Ikhwan & Akhwat Terpisah Rapi & Elegan) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 20px;">
         <!-- Size Chart Ikhwan -->
-        <div class="uniform-size-guide-card" style="margin-top: 0; border-color: rgba(56, 189, 248, 0.45); background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(12, 74, 110, 0.25));">
+        <div class="uniform-size-guide-card uniform-size-card-ikhwan">
           <div class="uniform-size-guide-head">
-            <div class="uniform-size-guide-title">
-              <i class="fa-solid fa-mars" style="color: #38bdf8;"></i>
-              <strong style="color: #38bdf8;">Size Chart Seragam Ikhwan (Laki-laki):</strong>
+            <div class="uniform-size-guide-left">
+              <div class="uniform-size-badge-pill ikhwan">
+                <i class="fa-solid fa-mars"></i> Size Chart Ikhwan
+              </div>
+              <span class="uniform-size-guide-sub">Kaos Paskas &bull; Model 01</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="uniform-size-guide-note">
-                <i class="fa-solid fa-circle-info"></i> Kaos - Model 01
-              </span>
-              <button type="button" class="btn btn-xs" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-kaos-ikhwan.png', 'Panduan Visual Size Chart Kaos Ikhwan')" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); padding: 2px 7px; font-size: 11px; border-radius: 5px; cursor: pointer;">
-                <i class="fa-solid fa-expand"></i> Panduan Visual
-              </button>
-            </div>
+            <button type="button" class="btn-visual-guide btn-visual-guide-ikhwan" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-kaos-ikhwan.png', 'Panduan Visual Size Chart Kaos Ikhwan')">
+              <i class="fa-solid fa-expand"></i>
+              <span>Panduan Visual HD</span>
+            </button>
           </div>
-          <div class="uniform-size-pills-wrap">
+
+          <div class="uniform-size-grid-list">
             ${renderSizeChartPills(uniforms.ikhwanSizeChart, 'ikhwan')}
           </div>
-          <div style="font-size: 11px; color: #94a3b8; margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(56, 189, 248, 0.25);">
-            <i class="fa-solid fa-circle-info text-gold"></i> <strong>Keterangan:</strong> LB = Lebar Badan &bull; PB = Panjang Badan &bull; PT = Panjang Tangan (Toleransi &plusmn;1-2cm)
+
+          <div class="uniform-size-guide-footer">
+            <div class="uniform-size-legend">
+              <i class="fa-solid fa-circle-info"></i>
+              <span><strong>Keterangan:</strong> LB = Lebar Badan &bull; PB = Panjang Badan &bull; PT = Panjang Tangan <span class="legend-tolerance">(Toleransi &plusmn;1&ndash;2 cm)</span></span>
+            </div>
           </div>
         </div>
 
         <!-- Size Chart Akhwat -->
-        <div class="uniform-size-guide-card" style="margin-top: 0; border-color: rgba(244, 114, 182, 0.45); background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(131, 24, 67, 0.25));">
+        <div class="uniform-size-guide-card uniform-size-card-akhwat">
           <div class="uniform-size-guide-head">
-            <div class="uniform-size-guide-title">
-              <i class="fa-solid fa-venus" style="color: #f472b6;"></i>
-              <strong style="color: #f472b6;">Size Chart Seragam Akhwat (Perempuan):</strong>
+            <div class="uniform-size-guide-left">
+              <div class="uniform-size-badge-pill akhwat">
+                <i class="fa-solid fa-venus"></i> Size Chart Akhwat
+              </div>
+              <span class="uniform-size-guide-sub">Rompi / Outer &bull; Model 02</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="uniform-size-guide-note">
-                <i class="fa-solid fa-circle-info"></i> Rompi - Model 02
-              </span>
-              <button type="button" class="btn btn-xs" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-rompi-akhwat.png', 'Panduan Visual Size Chart Rompi Akhwat')" style="background: rgba(244, 114, 182, 0.15); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.35); padding: 2px 7px; font-size: 11px; border-radius: 5px; cursor: pointer;">
-                <i class="fa-solid fa-expand"></i> Panduan Visual
-              </button>
-            </div>
+            <button type="button" class="btn-visual-guide btn-visual-guide-akhwat" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-rompi-akhwat.png', 'Panduan Visual Size Chart Rompi Akhwat')">
+              <i class="fa-solid fa-expand"></i>
+              <span>Panduan Visual HD</span>
+            </button>
           </div>
-          <div class="uniform-size-pills-wrap">
+
+          <div class="uniform-size-grid-list">
             ${renderSizeChartPills(uniforms.akhwatSizeChart, 'akhwat')}
           </div>
-          <div style="font-size: 11px; color: #fbcfe8; margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(244, 114, 182, 0.25);">
-            <i class="fa-solid fa-circle-info text-gold"></i> <strong>Keterangan:</strong> LD = Lingkar Dada &bull; PB = Panjang Badan &bull; LB = Lebar Bahu (Toleransi &plusmn;1-2cm)
+
+          <div class="uniform-size-guide-footer">
+            <div class="uniform-size-legend">
+              <i class="fa-solid fa-circle-info"></i>
+              <span><strong>Keterangan:</strong> LD = Lingkar Dada &bull; PB = Panjang Badan &bull; LB = Lebar Bahu <span class="legend-tolerance">(Toleransi &plusmn;1&ndash;2 cm)</span></span>
+            </div>
           </div>
         </div>
       </div>

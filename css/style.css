@@ -10356,18 +10356,113 @@ input:checked + .slider:before {
 }
 
 .uniform-card-content {
-  padding: 18px;
+  padding: 20px 22px 24px;
   display: flex;
   flex-direction: column;
   flex: 1;
 }
 
+.uniform-card-header-meta {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
 .uniform-card-title {
-  font-size: 16.5px;
+  font-size: 18px;
   font-weight: 800;
-  color: #ffffff;
-  margin: 0 0 10px 0;
-  letter-spacing: -0.2px;
+  color: #f8fafc;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.3px;
+  line-height: 1.35;
+}
+
+.uniform-card-subtitle-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  letter-spacing: 0.2px;
+}
+
+.uniform-card-subtitle-badge.ikhwan {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.uniform-card-subtitle-badge.akhwat {
+  background: rgba(244, 114, 182, 0.12);
+  color: #f472b6;
+  border: 1px solid rgba(244, 114, 182, 0.3);
+}
+
+/* Luxury Catatan & Spesifikasi Box */
+.uniform-card-notes-box {
+  background: linear-gradient(160deg, rgba(30, 41, 59, 0.45) 0%, rgba(15, 23, 42, 0.75) 100%);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px -8px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+}
+
+.uniform-card-notes-box.uniform-notes-box-ikhwan {
+  border: 1px solid rgba(56, 189, 248, 0.22);
+}
+.uniform-card-notes-box.uniform-notes-box-ikhwan::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  opacity: 0.8;
+}
+
+.uniform-card-notes-box.uniform-notes-box-akhwat {
+  border: 1px solid rgba(244, 114, 182, 0.22);
+}
+.uniform-card-notes-box.uniform-notes-box-akhwat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #f472b6, transparent);
+  opacity: 0.8;
+}
+
+.uniform-notes-tag {
+  font-size: 11px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.uniform-notes-box-ikhwan .uniform-notes-tag {
+  color: #38bdf8;
+}
+
+.uniform-notes-box-akhwat .uniform-notes-tag {
+  color: #f472b6;
+}
+
+.uniform-notes-body {
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.7;
+  letter-spacing: 0.1px;
 }
 
 .uniform-card-narration-box {
@@ -10416,42 +10511,252 @@ input:checked + .slider:before {
   gap: 8px;
 }
 
-/* Size Guide Banner */
+/* ===================================================================
+   LUXURY SIZE GUIDE CARDS (Clean Solid Glassmorphism)
+   =================================================================== */
 .uniform-size-guide-card {
-  margin-top: 18px;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.9));
-  border: 1px dashed rgba(212, 175, 55, 0.4);
-  border-radius: 14px;
-  padding: 16px 20px;
-  backdrop-filter: blur(10px);
+  margin-top: 0;
+  border-radius: 18px;
+  padding: 18px 20px;
+  backdrop-filter: blur(14px);
+  transition: all 0.3s ease;
+  box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+}
+
+.uniform-size-guide-card.uniform-size-card-ikhwan {
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: linear-gradient(150deg, rgba(15, 23, 42, 0.94) 0%, rgba(12, 74, 110, 0.18) 100%);
+}
+.uniform-size-guide-card.uniform-size-card-ikhwan:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 16px 36px -8px rgba(14, 165, 233, 0.2);
+}
+
+.uniform-size-guide-card.uniform-size-card-akhwat {
+  border: 1px solid rgba(244, 114, 182, 0.25);
+  background: linear-gradient(150deg, rgba(15, 23, 42, 0.94) 0%, rgba(131, 24, 67, 0.18) 100%);
+}
+.uniform-size-guide-card.uniform-size-card-akhwat:hover {
+  border-color: rgba(244, 114, 182, 0.45);
+  box-shadow: 0 16px 36px -8px rgba(236, 72, 153, 0.2);
 }
 
 .uniform-size-guide-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.uniform-size-guide-title {
+.uniform-size-guide-left {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13.5px;
-  color: #f8fafc;
-  font-weight: 700;
+  flex-wrap: wrap;
 }
 
-.uniform-size-guide-note {
-  font-size: 11.5px;
-  color: #94a3b8;
+.uniform-size-badge-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 999px;
+  letter-spacing: 0.2px;
 }
 
+.uniform-size-badge-pill.ikhwan {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.uniform-size-badge-pill.akhwat {
+  background: rgba(244, 114, 182, 0.18);
+  color: #f472b6;
+  border: 1px solid rgba(244, 114, 182, 0.35);
+}
+
+.uniform-size-guide-sub {
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* Button Panduan Visual HD */
+.btn-visual-guide {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.btn-visual-guide-ikhwan {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+.btn-visual-guide-ikhwan:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+.btn-visual-guide-akhwat {
+  background: rgba(244, 114, 182, 0.12);
+  color: #f472b6;
+  border: 1px solid rgba(244, 114, 182, 0.35);
+}
+.btn-visual-guide-akhwat:hover {
+  background: rgba(244, 114, 182, 0.25);
+  border-color: #f472b6;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+}
+
+/* Luxury Size Rows & Grid List */
+.uniform-size-grid-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.size-row-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+.size-row-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.14);
+  transform: translateX(2px);
+}
+
+.size-code-badge {
+  min-width: 44px;
+  height: 28px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  border-radius: 7px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.size-row-ikhwan .size-code-badge {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.3), rgba(2, 132, 199, 0.5));
+  color: #e0f2fe;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
+}
+
+.size-row-akhwat .size-code-badge {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.3), rgba(190, 24, 93, 0.5));
+  color: #fdf2f8;
+  border: 1px solid rgba(244, 114, 182, 0.45);
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.2);
+}
+
+.size-specs-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.size-metric-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.size-metric-badge .metric-key {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+}
+
+.size-row-ikhwan .size-metric-badge .metric-key {
+  color: #7dd3fc;
+}
+
+.size-row-akhwat .size-metric-badge .metric-key {
+  color: #f472b6;
+}
+
+.size-metric-badge .metric-val {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.size-metric-badge.single-metric {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+/* Footer Legend */
+.uniform-size-guide-footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.uniform-size-legend {
+  font-size: 11px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1.5;
+}
+
+.uniform-size-card-ikhwan .uniform-size-legend i {
+  color: #38bdf8;
+}
+
+.uniform-size-card-akhwat .uniform-size-legend i {
+  color: #f472b6;
+}
+
+.legend-tolerance {
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+/* Fallback legacy pills */
 .uniform-size-pills-wrap {
   display: flex;
   flex-wrap: wrap;
