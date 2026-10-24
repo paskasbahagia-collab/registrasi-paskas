@@ -43,7 +43,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=100.0">
+  <link rel="stylesheet" href="css/style.css?v=103.0">
 </head>
 <body>
 
@@ -1212,7 +1212,9 @@
               <input type="text" id="grp_hp_fax" name="hp_fax" tabindex="-1" autocomplete="off">
             </div>
             
-            <div class="group-header-card">
+            <!-- Kontainer Input Formulir Rombongan -->
+            <div id="grpInputsContainer">
+              <div class="group-header-card">
               <div class="group-card-icon">
                 <i class="fa-solid fa-users-rectangle"></i>
               </div>
@@ -1429,18 +1431,196 @@
               </div>
             </div>
 
-            <!-- Group Submit Actions -->
-            <div class="form-footer">
-              <button type="button" class="btn btn-secondary" onclick="navigateTo('dashboard')">
-                <i class="fa-solid fa-arrow-left"></i> Kembali ke Dashboard
-              </button>
-              <button type="submit" class="btn btn-primary btn-glow" id="grpSubmitBtn">
-                <i class="fa-solid fa-eye"></i> Pratinjau Registrasi Rombongan (<span id="grpTotalMemberCounter">1</span>)
-              </button>
+              <!-- Group Submit Actions -->
+              <div class="form-footer">
+                <button type="button" class="btn btn-secondary" onclick="navigateTo('dashboard')">
+                  <i class="fa-solid fa-arrow-left"></i> Kembali ke Dashboard
+                </button>
+                <button type="submit" class="btn btn-primary btn-glow" id="grpSubmitBtn">
+                  <i class="fa-solid fa-eye"></i> Pratinjau Registrasi Rombongan (<span id="grpTotalMemberCounter">1</span>)
+                </button>
+              </div>
+            </div> <!-- Akhir #grpInputsContainer -->
+
+            <!-- ============================================================== -->
+            <!-- PRATINJAU IN-PAGE KELOMPOK (FORMAT PERSIS SAMA DENGAN INDIVIDU) -->
+            <!-- ============================================================== -->
+            <div id="grpPreviewPane" class="form-step-pane" style="display: none;">
+              <div class="form-grid-section">
+                <div class="section-title-wrap">
+                  <div class="section-title-icon">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                  </div>
+                  <div>
+                    <span class="section-kicker">KONFIRMASI FINAL SEBELUM MENGIRIM</span>
+                    <h3 class="form-section-title">Pratinjau Ringkasan Jawaban Rombongan</h3>
+                    <p class="section-subtext">Mohon periksa kembali kelengkapan dan kebenaran data seluruh anggota rombongan sebelum melakukan pengiriman formulir registrasi resmi.</p>
+                  </div>
+                </div>
+
+                <!-- Dynamic Rendered Summary Container (Format Sama Seperti Individu) -->
+                <div id="grpPreviewSummaryContainer" class="summary-preview-card"></div>
+              </div>
+
+              <!-- Footer Actions Rombongan -->
+              <div class="form-footer step-wizard-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeKelompokInPagePreview()">
+                  <i class="fa-solid fa-pen-to-square"></i> Ubah / Koreksi Data
+                </button>
+                <button type="button" class="btn btn-primary btn-glow btn-final-submit" id="grpFinalSubmitBtn" onclick="confirmAndSubmitRegistration()">
+                  <i class="fa-solid fa-paper-plane"></i> Kirim Pendaftaran Rombongan
+                </button>
+              </div>
             </div>
           </form>
 
             </div> <!-- #regFormCardContainer -->
+
+            <!-- ============================================================== -->
+            <!-- SECTION KHUSUS: MAHABBAH & SUKSES REGISTRASI (IN-PAGE VIEW)     -->
+            <!-- ============================================================== -->
+            <div id="regSuccessViewContainer" class="reg-success-view-container" style="display: none;">
+              <div class="reg-success-scenic-hero">
+                <div class="reg-success-scenic-overlay">
+                  
+                  <!-- KARTU MAHABBAH UTAMA -->
+                  <div class="reg-success-card">
+                    
+                    <!-- Header Badge & Celebration -->
+                    <div class="reg-success-top-badge">
+                      <span class="reg-success-pill-green">
+                        <i class="fa-solid fa-circle-check"></i> ALHAMDULILLAH, REGISTRASI BERHASIL!
+                      </span>
+                    </div>
+
+                    <!-- Greeting Section -->
+                    <div class="reg-success-greeting-block">
+                      <h2 class="reg-success-headline">
+                        Jazakumullahu khairan, <span id="successAttendeeName" class="reg-success-name-highlight">Nama Peserta</span>,
+                      </h2>
+                      <p class="reg-success-subheadline">telah menjadi bagian dari PASKAS Bahagia.</p>
+                    </div>
+
+                    <!-- Islamic Ornament Divider -->
+                    <div class="reg-success-divider">
+                      <span class="divider-line"></span>
+                      <i class="fa-solid fa-kaaba divider-icon"></i>
+                      <span class="divider-line"></span>
+                    </div>
+
+                    <!-- Puitis & Makna Narasi Ukhuwah (Quotes Card) -->
+                    <div class="reg-success-narrative-card">
+                      <p class="narrative-paragraph">
+                        Satu langkah telah kita ambil untuk menuju sebuah pertemuan yang insyaallah penuh makna. Kami menantikan kehadiran antum di <strong>Kota Yogyakarta</strong> untuk merajut silaturahmi, menguatkan ukhuwah, berbagi inspirasi, dan menumbuhkan semangat amal saleh bersama.
+                      </p>
+                      
+                      <p class="narrative-paragraph">
+                        Sebab, perjalanan ini bukan sekadar tentang tempat yang kita tuju, melainkan tentang persaudaraan yang kita temukan, kebersamaan yang kita rasakan, dan kebaikan yang kita bawa pulang.
+                      </p>
+                      
+                      <div class="narrative-callout">
+                        <i class="fa-solid fa-quote-left quote-icon-left"></i>
+                        <span class="callout-text">Yogyakarta Menanti, Saatnya Kita Saling Menguatkan.</span>
+                        <i class="fa-solid fa-quote-right quote-icon-right"></i>
+                      </div>
+
+                      <p class="narrative-paragraph narrative-closing">
+                        Sampai berjumpa di PASKAS Bahagia. Semoga Allah SWT memudahkan setiap langkah perjalanan kita, mempertemukan kita dalam kebaikan, dan memberkahi setiap ikhtiar yang kita lakukan.
+                      </p>
+
+                      <div class="narrative-signature">
+                        <strong class="sig-brand">PASKAS Bahagia</strong>
+                        <span class="sig-tagline">Pulang Membawa Bahagia, Kembali Menebar Kebaikan.</span>
+                      </div>
+                    </div>
+
+                    <!-- RINGKASAN DATA KAFILAH (Tabel / Ringkasan Elegan) -->
+                    <div class="reg-success-summary-card">
+                      <div class="summary-card-header">
+                        <div class="summary-header-left">
+                          <i class="fa-solid fa-id-card-clip text-gold"></i>
+                          <h4>Ringkasan Resmi Registrasi</h4>
+                        </div>
+                        <div id="successRegCodeBadgeWrap">
+                          <span class="success-code-pill" id="successRegCodeBadge">PKB-000</span>
+                        </div>
+                      </div>
+
+                      <!-- Kontainer Dinamis: Rincian Individu atau Tabel Rombongan -->
+                      <div id="successSummaryDetailsContainer">
+                        <!-- Disuntikkan via JS -->
+                      </div>
+                    </div>
+
+                    <!-- PRATINJAU BOARDING PASS LIVE (COLLAPSIBLE / TOGGLE VIEW) -->
+                    <div id="successTicketPreviewCollapsible" class="success-ticket-collapsible" style="display: none;">
+                      <div class="success-ticket-box-header">
+                        <span style="font-weight: 700; color: #1a1815; font-size: 13.5px;"><i class="fa-solid fa-ticket text-cyan"></i> Pratinjau Boarding Pass Resmi</span>
+                        <small style="color: #64748b; font-weight: 600;">(Format Asli Siap Cetak & Unduh)</small>
+                      </div>
+
+                      <!-- SLIDER NAVIGASI TIKET ROMBONGAN (Aktif otomatis untuk pendaftaran rombongan) -->
+                      <div id="successGroupNavSlider" class="success-group-nav-slider" style="display: none;">
+                        <button type="button" class="btn-group-nav-arrow" id="btnSuccessPrevTicket" onclick="successStepGroupTicket(-1)" title="Tiket Sebelumnya">
+                          <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+                        </button>
+                        
+                        <div class="success-group-nav-center">
+                          <select id="successGroupMemberSelect" class="success-group-member-select" onchange="successSwitchGroupMember(this.value)">
+                            <!-- Diisi dinamis via JS -->
+                          </select>
+                          <span class="success-group-nav-counter" id="successGroupCounterText">Peserta 1 dari 1</span>
+                        </div>
+
+                        <button type="button" class="btn-group-nav-arrow" id="btnSuccessNextTicket" onclick="successStepGroupTicket(1)" title="Tiket Berikutnya">
+                          Berikutnya <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                      </div>
+
+                      <div class="success-ticket-viewport" id="successTicketRenderArea">
+                        <!-- Tiket disuntikkan secara dinamis via JS -->
+                      </div>
+                    </div>
+
+                    <!-- Status Pengiriman Email (Muncul saat tombol kirim ditekan) -->
+                    <div id="successEmailStatusAlert" class="success-email-status-box" style="display: none;"></div>
+
+                    <!-- KONTROL TOMBOL AKSI DI BAWAH (SESUAI PERMINTAAN USER) -->
+                    <div class="reg-success-actions-toolbar">
+                      <button type="button" class="btn-success-action btn-preview-ticket" onclick="toggleSuccessTicketPreview()" id="btnSuccessTogglePreview">
+                        <i class="fa-solid fa-eye"></i> Pratinjau E-Tiket
+                      </button>
+
+                      <button type="button" class="btn-success-action btn-send-email" onclick="triggerSuccessEmailSend()" id="btnSuccessSendEmail">
+                        <i class="fa-solid fa-envelope"></i> Kirim via Email
+                      </button>
+
+                      <button type="button" class="btn-success-action btn-download-png" onclick="triggerSuccessTicketDownload()" id="btnSuccessDownload">
+                        <i class="fa-solid fa-file-arrow-down"></i> Unduh E-Tiket (PNG)
+                      </button>
+
+                      <!-- TOMBOL UNDUH SEMUA E-TIKET (KHUSUS PENDAFTARAN ROMBONGAN) -->
+                      <button type="button" class="btn-success-action btn-download-all-png" onclick="triggerSuccessDownloadAllTickets()" id="btnSuccessDownloadAll" style="display: none;">
+                        <i class="fa-solid fa-layer-group"></i> Unduh Semua E-Tiket (<span id="successBatchCountLabel">0 Tiket</span>)
+                      </button>
+
+                      <button type="button" class="btn-success-action btn-finish-reg" onclick="finishSuccessRegistration()">
+                        <i class="fa-solid fa-circle-check"></i> Selesai
+                      </button>
+                    </div>
+
+                    <!-- Opsi Tambahan Ramah Pengguna -->
+                    <div class="reg-success-secondary-footer">
+                      <button type="button" class="btn-link-another-reg" onclick="registerAnotherParticipant()">
+                        <i class="fa-solid fa-user-plus"></i> Daftarkan Peserta / Kafilah Lain
+                      </button>
+                    </div>
+
+                  </div> <!-- .reg-success-card -->
+
+                </div> <!-- .reg-success-scenic-overlay -->
+              </div> <!-- .reg-success-scenic-hero -->
+            </div> <!-- #regSuccessViewContainer -->
 
           </div> <!-- #guidelines-container / .retreat-story-section -->
 
@@ -4342,7 +4522,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=115.0"></script>
-  <script src="js/app.js?v=112.0"></script>
+  <script src="js/supabase-config.js?v=116.0"></script>
+  <script src="js/app.js?v=122.0"></script>
 </body>
 </html>

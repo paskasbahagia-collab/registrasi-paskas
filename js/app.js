@@ -1773,10 +1773,18 @@ function navigateTo(pageId) {
   // If going to registration page, reset to show start button initially
   if (pageId === 'registration') {
     populateWilayahDropdowns();
+    const successContainer = document.getElementById('regSuccessViewContainer');
+    if (successContainer) successContainer.style.display = 'none';
+
+    const hangingGallery = document.querySelector('.hanging-gallery-wrapper');
+    const floatingBar = document.querySelector('.retreat-floating-bar-wrapper');
     const storyGrid = document.getElementById('storyContentGrid');
     const ctaWrap = document.getElementById('regisCtaWrapper');
     const promptBox = document.getElementById('regTypePromptBox');
     const formCard = document.getElementById('regFormCardContainer');
+
+    if (hangingGallery) hangingGallery.style.display = '';
+    if (floatingBar) floatingBar.style.display = '';
     if (storyGrid) storyGrid.style.display = 'grid';
     if (ctaWrap) ctaWrap.style.display = 'flex';
     if (promptBox) promptBox.style.display = 'none';
@@ -2021,6 +2029,11 @@ function resetToSelectionScreen() {
   if (cardIndividu) cardIndividu.classList.remove('is-selected');
   if (cardKelompok) cardKelompok.classList.remove('is-selected');
   if (formCard) formCard.style.display = 'none';
+
+  const grpInputs = document.getElementById('grpInputsContainer');
+  const grpPane = document.getElementById('grpPreviewPane');
+  if (grpPane) grpPane.style.display = 'none';
+  if (grpInputs) grpInputs.style.display = 'block';
 
   if (promptBox) {
     promptBox.style.display = 'block';
@@ -3724,8 +3737,8 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
     if (wrapDepOther) wrapDepOther.style.display = 'none';
     jumpToIndividuStep(1, true);
 
-    // Show official E-Tiket Modal
-    showTicketModal(saved);
+    // Tampilkan Halaman Mahabbah & Sukses Langsung di Halaman (Bukan popup gambar tiket)
+    showSuccessRegistrationView(saved, 'individu');
 
     // Refresh data rekap
     await loadAndRenderRegistrations();
@@ -4070,111 +4083,170 @@ function handleKelompokPreview(e) {
     data: batchRecords
   };
 
-  const previewBody = document.getElementById('previewModalBody');
-  if (previewBody) {
-    previewBody.innerHTML = `
-      <div class="preview-summary-box">
-        <div class="preview-summary-heading">
-          <i class="fa-solid fa-users"></i> Informasi Rombongan &amp; Rute
-          <span class="preview-badge-status kelompok" style="margin-left: auto;">Registrasi Kelompok (${batchRecords.length} Peserta)</span>
+  // SUNTIKKAN KE PRATINJAU IN-PAGE KELOMPOK (Format Persis Sama & Serasi dengan Individu)
+  const grpSummaryContainer = document.getElementById('grpPreviewSummaryContainer');
+  if (grpSummaryContainer) {
+    const allMembersRowsHtml = batchRecords.map((item, idx) => {
+      const isCoord = idx < coordCards.length;
+      return `
+        <tr>
+          <td style="text-align: center; font-weight: 700;">${idx + 1}</td>
+          <td>
+            ${isCoord 
+              ? '<span style="background: rgba(217, 119, 6, 0.15); color: #b45309; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 11px;"><i class="fa-solid fa-crown"></i> Koordinator</span>' 
+              : '<span style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">Anggota</span>'
+            }
+          </td>
+          <td>
+            <strong style="text-transform: capitalize;">${escapeHtml(item.full_name)}</strong> 
+            ${item.is_child ? '<span style="font-size: 10px; padding: 1px 6px; background: rgba(245, 158, 11, 0.2); border-radius: 4px; color: #b45309; font-weight: 700; margin-left: 4px;"><i class="fa-solid fa-child"></i> Anak</span>' : ''}
+          </td>
+          <td style="text-align: center;">${item.age ? item.age + ' th' : '-'}</td>
+          <td>${escapeHtml(item.gender || '-')}</td>
+          <td style="text-align: center;"><span class="badge-cloth-val" style="padding: 2px 8px; font-size: 11.5px;">${escapeHtml(item.cloth_size || '-')}</span></td>
+          <td><small style="color: #047857; font-weight: 600;">${escapeHtml(item.medical_history || 'Sehat')}</small></td>
+          <td><small style="color: #64748b;">${escapeHtml(item.phone_number || '-')}</small></td>
+        </tr>
+      `;
+    }).join('');
+
+    grpSummaryContainer.innerHTML = `
+      <div class="summary-preview-notice">
+        <i class="fa-solid fa-circle-check"></i>
+        <div>
+          <strong>Pemeriksaan Jawaban Terakhir Rombongan</strong><br>
+          Seluruh data telah divalidasi. Mohon pastikan kebenaran informasi rombongan di bawah ini sebelum mengirimkan pendaftaran untuk penerbitan E-Tiket resmi.
         </div>
-        <div class="preview-detail-grid">
-          <div class="preview-item">
-            <span class="preview-label">Nama Rombongan</span>
-            <span class="preview-val">${escapeHtml(groupName)}</span>
+      </div>
+
+      <!-- Block 1: Identitas Rombongan & Rute -->
+      <div class="summary-block-card">
+        <div class="summary-block-head">
+          <span class="summary-block-title">
+            <i class="fa-solid fa-flag text-gold"></i> 1. Identitas Rombongan &amp; Rute Perjalanan
+          </span>
+          <button type="button" class="btn-edit-step" onclick="closeKelompokInPagePreview()">
+            <i class="fa-solid fa-pen-to-square"></i> Ubah Data
+          </button>
+        </div>
+        <div class="summary-block-grid">
+          <div class="summary-field-item">
+            <span class="summary-field-label">Nama Rombongan</span>
+            <span class="summary-field-value"><strong>${escapeHtml(groupName)}</strong></span>
           </div>
-          <div class="preview-item">
-            <span class="preview-label">Wilayah Kafilah</span>
-            <span class="preview-val">${escapeHtml(defaultWilayah)} (${escapeHtml(defaultDaerah)})</span>
+          <div class="summary-field-item">
+            <span class="summary-field-label">Total Kafilah</span>
+            <span class="summary-field-value"><strong style="color: #b45309;">${batchRecords.length} Peserta</strong> (${coordCards.length} Koord, ${memberCards.length} Anggota)</span>
           </div>
-          <div class="preview-item">
-            <span class="preview-label">Koordinator Utama</span>
-            <span class="preview-val">${escapeHtml(primaryLeaderName)}</span>
+          <div class="summary-field-item">
+            <span class="summary-field-label">Wilayah Kafilah</span>
+            <span class="summary-field-value">${escapeHtml(defaultWilayah)}</span>
           </div>
-          <div class="preview-item">
-            <span class="preview-label">No. WA Koordinator</span>
-            <span class="preview-val">${escapeHtml(primaryLeaderPhone)}</span>
+          <div class="summary-field-item">
+            <span class="summary-field-label">Daerah Asal Kafilah</span>
+            <span class="summary-field-value">${escapeHtml(defaultDaerah)}</span>
+          </div>
+          <div class="summary-field-item">
+            <span class="summary-field-label">Koordinator Utama</span>
+            <span class="summary-field-value"><strong>${escapeHtml(primaryLeaderName)}</strong></span>
+          </div>
+          <div class="summary-field-item">
+            <span class="summary-field-label">No. WhatsApp Koordinator</span>
+            <span class="summary-field-value">${escapeHtml(primaryLeaderPhone)}</span>
+          </div>
+          ${primaryLeaderEmail ? `
+          <div class="summary-field-item full-width">
+            <span class="summary-field-label">Alamat Email Koordinator</span>
+            <span class="summary-field-value">${escapeHtml(primaryLeaderEmail)}</span>
+          </div>` : ''}
+        </div>
+      </div>
+
+      <!-- Block 2: Jadwal & Transportasi Rombongan -->
+      <div class="summary-block-card">
+        <div class="summary-block-head">
+          <span class="summary-block-title">
+            <i class="fa-solid fa-calendar-days text-forest"></i> 2. Jadwal &amp; Transportasi Bersama
+          </span>
+          <button type="button" class="btn-edit-step" onclick="closeKelompokInPagePreview()">
+            <i class="fa-solid fa-pen-to-square"></i> Ubah Data
+          </button>
+        </div>
+        <div class="summary-block-grid">
+          <div class="summary-field-item">
+            <span class="summary-field-label">Rencana Kedatangan</span>
+            <span class="summary-field-value">${formatDateIndo(defaultArrival)} (12:00 WIB)</span>
+          </div>
+          <div class="summary-field-item">
+            <span class="summary-field-label">Rencana Kepulangan</span>
+            <span class="summary-field-value">${formatDateIndo(defaultDeparture)} (14:00 WIB)</span>
+          </div>
+          <div class="summary-field-item full-width">
+            <span class="summary-field-label">Armada Transportasi</span>
+            <span class="summary-field-value"><i class="fa-solid fa-bus text-forest"></i> ${escapeHtml(defaultTransport)}</span>
           </div>
         </div>
       </div>
 
-      <div class="preview-summary-box">
-        <div class="preview-summary-heading">
-          <i class="fa-solid fa-calendar-days"></i> Rencana Jadwal &amp; Transportasi Bersama
+      <!-- Block 3: Rincian Seluruh Peserta Rombongan -->
+      <div class="summary-block-card">
+        <div class="summary-block-head">
+          <span class="summary-block-title">
+            <i class="fa-solid fa-users text-gold"></i> 3. Rincian Anggota Rombongan (${batchRecords.length} Jiwa)
+          </span>
+          <button type="button" class="btn-edit-step" onclick="closeKelompokInPagePreview()">
+            <i class="fa-solid fa-pen-to-square"></i> Ubah Data
+          </button>
         </div>
-        <div class="preview-detail-grid">
-          <div class="preview-item">
-            <span class="preview-label">Tanggal Kedatangan</span>
-            <span class="preview-val">${formatDateIndo(defaultArrival)}</span>
-          </div>
-          <div class="preview-item">
-            <span class="preview-label">Tanggal Kepulangan</span>
-            <span class="preview-val">${formatDateIndo(defaultDeparture)}</span>
-          </div>
-          <div class="preview-item full-width">
-            <span class="preview-label">Armada Transportasi</span>
-            <span class="preview-val">${escapeHtml(defaultTransport)}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Preview Tabel Koordinator -->
-      <div class="preview-summary-box" style="border: 1.5px solid rgba(245, 158, 11, 0.5);">
-        <div class="preview-summary-heading" style="color: #fbbf24;">
-          <i class="fa-solid fa-crown text-gold"></i> 1. Koordinator Rombongan (${coordCards.length} Orang)
-        </div>
-        <div style="overflow-x: auto;">
-          <table class="preview-members-table">
-            <thead>
-              <tr style="background: rgba(245, 158, 11, 0.15);">
-                <th style="width: 50px; text-align: center;">Peran</th>
-                <th>Nama Koordinator</th>
-                <th style="width: 70px; text-align: center;">Usia</th>
-                <th style="width: 100px; text-align: center;">Tahun Paskas</th>
-                <th>Gender</th>
-                <th>Ukuran Baju</th>
-                <th>Kesehatan</th>
-                <th>No. WhatsApp</th>
-                <th>Email</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${coordinatorsRowsHtml}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Preview Tabel Anggota -->
-      <div class="preview-summary-box">
-        <div class="preview-summary-heading">
-          <i class="fa-solid fa-people-group"></i> 2. Anggota Rombongan (${memberCards.length} Orang)
-        </div>
-        <div style="overflow-x: auto;">
-          <table class="preview-members-table">
+        <div class="summary-preview-table-wrap">
+          <table class="summary-preview-table">
             <thead>
               <tr>
                 <th style="width: 40px; text-align: center;">No</th>
-                <th>Nama Peserta</th>
-                <th style="width: 70px; text-align: center;">Usia</th>
-                <th style="width: 100px; text-align: center;">Tahun Paskas</th>
+                <th>Peran</th>
+                <th>Nama Lengkap</th>
+                <th style="width: 60px; text-align: center;">Usia</th>
                 <th>Gender</th>
-                <th>Ukuran Baju</th>
+                <th style="width: 60px; text-align: center;">Baju</th>
                 <th>Kesehatan</th>
+                <th>Kontak</th>
               </tr>
             </thead>
             <tbody>
-              ${membersRowsHtml || '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 12px;">Tidak ada anggota tambahan</td></tr>'}
+              ${allMembersRowsHtml}
             </tbody>
           </table>
         </div>
       </div>
     `;
-  }
 
-  const modal = document.getElementById('previewModal');
-  if (modal) modal.classList.add('active');
+    // Sembunyikan lembar input dan tampilkan lembar pratinjau in-page persis seperti Individu
+    const grpInputs = document.getElementById('grpInputsContainer');
+    const grpPane = document.getElementById('grpPreviewPane');
+    if (grpInputs) grpInputs.style.display = 'none';
+    if (grpPane) {
+      grpPane.style.display = 'block';
+      setTimeout(() => {
+        const topOffset = grpPane.getBoundingClientRect().top + window.pageYOffset - 90;
+        window.scrollTo({ top: Math.max(0, topOffset), behavior: 'smooth' });
+      }, 80);
+    }
+  }
 }
+
+function closeKelompokInPagePreview() {
+  const grpInputs = document.getElementById('grpInputsContainer');
+  const grpPane = document.getElementById('grpPreviewPane');
+  if (grpPane) grpPane.style.display = 'none';
+  if (grpInputs) {
+    grpInputs.style.display = 'block';
+    setTimeout(() => {
+      const topOffset = grpInputs.getBoundingClientRect().top + window.pageYOffset - 90;
+      window.scrollTo({ top: Math.max(0, topOffset), behavior: 'smooth' });
+    }, 80);
+  }
+}
+window.closeKelompokInPagePreview = closeKelompokInPagePreview;
 
 function closePreviewModal() {
   const modal = document.getElementById('previewModal');
@@ -4214,8 +4286,8 @@ async function confirmAndSubmitRegistration() {
       document.getElementById('formIndividu').reset();
       closePreviewModal();
 
-      // Show official E-Tiket Modal
-      showTicketModal(saved);
+      // Tampilkan Halaman Mahabbah Sukses Langsung di Halaman (Bukan popup)
+      showSuccessRegistrationView(saved, 'individu');
 
       // Refresh data rekap
       await loadAndRenderRegistrations();
@@ -4233,10 +4305,11 @@ async function confirmAndSubmitRegistration() {
       document.getElementById('formKelompok').reset();
       initGroupMembers();
       closePreviewModal();
+      if (typeof closeKelompokInPagePreview === 'function') closeKelompokInPagePreview();
 
-      // Tampilkan tiket satu per satu untuk seluruh peserta rombongan
+      // Tampilkan Halaman Mahabbah Sukses Langsung di Halaman (Bukan popup)
       if (savedBatch && savedBatch.length > 0) {
-        showTicketModal(savedBatch, 0);
+        showSuccessRegistrationView(savedBatch, 'kelompok');
       }
 
       await loadAndRenderRegistrations();
@@ -5617,6 +5690,530 @@ window.checkSingleCoordinatorDuplicate = checkSingleCoordinatorDuplicate;
 window.clearSingleCoordinatorDuplicate = clearSingleCoordinatorDuplicate;
 window.checkIndividualDuplicateOnBlur = checkIndividualDuplicateOnBlur;
 window.hideIndividualDuplicateNotice = hideIndividualDuplicateNotice;
+
+// ===================================================================
+// SECTION: MAHABBAH & SUKSES REGISTRASI (IN-PAGE VIEW)
+// ===================================================================
+let activeSuccessRecord = null;
+let activeSuccessBatch = null;
+let activeSuccessIndex = 0;
+let activeSuccessType = 'individu';
+let isSuccessTicketPreviewOpen = false;
+
+function showSuccessRegistrationView(recordOrBatch, type = 'individu') {
+  activeSuccessType = type;
+  const container = document.getElementById('regSuccessViewContainer');
+  const formCard = document.getElementById('regFormCardContainer');
+  const promptBox = document.getElementById('regTypePromptBox');
+  const nameEl = document.getElementById('successAttendeeName');
+  const codeBadge = document.getElementById('successRegCodeBadge');
+  const detailsContainer = document.getElementById('successSummaryDetailsContainer');
+  const ticketCollapsible = document.getElementById('successTicketPreviewCollapsible');
+  const btnToggle = document.getElementById('btnSuccessTogglePreview');
+  const emailAlert = document.getElementById('successEmailStatusAlert');
+
+  // Tutup modal pop-up secara langsung tanpa redirect ke dashboard
+  const tModal = document.getElementById('ticketModal');
+  if (tModal) tModal.classList.remove('active');
+  const pModal = document.getElementById('previewModal');
+  if (pModal) pModal.classList.remove('active');
+
+  // Bersihkan efek konfeti
+  const confCanvas = document.getElementById('confettiCanvas');
+  if (confCanvas) {
+    const ctx = confCanvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+  }
+
+  // Pastikan view page-registration aktif tanpa memicu scroll ke top
+  document.querySelectorAll('.page-view').forEach(view => {
+    view.classList.remove('active');
+  });
+  const regPage = document.getElementById('page-registration');
+  if (regPage) regPage.classList.add('active');
+
+  // Sembunyikan SEMUA elemen panduan & tombol registrasi agar kartu sukses Mahabbah tampil murni dan fokus
+  const hangingGallery = document.querySelector('.hanging-gallery-wrapper');
+  const storyGrid = document.getElementById('storyContentGrid');
+  const ctaWrap = document.getElementById('regisCtaWrapper');
+  const floatingBar = document.querySelector('.retreat-floating-bar-wrapper');
+
+  if (hangingGallery) hangingGallery.style.display = 'none';
+  if (storyGrid) storyGrid.style.setProperty('display', 'none', 'important');
+  if (ctaWrap) ctaWrap.style.setProperty('display', 'none', 'important');
+  if (floatingBar) floatingBar.style.display = 'none';
+  if (formCard) formCard.style.display = 'none';
+  if (promptBox) promptBox.style.display = 'none';
+
+  // LANGSUNG TAMPILKAN KONTAINER SUKSES IN-PAGE
+  if (container) {
+    container.style.display = 'block';
+  }
+
+  // Reset ticket preview & alert status
+  isSuccessTicketPreviewOpen = false;
+  if (ticketCollapsible) ticketCollapsible.style.display = 'none';
+  if (btnToggle) btnToggle.innerHTML = '<i class="fa-solid fa-eye"></i> Pratinjau E-Tiket';
+  if (emailAlert) emailAlert.style.display = 'none';
+
+  if (type === 'individu') {
+    activeSuccessRecord = recordOrBatch;
+    activeSuccessBatch = null;
+    currentTicketRecord = recordOrBatch;
+
+    if (nameEl) nameEl.textContent = recordOrBatch.full_name || 'Sahabat Paskas';
+    if (codeBadge) codeBadge.textContent = recordOrBatch.registration_code || '-';
+
+    // Render Ringkasan Individu
+    if (detailsContainer) {
+      const isHealthy = !recordOrBatch.medical_history || recordOrBatch.medical_history.toLowerCase().includes('sehat') || recordOrBatch.medical_history.toLowerCase().includes('tidak ada');
+      const healthHtml = isHealthy 
+        ? `<span style="color: #047857; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> ${escapeHtml(recordOrBatch.medical_history || 'Tidak Ada (Alhamdulillah Sehat)')}</span>`
+        : `<span style="color: #b45309; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(recordOrBatch.medical_history)}</span>`;
+
+      detailsContainer.innerHTML = `
+        <div class="success-summary-grid">
+          <div class="summary-cell">
+            <div class="summary-cell-label"><i class="fa-solid fa-user" style="color:#d97706;"></i> Nama Lengkap & Usia</div>
+            <div class="summary-cell-value" style="text-transform: capitalize;">${escapeHtml(recordOrBatch.full_name || '-')} ${recordOrBatch.age ? `(${recordOrBatch.age} th)` : ''}</div>
+          </div>
+          <div class="summary-cell">
+            <div class="summary-cell-label"><i class="fa-solid fa-venus-mars" style="color:#0284c7;"></i> Jenis Kelamin</div>
+            <div class="summary-cell-value">${escapeHtml(recordOrBatch.gender || '-')}</div>
+          </div>
+          <div class="summary-cell">
+            <div class="summary-cell-label"><i class="fa-solid fa-map-location-dot" style="color:#d97706;"></i> Wilayah & Daerah</div>
+            <div class="summary-cell-value" style="text-transform: capitalize;">${escapeHtml(recordOrBatch.wilayah || '-')} ${recordOrBatch.daerah ? `<span style="color:#64748b; font-weight:600;">/ ${escapeHtml(recordOrBatch.daerah)}</span>` : ''}</div>
+          </div>
+          <div class="summary-cell">
+            <div class="summary-cell-label"><i class="fa-solid fa-shirt" style="color:#64748b;"></i> Ukuran Seragam</div>
+            <div class="summary-cell-value"><span class="badge-size" style="background:#0f172a; color:#f8fafc; padding:3px 10px; border-radius:6px; font-size:12px; font-weight:800;">${escapeHtml(recordOrBatch.cloth_size || '-')}</span></div>
+          </div>
+          <div class="summary-cell">
+            <div class="summary-cell-label"><i class="fa-solid fa-plane-arrival" style="color:#059669;"></i> Kedatangan</div>
+            <div class="summary-cell-value">${escapeHtml(recordOrBatch.arrival_date || '-')} <small style="color:#64748b; font-weight:600;">(${escapeHtml(recordOrBatch.transport_arrival || '-')})</small></div>
+          </div>
+          <div class="summary-cell">
+            <div class="summary-cell-label"><i class="fa-solid fa-plane-departure" style="color:#0284c7;"></i> Kepulangan</div>
+            <div class="summary-cell-value">${escapeHtml(recordOrBatch.departure_date || '-')} <small style="color:#64748b; font-weight:600;">(${escapeHtml(recordOrBatch.transport_departure || '-')})</small></div>
+          </div>
+          <div class="summary-cell" style="grid-column: 1 / -1;">
+            <div class="summary-cell-label"><i class="fa-solid fa-heart-pulse" style="color:#059669;"></i> Riwayat Kesehatan</div>
+            <div class="summary-cell-value">${healthHtml}</div>
+          </div>
+        </div>
+      `;
+    }
+  } else {
+    // Kelompok / Rombongan
+    activeSuccessRecord = Array.isArray(recordOrBatch) ? recordOrBatch[0] : recordOrBatch;
+    activeSuccessBatch = Array.isArray(recordOrBatch) ? recordOrBatch : [recordOrBatch];
+    activeSuccessIndex = 0;
+    currentTicketRecord = activeSuccessRecord;
+    currentTicketBatch = activeSuccessBatch;
+    currentTicketIndex = 0;
+
+    const groupName = activeSuccessRecord?.group_name || 'Kafilah Ukhuwah';
+    const leaderName = activeSuccessRecord?.group_leader_name || activeSuccessRecord?.full_name || 'Koordinator';
+    const count = activeSuccessBatch.length;
+    const firstCode = activeSuccessBatch[0]?.registration_code || '';
+    const lastCode = activeSuccessBatch[count - 1]?.registration_code || '';
+    const codeDisplay = (firstCode && lastCode && firstCode !== lastCode) ? `${firstCode} s/d ${lastCode}` : firstCode;
+
+    if (nameEl) nameEl.textContent = `${groupName} (Koord: ${leaderName})`;
+    if (codeBadge) codeBadge.textContent = codeDisplay || `${count} Peserta`;
+
+    if (detailsContainer) {
+      const rowsHtml = activeSuccessBatch.map((item, idx) => {
+        return `
+          <tr id="successGroupRow_${idx}">
+            <td style="text-align: center; font-weight: 700;">${idx + 1}</td>
+            <td><strong style="color: #b45309; font-family: monospace;">${escapeHtml(item.registration_code || '-')}</strong></td>
+            <td><strong>${escapeHtml(item.full_name || '-')}</strong> ${item.is_child ? '<span class="badge-role-child" style="font-size:10px;">Anak</span>' : ''}</td>
+            <td>${escapeHtml(item.gender || '-')}</td>
+            <td>${item.age ? `${item.age} th` : '-'}</td>
+            <td><span class="badge-size" style="background:#0f172a; color:#f8fafc; padding:2px 6px; border-radius:4px; font-size:11px;">${escapeHtml(item.cloth_size || '-')}</span></td>
+            <td><small style="color: #047857; font-weight:600;">${escapeHtml(item.medical_history || 'Sehat')}</small></td>
+            <td style="text-align: center;">
+              <button type="button" class="btn-table-view-ticket" onclick="successSwitchGroupMember(${idx}); toggleSuccessTicketPreview(true);" title="Lihat E-Tiket ${escapeHtml(item.full_name || '')}">
+                <i class="fa-solid fa-eye"></i> Lihat
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      detailsContainer.innerHTML = `
+        <div style="margin-bottom: 12px; font-size: 13.5px; color: #475569;">
+          Kafilah: <strong>${escapeHtml(groupName)}</strong> &bull; Wilayah: <strong>${escapeHtml(activeSuccessRecord?.wilayah || '-')}</strong> &bull; Total: <strong>${count} Jiwa</strong>
+        </div>
+        <div class="success-group-table-wrap">
+          <table class="success-group-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">No</th>
+                <th>Kode Tiket</th>
+                <th>Nama Peserta</th>
+                <th>Gender</th>
+                <th>Usia</th>
+                <th>Baju</th>
+                <th>Kesehatan</th>
+                <th style="width: 75px; text-align: center;">E-Tiket</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  }
+
+  // Atur visibilitas tombol unduh rombongan vs individu
+  const btnDownloadAll = document.getElementById('btnSuccessDownloadAll');
+  const btnDownloadSingle = document.getElementById('btnSuccessDownload');
+  const batchLabel = document.getElementById('successBatchCountLabel');
+
+  if (type === 'kelompok' && activeSuccessBatch && activeSuccessBatch.length > 1) {
+    if (btnDownloadAll) {
+      btnDownloadAll.style.display = 'inline-flex';
+      if (batchLabel) batchLabel.textContent = `${activeSuccessBatch.length} Tiket`;
+    }
+    if (btnDownloadSingle) {
+      btnDownloadSingle.innerHTML = '<i class="fa-solid fa-file-arrow-down"></i> Unduh E-Tiket Ini (PNG)';
+    }
+  } else {
+    if (btnDownloadAll) btnDownloadAll.style.display = 'none';
+    if (btnDownloadSingle) {
+      btnDownloadSingle.innerHTML = '<i class="fa-solid fa-file-arrow-down"></i> Unduh E-Tiket (PNG)';
+    }
+  }
+
+  // Update slider navigasi tiket rombongan
+  updateSuccessGroupSliderUI();
+
+  // Siapkan dan suntikkan tampilan tiket boarding pass ke area pratinjau live
+  try {
+    renderSuccessTicketIntoArea(activeSuccessRecord);
+  } catch (err) {
+    console.warn('Kendala render tiket sukses:', err);
+  }
+
+  // Pastikan formCard & promptBox tersembunyi
+  if (formCard) formCard.style.display = 'none';
+  if (promptBox) promptBox.style.display = 'none';
+  if (container) container.style.display = 'block';
+
+  // Smooth scroll langsung menuju puncak kartu sukses mahabbah
+  setTimeout(() => {
+    if (container) {
+      const topOffset = container.getBoundingClientRect().top + window.pageYOffset - 40;
+      window.scrollTo({ top: Math.max(0, topOffset), behavior: 'smooth' });
+    }
+  }, 100);
+}
+
+function renderSuccessTicketIntoArea(record) {
+  const renderArea = document.getElementById('successTicketRenderArea');
+  if (!renderArea || !record) return;
+
+  try {
+    // 1. KOSONGKAN renderArea TERLEBIH DAHULU agar tidak ada elemen duplikat ID di DOM
+    renderArea.innerHTML = '';
+
+    // 2. Isi #printableTicket yang asli dengan data peserta yang dipilih
+    if (typeof renderActiveTicket === 'function') {
+      renderActiveTicket(record);
+    }
+
+    // 3. Klon tiket yang sudah terisi data resmi peserta
+    const sourceTicket = document.getElementById('printableTicket');
+    if (sourceTicket) {
+      const clonedTicket = sourceTicket.cloneNode(true);
+      clonedTicket.id = 'successClonedPrintableTicket';
+      // Beri awalan 'cloned_' pada semua ID di dalam elemen tiruan agar tidak terjadi konflik DOM ID
+      clonedTicket.querySelectorAll('[id]').forEach(el => {
+        el.id = 'cloned_' + el.id;
+      });
+      renderArea.appendChild(clonedTicket);
+    }
+  } catch (err) {
+    console.warn('Gagal merender pratinjau tiket sukses:', err);
+  }
+}
+
+function updateSuccessGroupSliderUI() {
+  const slider = document.getElementById('successGroupNavSlider');
+  const selMember = document.getElementById('successGroupMemberSelect');
+  const counterText = document.getElementById('successGroupCounterText');
+  const btnPrev = document.getElementById('btnSuccessPrevTicket');
+  const btnNext = document.getElementById('btnSuccessNextTicket');
+
+  if (!slider) return;
+
+  if (activeSuccessType === 'kelompok' && activeSuccessBatch && activeSuccessBatch.length > 1) {
+    slider.style.display = 'flex';
+    if (selMember) {
+      selMember.innerHTML = activeSuccessBatch.map((item, idx) => {
+        const isCurrent = idx === activeSuccessIndex;
+        return `<option value="${idx}" ${isCurrent ? 'selected' : ''}>Peserta ${idx + 1}: ${escapeHtml(item.full_name || 'Peserta')} (${escapeHtml(item.registration_code || '-')})</option>`;
+      }).join('');
+      selMember.value = String(activeSuccessIndex);
+    }
+    if (counterText) {
+      counterText.textContent = `Peserta ${activeSuccessIndex + 1} dari ${activeSuccessBatch.length}`;
+    }
+    if (btnPrev) btnPrev.disabled = activeSuccessIndex === 0;
+    if (btnNext) btnNext.disabled = activeSuccessIndex === activeSuccessBatch.length - 1;
+  } else {
+    slider.style.display = 'none';
+  }
+}
+
+function successStepGroupTicket(delta) {
+  if (!activeSuccessBatch || activeSuccessBatch.length <= 1) return;
+  const newIndex = activeSuccessIndex + delta;
+  if (newIndex >= 0 && newIndex < activeSuccessBatch.length) {
+    successSwitchGroupMember(newIndex);
+  }
+}
+
+function successSwitchGroupMember(indexVal) {
+  const idx = parseInt(indexVal, 10);
+  if (isNaN(idx) || !activeSuccessBatch || idx < 0 || idx >= activeSuccessBatch.length) return;
+
+  activeSuccessIndex = idx;
+  activeSuccessRecord = activeSuccessBatch[idx];
+  currentTicketRecord = activeSuccessRecord;
+  currentTicketIndex = idx;
+
+  // Update UI slider & dropdown
+  updateSuccessGroupSliderUI();
+
+  // Render ulang tiket di area pratinjau live
+  renderSuccessTicketIntoArea(activeSuccessRecord);
+
+  // Jika pratinjau sedang tertutup, buka agar peserta langsung melihatnya
+  const collapsible = document.getElementById('successTicketPreviewCollapsible');
+  const btnToggle = document.getElementById('btnSuccessTogglePreview');
+  if (collapsible && collapsible.style.display === 'none') {
+    isSuccessTicketPreviewOpen = true;
+    collapsible.style.display = 'block';
+    if (btnToggle) {
+      btnToggle.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Sembunyikan E-Tiket';
+    }
+  }
+
+  // Highlight baris di tabel ringkasan
+  document.querySelectorAll('.success-group-table tbody tr').forEach((tr, rIdx) => {
+    if (rIdx === idx) {
+      tr.style.background = '#fef3c7';
+      tr.style.transition = 'background 0.3s ease';
+    } else {
+      tr.style.background = '';
+    }
+  });
+}
+
+function toggleSuccessTicketPreview(forceOpen = null) {
+  const collapsible = document.getElementById('successTicketPreviewCollapsible');
+  const btnToggle = document.getElementById('btnSuccessTogglePreview');
+  if (!collapsible) return;
+
+  if (typeof forceOpen === 'boolean') {
+    isSuccessTicketPreviewOpen = forceOpen;
+  } else {
+    isSuccessTicketPreviewOpen = !isSuccessTicketPreviewOpen;
+  }
+
+  collapsible.style.display = isSuccessTicketPreviewOpen ? 'block' : 'none';
+
+  if (btnToggle) {
+    btnToggle.innerHTML = isSuccessTicketPreviewOpen 
+      ? '<i class="fa-solid fa-eye-slash"></i> Sembunyikan E-Tiket'
+      : '<i class="fa-solid fa-eye"></i> Pratinjau E-Tiket';
+  }
+
+  if (isSuccessTicketPreviewOpen) {
+    collapsible.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+async function triggerSuccessEmailSend() {
+  const alertBox = document.getElementById('successEmailStatusAlert');
+  if (alertBox) {
+    alertBox.style.display = 'block';
+    alertBox.style.background = '#f0f9ff';
+    alertBox.style.border = '1px solid #7dd3fc';
+    alertBox.style.color = '#0369a1';
+    alertBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan pengiriman E-Tiket ke email...';
+  }
+
+  // Panggil fungsi sendTicketEmail yang sudah ada
+  try {
+    await sendTicketEmail();
+    if (alertBox) {
+      alertBox.style.background = '#ecfdf5';
+      alertBox.style.border = '1px solid #6ee7b7';
+      alertBox.style.color = '#065f46';
+      alertBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> E-Tiket resmi telah diproses untuk dikirim ke email peserta.';
+    }
+  } catch (err) {
+    if (alertBox) {
+      alertBox.style.background = '#fef2f2';
+      alertBox.style.border = '1px solid #fca5a5';
+      alertBox.style.color = '#991b1b';
+      alertBox.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> ' + (err.message || 'Kendala saat mengirim email.');
+    }
+  }
+}
+
+async function triggerSuccessTicketDownload() {
+  // Pastikan #printableTicket terisi data peserta yang sedang aktif di pratinjau
+  if (activeSuccessRecord && typeof renderActiveTicket === 'function') {
+    renderActiveTicket(activeSuccessRecord);
+  }
+  // Unduh tiket yang sedang aktif di pratinjau live
+  await downloadTicketImage();
+}
+
+async function triggerSuccessDownloadAllTickets() {
+  if (!activeSuccessBatch || activeSuccessBatch.length === 0) {
+    showToast('Tidak ada tiket rombongan yang dapat diunduh.', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btnSuccessDownloadAll');
+  const origHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh (0/${activeSuccessBatch.length})...`;
+  }
+
+  const alertBox = document.getElementById('successEmailStatusAlert');
+  if (alertBox) {
+    alertBox.style.display = 'block';
+    alertBox.style.background = '#f0fdf4';
+    alertBox.style.border = '1.5px solid #86efac';
+    alertBox.style.color = '#166534';
+    alertBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Memulai pengunduhan otomatis untuk ${activeSuccessBatch.length} tiket rombongan...`;
+  }
+
+  showToast(`Memulai proses pengunduhan ${activeSuccessBatch.length} tiket rombongan satu per satu...`, 'info');
+
+  try {
+    for (let i = 0; i < activeSuccessBatch.length; i++) {
+      if (btn) {
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh (${i + 1}/${activeSuccessBatch.length})...`;
+      }
+      if (alertBox) {
+        alertBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan gambar PNG (${i + 1}/${activeSuccessBatch.length}): <strong>${escapeHtml(activeSuccessBatch[i].full_name || 'Peserta')}</strong>...`;
+      }
+
+      // Ganti tiket aktif
+      successSwitchGroupMember(i);
+      await new Promise(r => setTimeout(r, 220));
+
+      const ticketCard = document.getElementById('printableTicket');
+      if (ticketCard && window.html2canvas) {
+        const canvas = await window.html2canvas(ticketCard, {
+          scale: 2.2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null,
+          logging: false,
+          imageTimeout: 0
+        });
+
+        const member = activeSuccessBatch[i];
+        const regCode = (member.registration_code || `PKB_${i+1}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const cleanName = (member.full_name || `Peserta_${i+1}`).trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+        const fileName = `E-Tiket_${regCode}_${cleanName}.png`;
+
+        const imageUri = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = imageUri;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // Delay jeda aman antar unduhan agar browser tidak mencegat multiple download
+      await new Promise(r => setTimeout(r, 450));
+    }
+
+    if (alertBox) {
+      alertBox.style.background = '#ecfdf5';
+      alertBox.style.border = '1.5px solid #6ee7b7';
+      alertBox.style.color = '#047857';
+      alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> <strong>Alhamdulillah!</strong> Seluruh ${activeSuccessBatch.length} tiket rombongan berhasil diunduh lengkap.`;
+    }
+    showToast(`Alhamdulillah! Berhasil mengunduh semua (${activeSuccessBatch.length}) tiket rombongan.`, 'success');
+  } catch (err) {
+    console.error('Error downloading all group tickets:', err);
+    showToast('Kendala saat mengunduh tiket rombongan: ' + err.message, 'error');
+    if (alertBox) {
+      alertBox.style.background = '#fef2f2';
+      alertBox.style.border = '1.5px solid #fca5a5';
+      alertBox.style.color = '#991b1b';
+      alertBox.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Kendala saat mengunduh: ' + err.message;
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
+  }
+}
+
+function finishSuccessRegistration() {
+  const container = document.getElementById('regSuccessViewContainer');
+  if (container) container.style.display = 'none';
+
+  // Pulihkan tampilan normal registrasi
+  const hangingGallery = document.querySelector('.hanging-gallery-wrapper');
+  const storyGrid = document.getElementById('storyContentGrid');
+  const ctaWrap = document.getElementById('regisCtaWrapper');
+  const floatingBar = document.querySelector('.retreat-floating-bar-wrapper');
+  if (hangingGallery) hangingGallery.style.display = '';
+  if (storyGrid) storyGrid.style.display = '';
+  if (ctaWrap) ctaWrap.style.display = '';
+  if (floatingBar) floatingBar.style.display = '';
+
+  // Bersihkan form & kembalikan ke beranda
+  resetToSelectionScreen();
+  navigateTo('dashboard');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function registerAnotherParticipant() {
+  const container = document.getElementById('regSuccessViewContainer');
+  if (container) container.style.display = 'none';
+
+  // Pulihkan tampilan normal registrasi
+  const hangingGallery = document.querySelector('.hanging-gallery-wrapper');
+  const floatingBar = document.querySelector('.retreat-floating-bar-wrapper');
+  if (hangingGallery) hangingGallery.style.display = '';
+  if (floatingBar) floatingBar.style.display = '';
+
+  resetToSelectionScreen();
+  if (typeof navigateTo === 'function') {
+    navigateTo('registration');
+  }
+  openRegistrationSelector();
+}
+
+window.showSuccessRegistrationView = showSuccessRegistrationView;
+window.toggleSuccessTicketPreview = toggleSuccessTicketPreview;
+window.triggerSuccessEmailSend = triggerSuccessEmailSend;
+window.triggerSuccessTicketDownload = triggerSuccessTicketDownload;
+window.triggerSuccessDownloadAllTickets = triggerSuccessDownloadAllTickets;
+window.successStepGroupTicket = successStepGroupTicket;
+window.successSwitchGroupMember = successSwitchGroupMember;
+window.finishSuccessRegistration = finishSuccessRegistration;
+window.registerAnotherParticipant = registerAnotherParticipant;
 
 // ===================================================================
 // 6. REKAP DATA & METRICS

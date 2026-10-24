@@ -169,10 +169,45 @@ class PaskasDataService {
    */
   async syncSettingsFromSupabase() {
     this.ensureSupabaseClient();
-    if (!this.isSupabaseConnected || !this.supabaseClient) return null;
-    try {
-      const { data, error } = await this.supabaseClient.from('app_settings').select('*');
-      if (!error && Array.isArray(data) && data.length > 0) {
+    let data = null;
+
+    if (this.isSupabaseConnected && this.supabaseClient) {
+      try {
+        const res = await this.supabaseClient.from('app_settings').select('*');
+        if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
+          data = res.data;
+        }
+      } catch (e) {
+        console.warn('Gagal membaca app_settings via SDK, mencoba REST fetch:', e);
+      }
+    }
+
+    if (!data) {
+      try {
+        const creds = this.getCredentials();
+        if (creds.url && creds.key) {
+          const cleanUrl = creds.url.replace(/\/+$/, '');
+          const resp = await fetch(`${cleanUrl}/rest/v1/app_settings?select=*`, {
+            headers: {
+              'apikey': creds.key,
+              'Authorization': `Bearer ${creds.key}`
+            }
+          });
+          if (resp.ok) {
+            const json = await resp.json();
+            if (Array.isArray(json) && json.length > 0) {
+              data = json;
+              this.isSupabaseConnected = true;
+            }
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('REST API settings fetch error:', fetchErr);
+      }
+    }
+
+    if (Array.isArray(data) && data.length > 0) {
+      try {
         const cloudSettings = {};
         data.forEach(row => {
           if (!row.setting_key) return;
@@ -232,9 +267,9 @@ class PaskasDataService {
         const merged = { ...this.getSettings(), ...cloudSettings };
         localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(merged));
         return merged;
+      } catch (e) {
+        console.warn('Gagal membaca app_settings dari Supabase:', e);
       }
-    } catch (e) {
-      console.warn('Gagal membaca app_settings dari Supabase:', e);
     }
     return null;
   }
@@ -486,7 +521,34 @@ class PaskasDataService {
           console.warn('Supabase getRegistrations error:', error.message || error);
         }
       } catch (e) {
-        console.warn('Gagal query Supabase, membaca dari LocalStorage:', e);
+        console.warn('Gagal query Supabase SDK, mencoba direct REST fetch:', e);
+      }
+    }
+
+    // RESILIENT FALLBACK: Direct REST API fetch menggunakan apikey default
+    if (cloudList === null) {
+      try {
+        const creds = this.getCredentials();
+        if (creds.url && creds.key) {
+          const cleanUrl = creds.url.replace(/\/+$/, '');
+          const resp = await fetch(`${cleanUrl}/rest/v1/registrations?select=*&order=created_at.desc`, {
+            headers: {
+              'apikey': creds.key,
+              'Authorization': `Bearer ${creds.key}`
+            }
+          });
+          if (resp.ok) {
+            const restData = await resp.json();
+            if (Array.isArray(restData)) {
+              cloudList = restData;
+              this.isSupabaseConnected = true;
+            }
+          } else {
+            console.warn('Direct REST fetch returned status:', resp.status);
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Direct REST fetch fallback error:', fetchErr);
       }
     }
 
@@ -643,11 +705,43 @@ class PaskasDataService {
           newRecord._is_offline_pending = false;
         }
       } catch (err) {
-        console.warn('Gagal simpan ke Supabase, simpan lokal sebagai cadangan:', err);
+        console.warn('Gagal simpan ke Supabase via SDK, mencoba REST fallback:', err);
         newRecord._is_offline_pending = true;
       }
     } else {
       newRecord._is_offline_pending = true;
+    }
+
+    if (!newRecord.id || newRecord._is_offline_pending) {
+      try {
+        const creds = this.getCredentials();
+        if (creds.url && creds.key) {
+          const cleanUrl = creds.url.replace(/\/+$/, '');
+          const postData = this.sanitizeRegistrationPayload(newRecord);
+          delete postData.id;
+          delete postData._is_offline_pending;
+          const resp = await fetch(`${cleanUrl}/rest/v1/registrations`, {
+            method: 'POST',
+            headers: {
+              'apikey': creds.key,
+              'Authorization': `Bearer ${creds.key}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(postData)
+          });
+          if (resp.ok) {
+            const resJson = await resp.json();
+            if (resJson && resJson[0]) {
+              newRecord.id = resJson[0].id;
+              newRecord._is_offline_pending = false;
+              this.isSupabaseConnected = true;
+            }
+          }
+        }
+      } catch (rErr) {
+        console.warn('Direct REST insert error:', rErr);
+      }
     }
 
     // Simpan ke LocalStorage sebagai backup instan
@@ -728,11 +822,50 @@ class PaskasDataService {
           });
         }
       } catch (err) {
-        console.warn('Gagal batch insert ke Supabase, simpan lokal sebagai cadangan:', err);
+        console.warn('Gagal batch insert ke Supabase via SDK, mencoba REST fallback:', err);
         stampedList.forEach(item => { item._is_offline_pending = true; });
       }
     } else {
       stampedList.forEach(item => { item._is_offline_pending = true; });
+    }
+
+    if (stampedList.some(item => !item.id || item._is_offline_pending)) {
+      try {
+        const creds = this.getCredentials();
+        if (creds.url && creds.key) {
+          const cleanUrl = creds.url.replace(/\/+$/, '');
+          const cleanList = stampedList.map(item => {
+            const c = this.sanitizeRegistrationPayload(item);
+            delete c.id;
+            delete c._is_offline_pending;
+            return c;
+          });
+          const resp = await fetch(`${cleanUrl}/rest/v1/registrations`, {
+            method: 'POST',
+            headers: {
+              'apikey': creds.key,
+              'Authorization': `Bearer ${creds.key}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(cleanList)
+          });
+          if (resp.ok) {
+            const resJson = await resp.json();
+            if (Array.isArray(resJson)) {
+              resJson.forEach((row, idx) => {
+                if (stampedList[idx]) {
+                  stampedList[idx].id = row.id;
+                  stampedList[idx]._is_offline_pending = false;
+                }
+              });
+              this.isSupabaseConnected = true;
+            }
+          }
+        }
+      } catch (bErr) {
+        console.warn('Direct REST batch insert error:', bErr);
+      }
     }
 
     const current = await this.getLocalRegistrations();
