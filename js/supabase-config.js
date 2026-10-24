@@ -944,6 +944,7 @@ class PaskasDataService {
       this.recordDeletedCode(codeToDelete);
     }
 
+    // 1. Coba hapus di Cloud Supabase via SDK Client
     if (this.isSupabaseConnected && this.supabaseClient) {
       try {
         if (codeToDelete) {
@@ -961,8 +962,36 @@ class PaskasDataService {
           if (errId) console.warn('Supabase delete by id error:', errId);
         }
       } catch (err) {
-        console.warn('Gagal delete di Supabase:', err);
+        console.warn('Gagal delete di Supabase via SDK:', err);
       }
+    }
+
+    // 2. RESILIENT FALLBACK: Pastikan data terhapus permanen via Direct REST API ke Supabase
+    try {
+      const creds = this.getCredentials();
+      if (creds.url && creds.key) {
+        const cleanUrl = creds.url.replace(/\/+$/, '');
+        if (codeToDelete) {
+          await fetch(`${cleanUrl}/rest/v1/registrations?registration_code=eq.${encodeURIComponent(codeToDelete)}`, {
+            method: 'DELETE',
+            headers: {
+              'apikey': creds.key,
+              'Authorization': `Bearer ${creds.key}`
+            }
+          });
+        }
+        if (idToDelete && /^\d+$/.test(String(idToDelete))) {
+          await fetch(`${cleanUrl}/rest/v1/registrations?id=eq.${parseInt(idToDelete, 10)}`, {
+            method: 'DELETE',
+            headers: {
+              'apikey': creds.key,
+              'Authorization': `Bearer ${creds.key}`
+            }
+          });
+        }
+      }
+    } catch (restErr) {
+      console.warn('Direct REST delete fallback error:', restErr);
     }
 
     const filtered = current.filter(item => {
