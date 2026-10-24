@@ -118,15 +118,16 @@ ON app_settings FOR UPDATE USING (true);
 
 DROP POLICY IF EXISTS "Allow public delete for app_settings" ON app_settings;
 
--- 4. Storage Pas Foto Peserta (bucket 'foto-peserta')
+-- 4. Storage Pas Foto Peserta (bucket 'paskas bahagia')
 -- Foto disimpan sebagai file gambar; kolom registrations.photo_url berisi link publiknya.
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('foto-peserta', 'foto-peserta', true)
-ON CONFLICT (id) DO NOTHING;
-
-DROP POLICY IF EXISTS "Allow public upload foto-peserta" ON storage.objects;
-CREATE POLICY "Allow public upload foto-peserta"
+DROP POLICY IF EXISTS "Allow public upload paskas bahagia" ON storage.objects;
+CREATE POLICY "Allow public upload paskas bahagia"
 ON storage.objects FOR INSERT TO anon, authenticated
-WITH CHECK (bucket_id = 'foto-peserta');
+WITH CHECK (bucket_id = 'paskas bahagia');
+
+DROP POLICY IF EXISTS "Allow public read paskas bahagia" ON storage.objects;
+CREATE POLICY "Allow public read paskas bahagia"
+ON storage.objects FOR SELECT TO anon, authenticated
+USING (bucket_id = 'paskas bahagia');
 
 -- Selesai! Skema database siap & aman digunakan oleh frontend PASKAS BAHAGIA.

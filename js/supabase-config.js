@@ -395,12 +395,26 @@ class PaskasDataService {
       const blob = await (await fetch(photo)).blob();
       const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
       const safeCode = String(registrationCode || 'PKB').replace(/[^a-zA-Z0-9-]/g, '_');
-      const path = `${safeCode}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
-      const { error } = await this.supabaseClient.storage
-        .from('foto-peserta')
+      const path = `foto-peserta/${safeCode}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+
+      // Utamakan bucket 'paskas bahagia' yang sudah ada di Supabase
+      const bucketName = 'paskas bahagia';
+      let { error } = await this.supabaseClient.storage
+        .from(bucketName)
         .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
+
+      if (error && error.message && error.message.includes('Bucket not found')) {
+        const fb = await this.supabaseClient.storage
+          .from('foto-peserta')
+          .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
+        if (!fb.error) {
+          const { data } = this.supabaseClient.storage.from('foto-peserta').getPublicUrl(path);
+          return (data && data.publicUrl) || photo;
+        }
+      }
+
       if (error) throw error;
-      const { data } = this.supabaseClient.storage.from('foto-peserta').getPublicUrl(path);
+      const { data } = this.supabaseClient.storage.from(bucketName).getPublicUrl(path);
       return (data && data.publicUrl) || photo;
     } catch (err) {
       console.warn('Gagal upload foto ke Supabase Storage, simpan base64 sebagai cadangan:', err);
