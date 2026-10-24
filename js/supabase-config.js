@@ -572,13 +572,21 @@ class PaskasDataService {
         if (toPurge.length > 0) {
           cloudList = cloudList.filter(r => r && (!r.registration_code || !deletedCodes.has(r.registration_code)));
           if (this.isSupabaseConnected && this.supabaseClient) {
-            toPurge.forEach(p => {
-              this.supabaseClient
-                .from('registrations')
-                .delete()
-                .eq('registration_code', p.registration_code)
-                .catch(() => {});
-            });
+            const purgeCodes = toPurge.map(p => p.registration_code).filter(Boolean);
+            if (purgeCodes.length > 0) {
+              try {
+                this.supabaseClient
+                  .from('registrations')
+                  .delete()
+                  .in('registration_code', purgeCodes)
+                  .then(
+                    ({ error }) => { if (error) console.warn('Supabase purge error:', error); },
+                    (err) => console.warn('Supabase purge exception:', err)
+                  );
+              } catch (purgeErr) {
+                console.warn('Purge error:', purgeErr);
+              }
+            }
           }
         }
       }
