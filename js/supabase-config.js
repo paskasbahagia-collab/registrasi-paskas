@@ -876,18 +876,27 @@ class PaskasDataService {
     const updated = { ...current, ...newSettings };
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
 
-    // Bila terhubung ke Supabase, update tabel app_settings jika tersedia
-    if (this.isSupabaseConnected && this.supabaseClient) {
+    // Bila terhubung ke Supabase, HANYA upsert keys yang benar-benar diubah (newSettings)
+    // agar TIDAK menimpa pengaturan lain dengan cache lama yang tertumpuk
+    if (this.isSupabaseConnected && this.supabaseClient && newSettings && typeof newSettings === 'object') {
       try {
-        const rows = Object.entries(updated).map(([key, val]) => ({
-          setting_key: key,
-          setting_value: typeof val === 'object' ? JSON.stringify(val) : String(val),
-          updated_at: new Date().toISOString()
-        }));
-        const { error } = await this.supabaseClient.from('app_settings').upsert(rows, { onConflict: 'setting_key' });
-        if (error) console.warn('Gagal upsert app_settings ke Supabase:', error);
+        const rows = Object.entries(newSettings)
+          .filter(([_, val]) => val !== undefined)
+          .map(([key, val]) => ({
+            setting_key: key,
+            setting_value: typeof val === 'object' ? JSON.stringify(val) : String(val),
+            updated_at: new Date().toISOString()
+          }));
+        if (rows.length > 0) {
+          const { error } = await this.supabaseClient.from('app_settings').upsert(rows, { onConflict: 'setting_key' });
+          if (error) {
+            console.warn('Gagal upsert app_settings ke Supabase:', error);
+            this.showCloudSaveWarning();
+          }
+        }
       } catch (e) {
         console.warn('Gagal update settings di Supabase:', e);
+        this.showCloudSaveWarning();
       }
     }
 

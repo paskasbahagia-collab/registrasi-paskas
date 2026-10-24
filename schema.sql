@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Masukkan / Perbarui pengaturan default (Batas Pendaftaran, Status, Judul Acara, Lokasi Jogja)
+-- Masukkan pengaturan default HANYA jika belum pernah ada (tidak menimpa data yang sudah diedit)
 INSERT INTO app_settings (setting_key, setting_value, description)
 VALUES 
     ('registration_deadline', '2026-12-31T23:59:59', 'Batas akhir waktu pengisian registrasi peserta'),
@@ -70,15 +70,6 @@ VALUES
     ('uniform_size_chart_ikhwan', E'S: Lebar 46cm / LD 92cm\nM: Lebar 48cm / LD 96cm\nL: Lebar 50cm / LD 100cm\nXL: Lebar 52cm / LD 104cm\nXXL: Lebar 54cm / LD 108cm\n3XL: Lebar 56cm / LD 112cm\n4XL: Lebar 58cm / LD 116cm', 'Panduan standar size chart seragam ikhwan'),
     ('uniform_size_chart_akhwat', E'S: Lebar 46cm / LD 92cm\nM: Lebar 48cm / LD 96cm\nL: Lebar 50cm / LD 100cm\nXL: Lebar 52cm / LD 104cm\nXXL: Lebar 54cm / LD 108cm\n3XL: Lebar 56cm / LD 112cm\n4XL: Lebar 58cm / LD 116cm', 'Panduan standar size chart seragam akhwat')
 ON CONFLICT (setting_key) DO NOTHING;
-
--- Query pembaruan langsung (jika tabel app_settings sudah pernah terisi sebelumnya)
-UPDATE app_settings 
-SET setting_value = 'Rocket Convention Hall, Sleman, D.I. Yogyakarta', updated_at = NOW()
-WHERE setting_key = 'event_location';
-
-UPDATE app_settings 
-SET setting_value = '2026-11-10 s/d 2026-11-13', updated_at = NOW()
-WHERE setting_key = 'event_date';
 
 -- 3. Konfigurasi Row Level Security (RLS) Diperkuat
 -- Supaya aplikasi web frontend aman:

@@ -16,9 +16,8 @@ function parseDirectImageUrl(rawUrl, isThumb = false) {
     return url;
   }
 
-  // 2. Deteksi link Google Maps atau Rocket Convention Hall
-  if (url.includes('google.com/maps') || url.includes('maps.google') || url.includes('goo.gl') || url.toLowerCase().includes('rocket')) {
-    // Jika mengarah ke Rocket Convention Hall, gunakan aset foto arsitektur 4K UHD ultra-jernih lokal
+  if (url.includes('google.com/maps') || url.includes('maps.google') || url.includes('goo.gl')) {
+    // Jika mengarah ke Rocket Convention Hall di Google Maps, gunakan aset foto ultra-jernih lokal
     if (url.toLowerCase().includes('rocket') || url.toLowerCase().includes('convention')) {
       return isThumb ? 'images/rocket-convention-hall-card.jpg' : 'images/rocket-convention-hall-hero.jpg';
     }
@@ -426,9 +425,7 @@ function loadStoredRegistrationContent() {
       if (parsed && typeof parsed === 'object') {
         const savedSettings = window.dataService ? window.dataService.getSettings() : {};
         const fallbackLocation = savedSettings.event_location || DEFAULT_REGISTRATION_CONTENT.location;
-        const resolvedLocation = (parsed.location && parsed.location !== 'Bumi Perkemahan Silaturahmi') 
-          ? parsed.location 
-          : fallbackLocation;
+        const resolvedLocation = parsed.location || fallbackLocation;
 
         return {
           location: resolvedLocation,
@@ -7648,6 +7645,18 @@ async function saveEventInfoSettings() {
     event_desc: desc
   });
 
+  if (loc) {
+    REGISTRATION_CONTENT.location = loc;
+    try {
+      localStorage.setItem('paskas_reg_content', JSON.stringify(REGISTRATION_CONTENT));
+    } catch (e) { }
+    if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+      window.dataService.saveCloudSetting('paskas_reg_content', REGISTRATION_CONTENT).catch(() => { });
+    }
+    const regLocInput = document.getElementById('cfg_regLocation');
+    if (regLocInput) regLocInput.value = loc;
+  }
+
   applyEventInfoToUI({
     event_headline: headline,
     event_name: name,
@@ -9878,13 +9887,8 @@ async function saveCardsFromSettings() {
       DASHBOARD_CARDS[idx].title = title;
       DASHBOARD_CARDS[idx].category = category;
       DASHBOARD_CARDS[idx].subtitle = subtitle;
-      if (idx === 0 && (cover.includes('rocket') || cover.includes('convention'))) {
-        DASHBOARD_CARDS[idx].thumbImg = 'images/rocket-convention-hall-card.jpg';
-        DASHBOARD_CARDS[idx].coverImg = 'images/rocket-convention-hall-hero.jpg';
-      } else {
-        DASHBOARD_CARDS[idx].coverImg = cover;
-        DASHBOARD_CARDS[idx].thumbImg = cover;
-      }
+      DASHBOARD_CARDS[idx].coverImg = cover || DASHBOARD_CARDS[idx].coverImg;
+      DASHBOARD_CARDS[idx].thumbImg = cover || DASHBOARD_CARDS[idx].thumbImg;
       DASHBOARD_CARDS[idx].narration = narration;
       DASHBOARD_CARDS[idx].badge = `${String(idx + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
     }
@@ -9965,7 +9969,8 @@ function renderRegistrationPageContent() {
   const titleEl = document.getElementById('regStorySerifTitle');
   const leadEl = document.getElementById('regStoryLeadText');
 
-  if (locEl) locEl.textContent = REGISTRATION_CONTENT.location || 'Bumi Perkemahan Silaturahmi';
+  const activeLoc = REGISTRATION_CONTENT.location || (window.dataService ? window.dataService.getSettings().event_location : '') || '';
+  if (locEl && activeLoc) locEl.textContent = activeLoc;
   if (kickerEl) kickerEl.textContent = REGISTRATION_CONTENT.kicker || '';
   if (titleEl) titleEl.textContent = REGISTRATION_CONTENT.title || '';
   if (leadEl) leadEl.textContent = REGISTRATION_CONTENT.narration || '';
