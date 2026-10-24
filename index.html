@@ -2157,6 +2157,14 @@
                 <i class="fa-solid fa-people-roof"></i>
                 <span>Gender &amp; Tipe</span>
               </button>
+              <button class="chart-tab-pill" data-chart="health" onclick="switchChartTab('health')">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>Rekap Kesehatan</span>
+              </button>
+              <button class="chart-tab-pill" data-chart="paskas" onclick="switchChartTab('paskas')">
+                <i class="fa-solid fa-ranking-star"></i>
+                <span>Jenjang Paskas</span>
+              </button>
               <button class="chart-tab-pill" data-chart="all" onclick="switchChartTab('all')">
                 <i class="fa-solid fa-table-cells-large"></i>
                 <span>Tampilkan Semua</span>
@@ -2330,7 +2338,138 @@
               </div>
             </div>
 
-            <!-- VIEW 5: ALL GRIDS (Overview View) -->
+            <!-- VIEW 5: REKAP KESEHATAN (Focus View) -->
+            <div class="chart-view-panel" id="chartViewHealth" style="display: none;">
+              <div class="chart-focused-grid">
+                <div class="chart-box main-chart-box">
+                  <div class="chart-box-top">
+                    <h4 class="chart-title">
+                      <i class="fa-solid fa-heart-pulse text-green"></i>
+                      Status Kesiapan Fisik &amp; Riwayat Medis Peserta
+                    </h4>
+                    <span class="chart-badge-tag" id="tagHealthLead">Kondisi Prima: -</span>
+                  </div>
+                  <div class="chart-canvas-wrapper" style="height: 310px;">
+                    <canvas id="chartHealthStatus"></canvas>
+                  </div>
+                </div>
+
+                <!-- Insight Pod -->
+                <div class="chart-insight-box">
+                  <h5 class="insight-title"><i class="fa-solid fa-kit-medical"></i> Ringkasan Medis &amp; Darurat</h5>
+                  <div class="insight-metric-list" id="healthInsightList">
+                    <!-- Populated dynamically via JS -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tabel Peserta Memerlukan Perhatian Medis Khusus -->
+              <div class="rekap-wilayah-table-card" style="margin-top: 24px;">
+                <div class="rekap-section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+                  <div>
+                    <h4 style="font-size: 16px; font-weight: 700; color: #132a1c; margin: 0; display: flex; align-items: center; gap: 8px;">
+                      <i class="fa-solid fa-notes-medical" style="color: #dc2626;"></i> 
+                      Daftar Peserta dengan Riwayat Medis / Perhatian Khusus
+                    </h4>
+                    <p style="font-size: 12.5px; color: #475569; margin: 3px 0 0 0;">
+                      Daftar peserta yang memiliki catatan riwayat medis atau alergi untuk pemantauan dan kesiapsiagaan tim posko kesehatan.
+                    </p>
+                  </div>
+                  <span class="chart-badge-tag" id="rekapHealthTotalBadge" style="background: #fee2e2; color: #991b1b; border-color: #fca5a5;">0 Perlu Pantauan</span>
+                </div>
+
+                <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                  <table class="data-table" style="font-size: 13px;">
+                    <thead>
+                      <tr>
+                        <th width="50" style="text-align: center;">No</th>
+                        <th>Nama Peserta</th>
+                        <th width="80" style="text-align: center;">Usia</th>
+                        <th width="100" style="text-align: center;">Gender</th>
+                        <th width="150">Wilayah / Daerah</th>
+                        <th width="160">Gedung / Kamar</th>
+                        <th>Riwayat Medis / Keluhan</th>
+                        <th width="140" style="text-align: center;">No WhatsApp</th>
+                        <th width="140" style="text-align: center;">No HP Darurat</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rekapHealthTableBody">
+                      <!-- Populated dynamically via JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- VIEW 6: REKAP JENJANG KEANGGOTAAN PASKAS (Focus View) -->
+            <div class="chart-view-panel" id="chartViewPaskas" style="display: none;">
+              <div class="chart-focused-grid">
+                <div class="chart-box main-chart-box">
+                  <div class="chart-box-top">
+                    <h4 class="chart-title">
+                      <i class="fa-solid fa-ranking-star text-green"></i>
+                      Komposisi Jenjang Keanggotaan PASKAS
+                    </h4>
+                    <span class="chart-badge-tag" id="tagPaskasLead">Jenjang Terbanyak: -</span>
+                  </div>
+                  <div class="chart-canvas-wrapper" style="height: 310px;">
+                    <canvas id="chartPaskasStatus"></canvas>
+                  </div>
+                </div>
+
+                <!-- Insight Pod -->
+                <div class="chart-insight-box">
+                  <h5 class="insight-title"><i class="fa-solid fa-award"></i> Kategori Keanggotaan Paskas</h5>
+                  <div class="insight-metric-list" id="paskasInsightList">
+                    <!-- Populated dynamically via JS -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tabel Rekapitulasi Jenjang Paskas per Wilayah -->
+              <div class="rekap-wilayah-table-card" style="margin-top: 24px;">
+                <div class="rekap-section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+                  <div>
+                    <h4 style="font-size: 16px; font-weight: 700; color: #132a1c; margin: 0; display: flex; align-items: center; gap: 8px;">
+                      <i class="fa-solid fa-users-viewfinder text-green"></i> Rekapitulasi Jenjang Anggota per Wilayah
+                    </h4>
+                    <p style="font-size: 12.5px; color: #475569; margin: 3px 0 0 0;">
+                      Sebaran anggota PASKAS Baru (&lt; 1 th), PASKAS Madya (1 - &lt;5 th), dan PASKAS Senior (&ge; 5 th) di setiap wilayah.
+                    </p>
+                  </div>
+                  <span class="chart-badge-tag" id="rekapPaskasTotalBadge">0 Wilayah</span>
+                </div>
+
+                <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                  <table class="data-table" style="font-size: 13px;">
+                    <thead>
+                      <tr>
+                        <th width="50" style="text-align: center;">No</th>
+                        <th>Wilayah Asal</th>
+                        <th width="120" style="text-align: center;">Total Peserta</th>
+                        <th width="160" style="text-align: center;">PASKAS Baru (&lt;1 Th)</th>
+                        <th width="170" style="text-align: center;">PASKAS Madya (1-&lt;5 Th)</th>
+                        <th width="160" style="text-align: center;">PASKAS Senior (&ge;5 Th)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rekapPaskasTableBody">
+                      <!-- Populated dynamically via JS -->
+                    </tbody>
+                    <tfoot>
+                      <tr style="background: rgba(45, 106, 79, 0.08); font-weight: 700; color: #132a1c;">
+                        <td colspan="2" style="text-align: right; padding: 12px 14px;">TOTAL KESELURUHAN:</td>
+                        <td style="text-align: center;" id="rekapPaskasSumTotal">0 Orang</td>
+                        <td style="text-align: center;" id="rekapPaskasSumBaru">0 Orang</td>
+                        <td style="text-align: center;" id="rekapPaskasSumMadya">0 Orang</td>
+                        <td style="text-align: center;" id="rekapPaskasSumSenior">0 Orang</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- VIEW 7: ALL GRIDS (Overview View) -->
             <div class="chart-view-panel" id="chartViewAll" style="display: none;">
               <div class="charts-all-grid">
                 <div class="chart-box">
@@ -2355,6 +2494,18 @@
                   <h4 class="chart-title"><i class="fa-solid fa-people-roof text-green"></i> Komposisi Gender</h4>
                   <div class="chart-canvas-wrapper" style="height: 230px;">
                     <canvas id="chartGenderAll"></canvas>
+                  </div>
+                </div>
+                <div class="chart-box">
+                  <h4 class="chart-title"><i class="fa-solid fa-heart-pulse text-green"></i> Kesiapan Fisik &amp; Kesehatan</h4>
+                  <div class="chart-canvas-wrapper" style="height: 230px;">
+                    <canvas id="chartHealthAll"></canvas>
+                  </div>
+                </div>
+                <div class="chart-box">
+                  <h4 class="chart-title"><i class="fa-solid fa-ranking-star text-green"></i> Jenjang Keanggotaan Paskas</h4>
+                  <div class="chart-canvas-wrapper" style="height: 230px;">
+                    <canvas id="chartPaskasAll"></canvas>
                   </div>
                 </div>
               </div>

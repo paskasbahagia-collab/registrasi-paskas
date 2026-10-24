@@ -471,6 +471,10 @@ let chartClothAllInstance = null;
 let chartTransportAllInstance = null;
 let chartWilayahAllInstance = null;
 let chartGenderAllInstance = null;
+let chartHealthInstance = null;
+let chartHealthAllInstance = null;
+let chartPaskasInstance = null;
+let chartPaskasAllInstance = null;
 
 // ===================================================================
 // MASTER WILAYAH / ASAL DAERAH KAFILAH
@@ -6378,6 +6382,8 @@ function switchChartTab(tabName) {
     transport: document.getElementById('chartViewTransport'),
     wilayah: document.getElementById('chartViewWilayah'),
     gender: document.getElementById('chartViewGender'),
+    health: document.getElementById('chartViewHealth'),
+    paskas: document.getElementById('chartViewPaskas'),
     all: document.getElementById('chartViewAll')
   };
 
@@ -6470,6 +6476,72 @@ function renderCharts() {
 
   // Render Rekapitulasi Peserta per Daerah Table
   renderRekapWilayahSummaryTable(sortedWilayahList, totalOrang, male, female, individu, kelompok);
+
+  // Health computation
+  function checkHasMedicalIssue(r) {
+    if (!r.medical_history) return false;
+    const s = String(r.medical_history).trim().toLowerCase();
+    return s !== '' && s !== 'tidak ada' && s !== '-' && s !== 'sehat' && s !== 'none' && s !== 'nihil';
+  }
+
+  const healthyList = allRegistrations.filter(r => !checkHasMedicalIssue(r));
+  const healthIssueList = allRegistrations.filter(r => checkHasMedicalIssue(r));
+  const healthyCount = healthyList.length;
+  const issueCount = healthIssueList.length;
+  const healthyPct = totalOrang > 0 ? Math.round((healthyCount / totalOrang) * 100) : 0;
+  const issuePct = totalOrang > 0 ? (100 - healthyPct) : 0;
+  const emergencyReadyCount = allRegistrations.filter(r => r.emergency_phone && r.emergency_phone.trim() !== '' && r.emergency_phone.trim() !== '-').length;
+
+  renderHealthSection(healthIssueList, healthyCount, issueCount, healthyPct, issuePct, emergencyReadyCount, totalOrang);
+
+  // Paskas membership computation
+  const currentYr = new Date().getFullYear();
+  function calcPaskasCategory(item) {
+    let joinYear = null;
+    if (item.join_year) {
+      const p = parseInt(item.join_year, 10);
+      if (!isNaN(p) && p > 1900 && p <= currentYr + 1) joinYear = p;
+    }
+    if (!joinYear && item.created_at) {
+      const cYear = new Date(item.created_at).getFullYear();
+      if (!isNaN(cYear)) joinYear = cYear;
+    }
+    if (!joinYear) joinYear = currentYr;
+
+    const diff = Math.max(0, currentYr - joinYear);
+    if (diff < 1) {
+      return { level: 'PASKAS Baru', desc: '< 1 Tahun', years: diff, joinYear };
+    } else if (diff < 5) {
+      return { level: 'PASKAS Madya', desc: `${diff} Tahun`, years: diff, joinYear };
+    } else {
+      return { level: 'PASKAS Senior', desc: `${diff} Tahun`, years: diff, joinYear };
+    }
+  }
+
+  let countBaru = 0, countMadya = 0, countSenior = 0;
+  const paskasByWilayah = {};
+
+  allRegistrations.forEach(r => {
+    const cat = calcPaskasCategory(r);
+    if (cat.level === 'PASKAS Baru') countBaru++;
+    else if (cat.level === 'PASKAS Madya') countMadya++;
+    else countSenior++;
+
+    const w = normalizeWilayahName(r.wilayah || 'Lainnya');
+    if (!paskasByWilayah[w]) {
+      paskasByWilayah[w] = { name: w, total: 0, baru: 0, madya: 0, senior: 0 };
+    }
+    paskasByWilayah[w].total++;
+    if (cat.level === 'PASKAS Baru') paskasByWilayah[w].baru++;
+    else if (cat.level === 'PASKAS Madya') paskasByWilayah[w].madya++;
+    else paskasByWilayah[w].senior++;
+  });
+
+  const pctBaru = totalOrang > 0 ? Math.round((countBaru / totalOrang) * 100) : 0;
+  const pctMadya = totalOrang > 0 ? Math.round((countMadya / totalOrang) * 100) : 0;
+  const pctSenior = totalOrang > 0 ? (100 - pctBaru - pctMadya) : 0;
+
+  renderPaskasSection(paskasByWilayah, countBaru, countMadya, countSenior, pctBaru, pctMadya, pctSenior, totalOrang);
 
   // --- 2. POPULATE INSIGHT PODS & TAGS ---
   const tagCloth = document.getElementById('tagClothLead');
@@ -6925,6 +6997,98 @@ function renderCharts() {
     });
   }
 
+  // Chart Function: Health Status (Doughnut)
+  function renderHealthChart(canvasId, refInstance) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+    if (refInstance) refInstance.destroy();
+    return new Chart(ctx, {
+      type: 'doughnut',
+      plugins: [doughnutSliceValuesPlugin],
+      data: {
+        labels: ['Kondisi Prima (Sehat)', 'Perlu Perhatian Medis Khusus'],
+        datasets: [{
+          label: 'Status Kesehatan',
+          data: [healthyCount, issueCount],
+          backgroundColor: ['#166534', '#dc2626'],
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: '#132a1c', font: { size: 12, weight: '600' }, boxWidth: 14 }
+          },
+          tooltip: {
+            backgroundColor: '#132a1c',
+            titleColor: '#ffffff',
+            bodyColor: '#eaf4ee',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: (context) => {
+                const total = healthyCount + issueCount;
+                const val = context.raw || 0;
+                const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                return ` ${context.label}: ${val} Orang (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Chart Function: Paskas Membership (Doughnut)
+  function renderPaskasChart(canvasId, refInstance) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+    if (refInstance) refInstance.destroy();
+    return new Chart(ctx, {
+      type: 'doughnut',
+      plugins: [doughnutSliceValuesPlugin],
+      data: {
+        labels: ['PASKAS Baru (< 1 Th)', 'PASKAS Madya (1 - <5 Th)', 'PASKAS Senior (≥ 5 Th)'],
+        datasets: [{
+          label: 'Jenjang Keanggotaan',
+          data: [countBaru, countMadya, countSenior],
+          backgroundColor: ['#0284c7', '#d97706', '#15803d'],
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: '#132a1c', font: { size: 12, weight: '600' }, boxWidth: 14 }
+          },
+          tooltip: {
+            backgroundColor: '#132a1c',
+            titleColor: '#ffffff',
+            bodyColor: '#eaf4ee',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: (context) => {
+                const total = countBaru + countMadya + countSenior;
+                const val = context.raw || 0;
+                const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                return ` ${context.label}: ${val} Orang (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
   // Execute chart renders according to selected tab
   if (currentChartTab === 'cloth') {
     chartClothInstance = renderClothChart('chartClothSize', chartClothInstance);
@@ -6935,12 +7099,204 @@ function renderCharts() {
   } else if (currentChartTab === 'gender') {
     chartGenderInstance = renderGenderChart('chartGenderOnly', chartGenderInstance);
     chartTypeInstance = renderTypeChart('chartTypeOnly', chartTypeInstance);
+  } else if (currentChartTab === 'health') {
+    chartHealthInstance = renderHealthChart('chartHealthStatus', chartHealthInstance);
+  } else if (currentChartTab === 'paskas') {
+    chartPaskasInstance = renderPaskasChart('chartPaskasStatus', chartPaskasInstance);
   } else if (currentChartTab === 'all') {
     chartClothAllInstance = renderClothChart('chartClothSizeAll', chartClothAllInstance);
     chartTransportAllInstance = renderTransportChart('chartTransportAll', chartTransportAllInstance);
     chartWilayahAllInstance = renderWilayahChart('chartWilayahAll', chartWilayahAllInstance);
     chartGenderAllInstance = renderGenderChart('chartGenderAll', chartGenderAllInstance);
+    chartHealthAllInstance = renderHealthChart('chartHealthAll', chartHealthAllInstance);
+    chartPaskasAllInstance = renderPaskasChart('chartPaskasAll', chartPaskasAllInstance);
   }
+}
+
+/**
+ * Render Insight Pod & Tabel Daftar Peserta Perhatian Medis Khusus
+ */
+function renderHealthSection(healthIssueList, healthyCount, issueCount, healthyPct, issuePct, emergencyReadyCount, totalOrang) {
+  const tagHealth = document.getElementById('tagHealthLead');
+  if (tagHealth) {
+    tagHealth.textContent = `${healthyCount} Prima (${healthyPct}%) \u2022 ${issueCount} Perlu Pantauan (${issuePct}%)`;
+  }
+
+  const badgeTotal = document.getElementById('rekapHealthTotalBadge');
+  if (badgeTotal) {
+    badgeTotal.textContent = `${issueCount} Perlu Pantauan`;
+    badgeTotal.style.background = issueCount > 0 ? '#fee2e2' : '#dcfce7';
+    badgeTotal.style.color = issueCount > 0 ? '#991b1b' : '#15803d';
+    badgeTotal.style.borderColor = issueCount > 0 ? '#fca5a5' : '#86efac';
+  }
+
+  const listInsight = document.getElementById('healthInsightList');
+  if (listInsight) {
+    listInsight.innerHTML = `
+      <div class="insight-item">
+        <span class="insight-item-name"><i class="fa-solid fa-users text-green"></i> Total Peserta Terdata</span>
+        <span class="insight-item-val">${totalOrang} Orang</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-item-name"><i class="fa-solid fa-heart text-green"></i> Kondisi Prima / Bebas Keluhan</span>
+        <span class="insight-item-val" style="color: #15803d; font-weight: 700;">${healthyCount} Orang (${healthyPct}%)</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-item-name"><i class="fa-solid fa-triangle-exclamation" style="color: #dc2626;"></i> Memerlukan Perhatian Medis</span>
+        <span class="insight-item-val" style="color: ${issueCount > 0 ? '#dc2626' : '#64748b'}; font-weight: 700;">${issueCount} Orang (${issuePct}%)</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-item-name"><i class="fa-solid fa-phone-volume text-green"></i> Kontak Darurat Terdaftar</span>
+        <span class="insight-item-val">${emergencyReadyCount} Kontak Siaga</span>
+      </div>
+    `;
+  }
+
+  const tbody = document.getElementById('rekapHealthTableBody');
+  if (!tbody) return;
+
+  if (healthIssueList.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; color: #15803d; padding: 28px; background: #f0fdf4;">
+          <i class="fa-solid fa-shield-heart" style="font-size: 28px; margin-bottom: 8px; display: block; color: #16a34a;"></i>
+          <strong>Alhamdulillah, semua peserta dalam kondisi prima dan sehat!</strong>
+          <p style="font-size: 12px; color: #4b5563; margin: 4px 0 0 0;">Tidak ada peserta yang tercatat memiliki riwayat medis darurat atau penyakit berisiko.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = healthIssueList.map((item, idx) => {
+    const roomInfo = item.building 
+      ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+      : (item.room_name || item.room_number || '-');
+    const waClean = (item.phone_number || '').replace(/[^0-9]/g, '');
+    const waLink = waClean ? `https://wa.me/${waClean.startsWith('0') ? '62' + waClean.slice(1) : waClean}` : '#';
+    const emClean = (item.emergency_phone || '').replace(/[^0-9]/g, '');
+    const emLink = emClean ? `https://wa.me/${emClean.startsWith('0') ? '62' + emClean.slice(1) : emClean}` : '#';
+
+    return `
+      <tr>
+        <td style="text-align: center; font-weight: 700;">${idx + 1}</td>
+        <td style="font-weight: 700; color: #111827;">${item.full_name || '-'}</td>
+        <td style="text-align: center;">${item.age ? item.age + ' Th' : '-'}</td>
+        <td style="text-align: center;">
+          <span class="badge ${item.gender === 'Laki-laki' ? 'badge-ikhwan' : 'badge-akhwat'}">
+            ${item.gender || '-'}
+          </span>
+        </td>
+        <td>${item.wilayah || '-'}${item.daerah ? ' - ' + item.daerah : ''}</td>
+        <td>${roomInfo}</td>
+        <td>
+          <span style="display: inline-flex; align-items: center; gap: 6px; background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 12px;">
+            <i class="fa-solid fa-notes-medical" style="color: #dc2626;"></i>
+            ${item.medical_history || '-'}
+          </span>
+        </td>
+        <td style="text-align: center;">
+          ${waClean ? `<a href="${waLink}" target="_blank" style="color: #15803d; font-weight: 600; text-decoration: none;"><i class="fa-brands fa-whatsapp"></i> ${item.phone_number}</a>` : '-'}
+        </td>
+        <td style="text-align: center;">
+          ${emClean ? `<a href="${emLink}" target="_blank" style="color: #dc2626; font-weight: 600; text-decoration: none;"><i class="fa-solid fa-phone"></i> ${item.emergency_phone}</a>` : '-'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/**
+ * Render Insight Pod & Tabel Rekapitulasi Jenjang PASKAS per Wilayah
+ */
+function renderPaskasSection(paskasByWilayah, countBaru, countMadya, countSenior, pctBaru, pctMadya, pctSenior, totalOrang) {
+  const tagPaskas = document.getElementById('tagPaskasLead');
+  if (tagPaskas) {
+    tagPaskas.textContent = `Senior: ${countSenior} (${pctSenior}%) \u2022 Madya: ${countMadya} (${pctMadya}%) \u2022 Baru: ${countBaru} (${pctBaru}%)`;
+  }
+
+  const badgeTotal = document.getElementById('rekapPaskasTotalBadge');
+  const wilayahList = Object.values(paskasByWilayah).sort((a, b) => b.total - a.total);
+  if (badgeTotal) badgeTotal.textContent = `${wilayahList.length} Wilayah Terdata`;
+
+  const sumTotal = document.getElementById('rekapPaskasSumTotal');
+  const sumBaru = document.getElementById('rekapPaskasSumBaru');
+  const sumMadya = document.getElementById('rekapPaskasSumMadya');
+  const sumSenior = document.getElementById('rekapPaskasSumSenior');
+  if (sumTotal) sumTotal.textContent = `${totalOrang} Orang`;
+  if (sumBaru) sumBaru.textContent = `${countBaru} Orang`;
+  if (sumMadya) sumMadya.textContent = `${countMadya} Orang`;
+  if (sumSenior) sumSenior.textContent = `${countSenior} Orang`;
+
+  const listInsight = document.getElementById('paskasInsightList');
+  if (listInsight) {
+    listInsight.innerHTML = `
+      <div class="insight-item">
+        <span class="insight-item-name"><i class="fa-solid fa-users text-green"></i> Total Anggota Terdaftar</span>
+        <span class="insight-item-val">${totalOrang} Orang</span>
+      </div>
+      <div class="insight-item" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+          <span class="insight-item-name"><i class="fa-solid fa-crown" style="color: #15803d;"></i> PASKAS Senior (\u2265 5 Th)</span>
+          <span class="insight-item-val" style="color: #15803d; font-weight: 700;">${countSenior} Orang (${pctSenior}%)</span>
+        </div>
+        <small style="font-size: 11px; color: #4b5563;">Masa keanggotaan 5 tahun atau lebih sejak tanggal bergabung</small>
+      </div>
+      <div class="insight-item" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+          <span class="insight-item-name"><i class="fa-solid fa-star" style="color: #d97706;"></i> PASKAS Madya (1 - &lt;5 Th)</span>
+          <span class="insight-item-val" style="color: #d97706; font-weight: 700;">${countMadya} Orang (${pctMadya}%)</span>
+        </div>
+        <small style="font-size: 11px; color: #4b5563;">Masa keanggotaan mulai 1 tahun hingga kurang dari 5 tahun</small>
+      </div>
+      <div class="insight-item" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+          <span class="insight-item-name"><i class="fa-solid fa-seedling" style="color: #0284c7;"></i> PASKAS Baru (&lt; 1 Th)</span>
+          <span class="insight-item-val" style="color: #0284c7; font-weight: 700;">${countBaru} Orang (${pctBaru}%)</span>
+        </div>
+        <small style="font-size: 11px; color: #4b5563;">Masa keanggotaan kurang dari 1 (satu) tahun</small>
+      </div>
+    `;
+  }
+
+  const tbody = document.getElementById('rekapPaskasTableBody');
+  if (!tbody) return;
+
+  if (wilayahList.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; color: #64748b; padding: 24px;">
+          Belum ada data wilayah keanggotaan Paskas.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = wilayahList.map((w, idx) => {
+    return `
+      <tr>
+        <td style="text-align: center; font-weight: 700;">${idx + 1}</td>
+        <td style="font-weight: 700; color: #132a1c;">${w.name}</td>
+        <td style="text-align: center; font-weight: 700;">${w.total} Orang</td>
+        <td style="text-align: center;">
+          <span style="background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 12px;">
+            ${w.baru} Orang
+          </span>
+        </td>
+        <td style="text-align: center;">
+          <span style="background: #fef3c7; color: #b45309; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 12px;">
+            ${w.madya} Orang
+          </span>
+        </td>
+        <td style="text-align: center;">
+          <span style="background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 12px;">
+            ${w.senior} Orang
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 /**
