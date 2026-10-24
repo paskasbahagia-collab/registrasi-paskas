@@ -454,11 +454,11 @@
               </div>
               <div class="closed-notice-pill-wrap">
                 <span class="closed-notice-pill">
-                  <i class="fa-solid fa-circle-exclamation"></i> Status: Pendaftaran Ditutup
+                  <i class="fa-solid fa-circle-exclamation"></i> <span id="closedNoticeBadgeText">Status: Pendaftaran Ditutup</span>
                 </span>
               </div>
-              <h3 class="closed-notice-title">Mohon Maaf, Pendaftaran Telah Resmi Ditutup</h3>
-              <p class="closed-notice-desc">
+              <h3 class="closed-notice-title" id="closedNoticeTitle">Mohon Maaf, Pendaftaran Telah Resmi Ditutup</h3>
+              <p class="closed-notice-desc" id="closedNoticeDesc">
                 Masa registrasi peserta Kumpul Keluarga Paskas Bahagia telah berakhir sesuai batas waktu yang telah ditentukan oleh panitia.
               </p>
               <div class="closed-notice-quote" id="closedNoticeCustomMsgWrapper">
@@ -2854,14 +2854,41 @@
                   </div>
                 </div>
 
-                <div class="form-group" style="margin-top: 15px;">
-                  <label class="form-label">Pesan Ketika Pendaftaran Tutup</label>
-                  <input type="text" id="cfg_closedMessage" class="form-control" value="Mohon maaf, batas waktu registrasi peserta Paskas Bahagia telah ditutup. Silakan hubungi narahubung panitia.">
+                <div style="margin-top: 22px; padding-top: 18px; border-top: 1px dashed #e2e8f0;">
+                  <h5 style="margin: 0 0 6px 0; font-size: 14px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-pen-nib text-gold"></i> Kustomisasi Seluruh Narasi Halaman Penutupan
+                  </h5>
+                  <p style="margin: 0 0 16px 0; font-size: 12.5px; color: #64748b; line-height: 1.45;">
+                    Atur teks label status, judul, deskripsi, dan catatan narahubung yang muncul saat pendaftaran ditutup atau melewati batas waktu.
+                  </p>
+
+                  <div class="form-row col-2">
+                    <div class="form-group">
+                      <label class="form-label">Teks Pita Status (Badge)</label>
+                      <input type="text" id="cfg_closedBadge" class="form-control" placeholder="Default: Status: Pendaftaran Ditutup">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Judul Utama Penutupan</label>
+                      <input type="text" id="cfg_closedTitle" class="form-control" placeholder="Default: Mohon Maaf, Pendaftaran Telah Resmi Ditutup">
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="margin-top: 14px;">
+                    <label class="form-label">Deskripsi / Narasi Penjelasan</label>
+                    <textarea id="cfg_closedDesc" class="form-control" rows="2" placeholder="Default: Masa registrasi peserta Kumpul Keluarga Paskas Bahagia telah berakhir sesuai batas waktu yang telah ditentukan oleh panitia."></textarea>
+                  </div>
+
+                  <div class="form-group" style="margin-top: 14px;">
+                    <label class="form-label">Pesan Catatan Tambahan (Kontak / Narahubung)</label>
+                    <input type="text" id="cfg_closedMessage" class="form-control" placeholder="Default: Mohon maaf, pendaftaran peserta Paskas Bahagia telah ditutup. Silakan hubungi narahubung panitia.">
+                  </div>
                 </div>
 
-                <button class="btn btn-primary btn-sm" onclick="saveDeadlineSettings()">
-                  <i class="fa-solid fa-floppy-disk"></i> Simpan Pengaturan Batas Waktu
-                </button>
+                <div style="margin-top: 20px;">
+                  <button class="btn btn-primary btn-sm" onclick="saveDeadlineSettings()">
+                    <i class="fa-solid fa-floppy-disk"></i> Simpan Pengaturan Batas Waktu & Narasi
+                  </button>
+                </div>
               </div>
             </div>
 

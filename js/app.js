@@ -1949,6 +1949,29 @@ function lockRegistrationForms(locked) {
 
 function updateClosedNoticeContent() {
   const settings = (window.dataService && window.dataService.getSettings) ? window.dataService.getSettings() : {};
+
+  // 1. Teks Pita Status (Badge)
+  const badgeEl = document.getElementById('closedNoticeBadgeText');
+  if (badgeEl) {
+    const customBadge = settings.closed_badge || 'Status: Pendaftaran Ditutup';
+    badgeEl.textContent = customBadge;
+  }
+
+  // 2. Judul Utama Penutupan
+  const titleEl = document.getElementById('closedNoticeTitle');
+  if (titleEl) {
+    const customTitle = settings.closed_title || 'Mohon Maaf, Pendaftaran Telah Resmi Ditutup';
+    titleEl.textContent = customTitle;
+  }
+
+  // 3. Deskripsi / Narasi Penjelasan
+  const descEl = document.getElementById('closedNoticeDesc');
+  if (descEl) {
+    const customDesc = settings.closed_desc || 'Masa registrasi peserta Kumpul Keluarga Paskas Bahagia telah berakhir sesuai batas waktu yang telah ditentukan oleh panitia.';
+    descEl.textContent = customDesc;
+  }
+
+  // 4. Catatan Tambahan (Kontak / Narahubung)
   const msgEl = document.getElementById('closedNoticeCustomMsg');
   if (msgEl) {
     let customMsg = settings.closed_message || 'Batas waktu pendaftaran peserta Paskas Bahagia telah berakhir. Silakan hubungi narahubung panitia.';
@@ -8814,6 +8837,9 @@ function initSettingsPage(defaultTab = 'rekap', skipSwitchTab = false) {
   const deadlineInput = document.getElementById('cfg_deadlineTime');
   const regStatusInput = document.getElementById('cfg_registrationStatus');
   const statusLabel = document.getElementById('cfg_statusLabel');
+  const closedBadgeInput = document.getElementById('cfg_closedBadge');
+  const closedTitleInput = document.getElementById('cfg_closedTitle');
+  const closedDescInput = document.getElementById('cfg_closedDesc');
   const closedMsgInput = document.getElementById('cfg_closedMessage');
   const supabaseUrlInput = document.getElementById('cfg_supabaseUrl');
   const supabaseKeyInput = document.getElementById('cfg_supabaseKey');
@@ -8825,6 +8851,9 @@ function initSettingsPage(defaultTab = 'rekap', skipSwitchTab = false) {
   if (deadlineInput) deadlineInput.value = settings.registration_deadline || '2026-12-31T23:59';
   if (regStatusInput) regStatusInput.checked = settings.is_registration_open !== 'false';
   if (statusLabel) statusLabel.textContent = settings.is_registration_open !== 'false' ? 'Pendaftaran DIBUKA' : 'Pendaftaran DITUTUP';
+  if (closedBadgeInput) closedBadgeInput.value = settings.closed_badge || '';
+  if (closedTitleInput) closedTitleInput.value = settings.closed_title || '';
+  if (closedDescInput) closedDescInput.value = settings.closed_desc || '';
   if (closedMsgInput) closedMsgInput.value = settings.closed_message || '';
 
   if (supabaseUrlInput) supabaseUrlInput.value = credentials.url || '';
@@ -9301,19 +9330,26 @@ window.saveNewAdminPassword = saveNewAdminPassword;
 window.resetAdminPasswordDefault = resetAdminPasswordDefault;
 window.togglePasswordVisibility = togglePasswordVisibility;
 
-function saveDeadlineSettings() {
+async function saveDeadlineSettings() {
   const deadlineVal = document.getElementById('cfg_deadlineTime').value;
   const isOpen = document.getElementById('cfg_registrationStatus').checked;
-  const closedMsg = document.getElementById('cfg_closedMessage').value.trim();
+  const closedBadge = document.getElementById('cfg_closedBadge') ? document.getElementById('cfg_closedBadge').value.trim() : '';
+  const closedTitle = document.getElementById('cfg_closedTitle') ? document.getElementById('cfg_closedTitle').value.trim() : '';
+  const closedDesc = document.getElementById('cfg_closedDesc') ? document.getElementById('cfg_closedDesc').value.trim() : '';
+  const closedMsg = document.getElementById('cfg_closedMessage') ? document.getElementById('cfg_closedMessage').value.trim() : '';
 
-  window.dataService.saveSettings({
+  await window.dataService.saveSettings({
     registration_deadline: deadlineVal,
     is_registration_open: String(isOpen),
+    closed_badge: closedBadge,
+    closed_title: closedTitle,
+    closed_desc: closedDesc,
     closed_message: closedMsg
   });
 
   initCountdownTimer();
-  showToast('Pengaturan batas waktu berhasil disimpan!', 'success');
+  updateClosedNoticeContent();
+  showToast('Pengaturan batas waktu & narasi penutupan berhasil disimpan!', 'success');
 }
 
 async function saveSupabaseSettings() {
@@ -9402,6 +9438,9 @@ function applyEventInfoToUI(settings) {
       const regLoc = document.getElementById('regLocationDisplay');
       if (regLoc) regLoc.textContent = settings.event_location;
     }
+
+    // 5. Perbarui seluruh narasi penutupan bila pendaftaran terkunci
+    updateClosedNoticeContent();
   } catch (err) {
     console.warn('Gagal memperbarui UI info acara:', err);
   }

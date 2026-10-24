@@ -62,6 +62,10 @@ INSERT INTO app_settings (setting_key, setting_value, description)
 VALUES 
     ('registration_deadline', '2026-12-31T23:59:59', 'Batas akhir waktu pengisian registrasi peserta'),
     ('is_registration_open', 'true', 'Status pendaftaran: true (buka) / false (tutup)'),
+    ('closed_badge', 'Status: Pendaftaran Ditutup', 'Label status pita penutupan pendaftaran'),
+    ('closed_title', 'Mohon Maaf, Pendaftaran Telah Resmi Ditutup', 'Judul utama saat pendaftaran ditutup'),
+    ('closed_desc', 'Masa registrasi peserta Kumpul Keluarga Paskas Bahagia telah berakhir sesuai batas waktu yang telah ditentukan oleh panitia.', 'Narasi penjelasan saat pendaftaran ditutup'),
+    ('closed_message', 'Mohon maaf, pendaftaran peserta Paskas Bahagia telah ditutup. Silakan hubungi narahubung panitia.', 'Pesan catatan/kontak saat pendaftaran ditutup'),
     ('event_name', 'Silaturahmi Akbar Pasukan Amal Sholeh (PASKAS) Bahagia', 'Nama kegiatan agenda'),
     ('event_location', 'Rocket Convention Hall, Sleman, D.I. Yogyakarta', 'Lokasi utama acara'),
     ('event_date', '2026-11-10 s/d 2026-11-13', 'Tanggal pelaksanaan kegiatan'),
