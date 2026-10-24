@@ -5408,9 +5408,9 @@ Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`;
     .replace(/{rute_to}/g, settings.ticket_route_to || 'RUMAH')
     .replace(/{rombongan}/g, record.group_name || (record.registration_type === 'kelompok' ? 'Rombongan' : '-'))
     .replace(/{jadwal_kedatangan}/g, record.arrival_date ? formatTicketDate(record.arrival_date) : '-')
-    .replace(/{kendaraan_datang}/g, record.transport_arrival || 'Bus Panitia')
+    .replace(/{kendaraan_datang}/g, (record.transport_arrival === 'Bus Panitia' || record.transport_arrival === 'Bus Panitia / Rombongan' ? 'Bus' : record.transport_arrival) || 'Bus')
     .replace(/{jadwal_kepulangan}/g, record.departure_date ? formatTicketDate(record.departure_date) : '-')
-    .replace(/{kendaraan_pulang}/g, record.transport_departure || 'Bus Panitia')
+    .replace(/{kendaraan_pulang}/g, (record.transport_departure === 'Bus Panitia' || record.transport_departure === 'Bus Panitia / Rombongan' ? 'Bus' : record.transport_departure) || 'Bus')
     .replace(/{ukuran_baju}/g, record.cloth_size || '-')
     .replace(/{riwayat_medis}/g, record.medical_history || 'Tidak Ada / Sehat');
 }
@@ -6383,7 +6383,8 @@ function updateSummaryMetrics() {
   // Top Transport Arrival
   const transportCounts = {};
   allRegistrations.forEach(r => {
-    const t = r.transport_arrival || 'Lainnya';
+    let t = r.transport_arrival || 'Lainnya';
+    if (t === 'Bus Panitia' || t === 'Bus Panitia / Rombongan' || t.toLowerCase() === 'bus/rombongan') t = 'Bus';
     transportCounts[t] = (transportCounts[t] || 0) + 1;
   });
   let topTransport = '-';
@@ -6398,7 +6399,8 @@ function updateSummaryMetrics() {
   // Top Transport Departure
   const transportDepCounts = {};
   allRegistrations.forEach(r => {
-    const td = r.transport_departure || 'Lainnya';
+    let td = r.transport_departure || 'Lainnya';
+    if (td === 'Bus Panitia' || td === 'Bus Panitia / Rombongan' || td.toLowerCase() === 'bus/rombongan') td = 'Bus';
     transportDepCounts[td] = (transportDepCounts[td] || 0) + 1;
   });
   let topTransportDep = '-';
@@ -7076,7 +7078,8 @@ function renderCharts() {
   // Transport
   const transportCounts = {};
   allRegistrations.forEach(r => {
-    const t = r.transport_arrival || 'Lainnya';
+    let t = r.transport_arrival || 'Lainnya';
+    if (t === 'Bus Panitia' || t === 'Bus Panitia / Rombongan' || t.toLowerCase() === 'bus/rombongan') t = 'Bus';
     transportCounts[t] = (transportCounts[t] || 0) + 1;
   });
   let topTransport = '-';
