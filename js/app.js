@@ -1317,21 +1317,34 @@ function openCardDetail(cardId) {
 // ===================================================================
 // KATALOG & DESAIN MODEL SERAGAM RESMI IKHWAN & AKHWAT
 // ===================================================================
-const DEFAULT_SIZE_CHART_TEXT = 'S: Lebar 46cm / LD 92cm\nM: Lebar 48cm / LD 96cm\nL: Lebar 50cm / LD 100cm\nXL: Lebar 52cm / LD 104cm\nXXL: Lebar 54cm / LD 108cm\n3XL: Lebar 56cm / LD 112cm\n4XL: Lebar 58cm / LD 116cm';
+const DEFAULT_SIZE_CHART_IKHWAN = 'S: LB 49cm / PB 75cm / PT 20cm\nM: LB 52cm / PB 77cm / PT 21cm\nL: LB 55cm / PB 80cm / PT 22cm\nXL: LB 59cm / PB 82cm / PT 23cm\n2XL: LB 63cm / PB 84cm / PT 24cm\n3XL: LB 66cm / PB 86cm / PT 25cm';
+const DEFAULT_SIZE_CHART_AKHWAT = 'S: LD 96cm / PB 64cm / LB 40cm\nM: LD 100cm / PB 66cm / LB 42cm\nL: LD 104cm / PB 68cm / LB 44cm\nXL: LD 108cm / PB 70cm / LB 46cm\nXXL: LD 114cm / PB 72cm / LB 48cm\n3XL: LD 120cm / PB 74cm / LB 50cm\n4XL: LD 126cm / PB 76cm / LB 52cm';
+const DEFAULT_SIZE_CHART_TEXT = DEFAULT_SIZE_CHART_IKHWAN;
 
 function getUniformSettings() {
   const settings = (window.dataService && typeof window.dataService.getSettings === 'function')
     ? window.dataService.getSettings()
     : {};
+
+  let ikhwanChart = settings.uniform_size_chart_ikhwan || localStorage.getItem('paskas_uniform_size_chart_ikhwan');
+  if (!ikhwanChart || ikhwanChart.includes('Lebar 46cm / LD 92cm')) {
+    ikhwanChart = DEFAULT_SIZE_CHART_IKHWAN;
+  }
+
+  let akhwatChart = settings.uniform_size_chart_akhwat || localStorage.getItem('paskas_uniform_size_chart_akhwat');
+  if (!akhwatChart || akhwatChart.includes('Lebar 46cm / LD 92cm')) {
+    akhwatChart = DEFAULT_SIZE_CHART_AKHWAT;
+  }
+
   return {
-    ikhwanImg: localStorage.getItem('paskas_uniform_ikhwan_image') || settings.uniform_ikhwan_image || 'images/seragam-ikhwan.jpg',
-    akhwatImg: localStorage.getItem('paskas_uniform_akhwat_image') || settings.uniform_akhwat_image || 'images/seragam-akhwat.jpg',
-    ikhwanTitle: localStorage.getItem('paskas_uniform_ikhwan_title') || settings.uniform_title_ikhwan || 'Model Kaos Resmi Ikhwan',
-    akhwatTitle: localStorage.getItem('paskas_uniform_akhwat_title') || settings.uniform_title_akhwat || 'Model Kaos / Tunik Resmi Akhwat',
-    ikhwanDesc: localStorage.getItem('paskas_uniform_ikhwan_desc') || settings.uniform_desc_ikhwan || 'Bahan katun combed 24s premium adem, sablon plastisol emas logo resmi Paskas Bahagia.',
-    akhwatDesc: localStorage.getItem('paskas_uniform_akhwat_desc') || settings.uniform_desc_akhwat || 'Model tunik lengan panjang syar\'i & anggun, bahan katun combed 24s adem dengan aksen list emas.',
-    ikhwanSizeChart: localStorage.getItem('paskas_uniform_size_chart_ikhwan') || settings.uniform_size_chart_ikhwan || DEFAULT_SIZE_CHART_TEXT,
-    akhwatSizeChart: localStorage.getItem('paskas_uniform_size_chart_akhwat') || settings.uniform_size_chart_akhwat || DEFAULT_SIZE_CHART_TEXT
+    ikhwanImg: settings.uniform_ikhwan_image || localStorage.getItem('paskas_uniform_ikhwan_image') || 'images/seragam-ikhwan.jpg',
+    akhwatImg: settings.uniform_akhwat_image || localStorage.getItem('paskas_uniform_akhwat_image') || 'images/seragam-akhwat.jpg',
+    ikhwanTitle: settings.uniform_title_ikhwan || localStorage.getItem('paskas_uniform_ikhwan_title') || 'Model Kaos Resmi Ikhwan',
+    akhwatTitle: settings.uniform_title_akhwat || localStorage.getItem('paskas_uniform_akhwat_title') || 'Model Kaos / Tunik Resmi Akhwat',
+    ikhwanDesc: settings.uniform_desc_ikhwan || localStorage.getItem('paskas_uniform_ikhwan_desc') || 'Bahan katun combed 24s premium adem, sablon plastisol emas logo resmi Paskas Bahagia.',
+    akhwatDesc: settings.uniform_desc_akhwat || localStorage.getItem('paskas_uniform_akhwat_desc') || 'Model tunik lengan panjang syar\'i & anggun, bahan katun combed 24s adem dengan aksen list emas.',
+    ikhwanSizeChart: ikhwanChart,
+    akhwatSizeChart: akhwatChart
   };
 }
 
@@ -1434,12 +1447,20 @@ function renderUniformShowcaseHTML() {
               <i class="fa-solid fa-mars" style="color: #38bdf8;"></i>
               <strong style="color: #38bdf8;">Size Chart Seragam Ikhwan (Laki-laki):</strong>
             </div>
-            <span class="uniform-size-guide-note">
-              <i class="fa-solid fa-circle-info"></i> Model 01
-            </span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="uniform-size-guide-note">
+                <i class="fa-solid fa-circle-info"></i> Kaos - Model 01
+              </span>
+              <button type="button" class="btn btn-xs" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-kaos-ikhwan.png', 'Panduan Visual Size Chart Kaos Ikhwan')" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); padding: 2px 7px; font-size: 11px; border-radius: 5px; cursor: pointer;">
+                <i class="fa-solid fa-expand"></i> Panduan Visual
+              </button>
+            </div>
           </div>
           <div class="uniform-size-pills-wrap">
             ${renderSizeChartPills(uniforms.ikhwanSizeChart, 'ikhwan')}
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(56, 189, 248, 0.25);">
+            <i class="fa-solid fa-circle-info text-gold"></i> <strong>Keterangan:</strong> LB = Lebar Badan &bull; PB = Panjang Badan &bull; PT = Panjang Tangan (Toleransi &plusmn;1-2cm)
           </div>
         </div>
 
@@ -1450,12 +1471,20 @@ function renderUniformShowcaseHTML() {
               <i class="fa-solid fa-venus" style="color: #f472b6;"></i>
               <strong style="color: #f472b6;">Size Chart Seragam Akhwat (Perempuan):</strong>
             </div>
-            <span class="uniform-size-guide-note">
-              <i class="fa-solid fa-circle-info"></i> Model 02
-            </span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="uniform-size-guide-note">
+                <i class="fa-solid fa-circle-info"></i> Rompi - Model 02
+              </span>
+              <button type="button" class="btn btn-xs" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-rompi-akhwat.png', 'Panduan Visual Size Chart Rompi Akhwat')" style="background: rgba(244, 114, 182, 0.15); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.35); padding: 2px 7px; font-size: 11px; border-radius: 5px; cursor: pointer;">
+                <i class="fa-solid fa-expand"></i> Panduan Visual
+              </button>
+            </div>
           </div>
           <div class="uniform-size-pills-wrap">
             ${renderSizeChartPills(uniforms.akhwatSizeChart, 'akhwat')}
+          </div>
+          <div style="font-size: 11px; color: #fbcfe8; margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(244, 114, 182, 0.25);">
+            <i class="fa-solid fa-circle-info text-gold"></i> <strong>Keterangan:</strong> LD = Lingkar Dada &bull; PB = Panjang Badan &bull; LB = Lebar Bahu (Toleransi &plusmn;1-2cm)
           </div>
         </div>
       </div>
@@ -1472,49 +1501,54 @@ async function handleUniformImageUpload(event, genderType) {
     return;
   }
 
-  showToast(`Sedang memproses foto desain seragam ${genderType === 'ikhwan' ? 'Ikhwan' : 'Akhwat'}...`, 'info');
+  showToast(`Sedang mengunggah foto desain seragam ${genderType === 'ikhwan' ? 'Ikhwan' : 'Akhwat'} ke Supabase Storage...`, 'info');
 
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const base64Data = e.target.result;
-    if (typeof base64Data !== 'string' || !base64Data.startsWith('data:image/')) {
-      showToast('Format file gambar tidak valid.', 'error');
-      return;
+  try {
+    const res = await compressImageFile(file, 1600, 0.88);
+    let finalUrl = res.dataUrl;
+    if (window.dataService && typeof window.dataService.uploadAssetFile === 'function') {
+      try {
+        finalUrl = await window.dataService.uploadAssetFile(res.dataUrl, 'uniforms', `uniform-${genderType}`);
+      } catch (errUp) {
+        console.warn('Gagal upload ke storage:', errUp);
+      }
     }
 
     const key = genderType === 'ikhwan' ? 'uniform_ikhwan_image' : 'uniform_akhwat_image';
     const localKey = genderType === 'ikhwan' ? 'paskas_uniform_ikhwan_image' : 'paskas_uniform_akhwat_image';
 
     try {
-      localStorage.setItem(localKey, base64Data);
+      localStorage.setItem(localKey, finalUrl);
     } catch(err) {
       console.warn('Storage quota warning for uniform image:', err);
     }
 
     if (window.dataService) {
       if (typeof window.dataService.saveSettings === 'function') {
-        try {
-          await window.dataService.saveSettings({ [key]: base64Data });
-        } catch (err) {}
+        try { await window.dataService.saveSettings({ [key]: finalUrl }); } catch (err) {}
       }
       if (typeof window.dataService.saveCloudSetting === 'function') {
-        try {
-          await window.dataService.saveCloudSetting(key, base64Data);
-        } catch (err) {}
+        try { await window.dataService.saveCloudSetting(key, finalUrl); } catch (err) {}
       }
     }
 
     // Update DOM image preview
     const imgEl = document.getElementById(genderType === 'ikhwan' ? 'storyUniformImgIkhwan' : 'storyUniformImgAkhwat');
-    if (imgEl) imgEl.src = base64Data;
+    if (imgEl) imgEl.src = finalUrl;
 
     // Refresh if settings panel is open
     const cfgImgEl = document.getElementById(genderType === 'ikhwan' ? 'cfg_uniformIkhwanThumb' : 'cfg_uniformAkhwatThumb');
-    if (cfgImgEl) cfgImgEl.src = base64Data;
+    if (cfgImgEl) cfgImgEl.src = finalUrl;
+    const cfgCardEl = document.getElementById(genderType === 'ikhwan' ? 'cfg_cardUniformIkhwanThumb' : 'cfg_cardUniformAkhwatThumb');
+    if (cfgCardEl) cfgCardEl.src = finalUrl;
+    const cfgInput = document.getElementById(genderType === 'ikhwan' ? 'cfg_cardUniformIkhwanImg' : 'cfg_cardUniformAkhwatImg');
+    if (cfgInput) cfgInput.value = finalUrl;
 
-    showToast(`Alhamdulillah, desain baju ${genderType === 'ikhwan' ? 'Ikhwan' : 'Akhwat'} berhasil diperbarui!`, 'success');
-  };
-  reader.readAsDataURL(file);
+    showToast(`Alhamdulillah, desain baju ${genderType === 'ikhwan' ? 'Ikhwan' : 'Akhwat'} berhasil disimpan permanen ke Cloud Supabase!`, 'success');
+  } catch (err) {
+    console.error('Gagal memproses upload baju:', err);
+    showToast('Gagal memproses file desain baju.', 'error');
+  }
 }
 
 function openUniformImageLightbox(src, title) {
@@ -9527,11 +9561,17 @@ function renderSettingsCardsManager() {
 
                 <!-- Size Chart Ikhwan Input -->
                 <div class="form-group" style="margin: 0;">
-                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-                    <span style="font-weight: 700; color: #0284c7;"><i class="fa-solid fa-ruler-combined"></i> Panduan Standar Ukuran Baju (Size Chart) Ikhwan</span>
-                    <span style="font-size: 10px; color: #64748b;">1 ukuran per baris (Format: S: Lebar 46cm / LD 92cm)</span>
-                  </label>
-                  <textarea class="form-control card-uniform-ikhwan-size-chart" rows="7" placeholder="S: Lebar 46cm / LD 92cm&#10;M: Lebar 48cm / LD 96cm..." style="padding: 8px 10px; font-size: 12px; font-family: monospace; line-height: 1.5; resize: vertical; border-color: #bfdbfe;">${escapeHtml(uniforms.ikhwanSizeChart)}</textarea>
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 4px; gap: 6px;">
+                    <label class="form-label" style="font-size: 11.5px; margin: 0; font-weight: 700; color: #0284c7;">
+                      <i class="fa-solid fa-ruler-combined"></i> Panduan Standar Ukuran Baju (Size Chart) Ikhwan
+                    </label>
+                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-kaos-ikhwan.png', 'Panduan Visual Size Chart Kaos Ikhwan')" style="padding: 2px 8px; font-size: 10.5px; border-radius: 5px; background: #f0f9ff; border-color: #bae6fd; color: #0369a1; cursor: pointer;">
+                      <i class="fa-regular fa-image"></i> Lihat Gambar Panduan Kaos
+                    </button>
+                  </div>
+                  <div style="font-size: 10.5px; color: #64748b; margin-bottom: 4px;">Format 1 baris per ukuran: <code>S: LB 49cm / PB 75cm / PT 20cm</code></div>
+                  <textarea class="form-control card-uniform-ikhwan-size-chart" rows="7" placeholder="S: LB 49cm / PB 75cm / PT 20cm&#10;M: LB 52cm / PB 77cm / PT 21cm&#10;L: LB 55cm / PB 80cm / PT 22cm..." style="padding: 8px 10px; font-size: 12px; font-family: monospace; line-height: 1.5; resize: vertical; border-color: #bfdbfe;">${escapeHtml(uniforms.ikhwanSizeChart)}</textarea>
+                  <div style="font-size: 10.5px; color: #64748b; margin-top: 3px;"><i class="fa-solid fa-circle-info text-primary"></i> <b>Keterangan:</b> LB = Lebar Badan &bull; PB = Panjang Badan &bull; PT = Panjang Tangan (Toleransi &plusmn;1-2cm)</div>
                 </div>
               </div>
 
@@ -9577,11 +9617,17 @@ function renderSettingsCardsManager() {
 
                 <!-- Size Chart Akhwat Input -->
                 <div class="form-group" style="margin: 0;">
-                  <label class="form-label" style="font-size: 11.5px; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-                    <span style="font-weight: 700; color: #db2777;"><i class="fa-solid fa-ruler-combined"></i> Panduan Standar Ukuran Baju (Size Chart) Akhwat</span>
-                    <span style="font-size: 10px; color: #64748b;">1 ukuran per baris (Format: S: Lebar 46cm / LD 92cm)</span>
-                  </label>
-                  <textarea class="form-control card-uniform-akhwat-size-chart" rows="7" placeholder="S: Lebar 46cm / LD 92cm&#10;M: Lebar 48cm / LD 96cm..." style="padding: 8px 10px; font-size: 12px; font-family: monospace; line-height: 1.5; resize: vertical; border-color: #fbcfe8;">${escapeHtml(uniforms.akhwatSizeChart)}</textarea>
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 4px; gap: 6px;">
+                    <label class="form-label" style="font-size: 11.5px; margin: 0; font-weight: 700; color: #db2777;">
+                      <i class="fa-solid fa-ruler-combined"></i> Panduan Standar Ukuran Baju (Size Chart) Akhwat
+                    </label>
+                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-rompi-akhwat.png', 'Panduan Visual Size Chart Rompi Akhwat')" style="padding: 2px 8px; font-size: 10.5px; border-radius: 5px; background: #fdf2f8; border-color: #fbcfe8; color: #be185d; cursor: pointer;">
+                      <i class="fa-regular fa-image"></i> Lihat Gambar Panduan Rompi
+                    </button>
+                  </div>
+                  <div style="font-size: 10.5px; color: #64748b; margin-bottom: 4px;">Format 1 baris per ukuran: <code>S: LD 96cm / PB 64cm / LB 40cm</code></div>
+                  <textarea class="form-control card-uniform-akhwat-size-chart" rows="7" placeholder="S: LD 96cm / PB 64cm / LB 40cm&#10;M: LD 100cm / PB 66cm / LB 42cm&#10;L: LD 104cm / PB 68cm / LB 44cm..." style="padding: 8px 10px; font-size: 12px; font-family: monospace; line-height: 1.5; resize: vertical; border-color: #fbcfe8;">${escapeHtml(uniforms.akhwatSizeChart)}</textarea>
+                  <div style="font-size: 10.5px; color: #64748b; margin-top: 3px;"><i class="fa-solid fa-circle-info text-pink"></i> <b>Keterangan:</b> LD = Lingkar Dada &bull; PB = Panjang Badan &bull; LB = Lebar Bahu (Toleransi &plusmn;1-2cm)</div>
                 </div>
               </div>
             </div>
