@@ -1805,16 +1805,35 @@ function navigateTo(pageId) {
     }
   }
 
-  // If going to rekap page, re-render charts
+  // If going to rekap page, refresh data from cloud & re-render charts
   if (pageId === 'rekap') {
-    renderCharts();
+    if (typeof loadAndRenderRegistrations === 'function') {
+      loadAndRenderRegistrations().catch(err => console.warn('Gagal refresh rekap:', err));
+    } else {
+      renderCharts();
+    }
   }
 
   // If going to settings page, initialize settings fields and cards
   if (pageId === 'settings') {
     initSettingsPage();
+    if (typeof loadAndRenderRegistrations === 'function') {
+      loadAndRenderRegistrations().catch(err => console.warn('Gagal refresh rekap settings:', err));
+    }
   }
 }
+
+// Auto-refresh saat pengguna kembali membuka / memfokuskan tab browser
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const activePage = document.querySelector('.page-view.active');
+    if (activePage && (activePage.id === 'page-rekap' || activePage.id === 'page-settings')) {
+      if (typeof loadAndRenderRegistrations === 'function') {
+        loadAndRenderRegistrations().catch(() => {});
+      }
+    }
+  }
+});
 
 function toggleMobileNav() {
   const drawer = document.getElementById('mobileNavDrawer');
