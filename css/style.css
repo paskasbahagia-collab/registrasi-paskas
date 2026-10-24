@@ -2497,6 +2497,107 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ===================================================================
+   REGISTRATION CLOSED NOTICE CARD (Tampilan Elegan Saat Pendaftaran Ditutup)
+   =================================================================== */
+.reg-closed-notice-card {
+  position: relative;
+  background: #ffffff;
+  border: 1.5px solid #ded6c5;
+  border-radius: 20px;
+  padding: 38px 28px;
+  margin: 16px auto 28px auto;
+  max-width: 680px;
+  box-shadow: 0 8px 30px rgba(22, 42, 31, 0.05);
+  text-align: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.closed-notice-icon-box {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px auto;
+  border-radius: 50%;
+  background: #fdf2f2;
+  border: 1.5px solid #fecaca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #dc2626;
+  font-size: 24px;
+}
+
+.closed-notice-pill-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.closed-notice-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border-radius: 999px;
+}
+
+.closed-notice-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a2e22;
+  margin: 0 0 10px 0;
+  line-height: 1.3;
+}
+
+.closed-notice-desc {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14.5px;
+  color: #526359;
+  line-height: 1.6;
+  max-width: 520px;
+  margin: 0 auto 18px auto;
+}
+
+.closed-notice-quote {
+  background: #faf7f2;
+  border: 1px solid #e7ded0;
+  border-left: 4px solid #b89758;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13.5px;
+  color: #3d4a41;
+  max-width: 540px;
+  margin: 0 auto 24px auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.closed-notice-quote i {
+  color: #b89758;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.closed-notice-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ===================================================================
    MINIMALIST LUXURY STUDIO: SLEEK SEGMENTED CATEGORY SELECTOR
    =================================================================== */
 

@@ -43,7 +43,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=104.0">
+  <link rel="stylesheet" href="css/style.css?v=105.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -445,6 +445,31 @@
               <button type="button" class="btn-forest-pill btn-cta-wide btn-center-regis" id="btnTriggerRegis" onclick="openRegistrationSelector()">
                 <i class="fa-solid fa-pen-to-square"></i> Mulai Mengisi Formulir
               </button>
+            </div>
+
+            <!-- PEMBERITAHUAN PENDAFTARAN DITUTUP (Tampil saat pendaftaran terkunci / batas waktu berakhir, tanpa emoticon) -->
+            <div id="regClosedPromptBox" class="reg-closed-notice-card" style="display: none;">
+              <div class="closed-notice-icon-box">
+                <i class="fa-solid fa-lock"></i>
+              </div>
+              <div class="closed-notice-pill-wrap">
+                <span class="closed-notice-pill">
+                  <i class="fa-solid fa-circle-exclamation"></i> Status: Pendaftaran Ditutup
+                </span>
+              </div>
+              <h3 class="closed-notice-title">Mohon Maaf, Pendaftaran Telah Resmi Ditutup</h3>
+              <p class="closed-notice-desc">
+                Masa registrasi peserta Kumpul Keluarga Paskas Bahagia telah berakhir sesuai batas waktu yang telah ditentukan oleh panitia.
+              </p>
+              <div class="closed-notice-quote" id="closedNoticeCustomMsgWrapper">
+                <i class="fa-solid fa-circle-info"></i>
+                <span id="closedNoticeCustomMsg">Batas pendaftaran telah berakhir. Silakan hubungi narahubung panitia.</span>
+              </div>
+              <div class="closed-notice-actions">
+                <button type="button" class="btn-forest-pill" onclick="navigateTo('dashboard')">
+                  <i class="fa-solid fa-house"></i> Kembali ke Dashboard
+                </button>
+              </div>
             </div>
 
             <!-- UNIFIED CENTERPIECE: Luxury Category Selector Gateway (Dibuka melalui tombol di atas) -->
@@ -4533,6 +4558,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=118.0"></script>
-  <script src="js/app.js?v=123.0"></script>
+  <script src="js/app.js?v=124.0"></script>
 </body>
 </html>

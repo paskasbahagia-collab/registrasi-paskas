@@ -1782,13 +1782,27 @@ function navigateTo(pageId) {
     const ctaWrap = document.getElementById('regisCtaWrapper');
     const promptBox = document.getElementById('regTypePromptBox');
     const formCard = document.getElementById('regFormCardContainer');
+    const closedBox = document.getElementById('regClosedPromptBox');
 
     if (hangingGallery) hangingGallery.style.display = '';
     if (floatingBar) floatingBar.style.display = '';
-    if (storyGrid) storyGrid.style.display = 'grid';
-    if (ctaWrap) ctaWrap.style.display = 'flex';
-    if (promptBox) promptBox.style.display = 'none';
-    if (formCard) formCard.style.display = 'none';
+
+    if (isRegistrationLocked) {
+      if (storyGrid) storyGrid.style.display = 'none';
+      if (ctaWrap) ctaWrap.style.display = 'none';
+      if (promptBox) promptBox.style.display = 'none';
+      if (formCard) formCard.style.display = 'none';
+      if (closedBox) {
+        closedBox.style.display = 'block';
+        updateClosedNoticeContent();
+      }
+    } else {
+      if (closedBox) closedBox.style.display = 'none';
+      if (storyGrid) storyGrid.style.display = 'grid';
+      if (ctaWrap) ctaWrap.style.display = 'flex';
+      if (promptBox) promptBox.style.display = 'none';
+      if (formCard) formCard.style.display = 'none';
+    }
   }
 
   // If going to rekap page, re-render charts
@@ -1896,6 +1910,32 @@ function initCountdownTimer() {
 function lockRegistrationForms(locked) {
   const indBtn = document.getElementById('indSubmitBtn');
   const grpBtn = document.getElementById('grpSubmitBtn');
+  const ctaWrap = document.getElementById('regisCtaWrapper');
+  const storyGrid = document.getElementById('storyContentGrid');
+  const promptBox = document.getElementById('regTypePromptBox');
+  const formCard = document.getElementById('regFormCardContainer');
+  const closedBox = document.getElementById('regClosedPromptBox');
+
+  if (locked) {
+    if (ctaWrap) ctaWrap.style.display = 'none';
+    if (promptBox) promptBox.style.display = 'none';
+    if (formCard) formCard.style.display = 'none';
+    if (storyGrid) storyGrid.style.display = 'none';
+    if (closedBox) {
+      closedBox.style.display = 'block';
+      updateClosedNoticeContent();
+    }
+  } else {
+    if (closedBox) closedBox.style.display = 'none';
+    const activePage = document.querySelector('.page-view.active');
+    if (activePage && activePage.id === 'page-registration') {
+      if ((!formCard || formCard.style.display !== 'block') && (!promptBox || promptBox.style.display !== 'block')) {
+        if (storyGrid) storyGrid.style.display = 'grid';
+        if (ctaWrap) ctaWrap.style.display = 'flex';
+      }
+    }
+  }
+
   if (indBtn) {
     indBtn.disabled = locked;
     indBtn.innerHTML = locked 
@@ -1904,6 +1944,17 @@ function lockRegistrationForms(locked) {
   }
   if (grpBtn) {
     grpBtn.disabled = locked;
+  }
+}
+
+function updateClosedNoticeContent() {
+  const settings = (window.dataService && window.dataService.getSettings) ? window.dataService.getSettings() : {};
+  const msgEl = document.getElementById('closedNoticeCustomMsg');
+  if (msgEl) {
+    let customMsg = settings.closed_message || 'Batas waktu pendaftaran peserta Paskas Bahagia telah berakhir. Silakan hubungi narahubung panitia.';
+    // Bersihkan karakter emoji atau emoticon agar tampilan resmi dan bersih
+    customMsg = customMsg.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu, '').trim();
+    msgEl.textContent = customMsg;
   }
 }
 
@@ -1925,15 +1976,17 @@ function chooseCategoryOption(type) {
   handleRegistrationTypeSelect(type);
 }
 
-function chooseCategoryOption(type) {
-  const nativeSelect = document.getElementById('formCategorySelect');
-  if (nativeSelect) {
-    nativeSelect.value = type;
-  }
-  handleRegistrationTypeSelect(type);
-}
-
 function openRegistrationSelector() {
+  if (isRegistrationLocked) {
+    showToast('Pendaftaran telah resmi ditutup.', 'warning');
+    const closedBox = document.getElementById('regClosedPromptBox');
+    if (closedBox) {
+      closedBox.style.display = 'block';
+      updateClosedNoticeContent();
+    }
+    return;
+  }
+
   const promptBox = document.getElementById('regTypePromptBox');
   const ctaWrap = document.getElementById('regisCtaWrapper');
   const storyGrid = document.getElementById('storyContentGrid');
