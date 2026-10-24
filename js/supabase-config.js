@@ -85,9 +85,13 @@ class PaskasDataService {
     if (this.supabaseClient && this.isSupabaseConnected) {
       return this.supabaseClient;
     }
-    const savedUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL) || DEFAULT_SUPABASE_URL;
+    let savedUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL);
+    if (!savedUrl || !savedUrl.startsWith('https://') || savedUrl.length < 15) {
+      localStorage.removeItem(STORAGE_KEYS.SUPABASE_URL);
+      savedUrl = DEFAULT_SUPABASE_URL;
+    }
     let savedKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY);
-    if (savedKey && (savedKey.startsWith('eyJ') || savedKey.length < 20)) {
+    if (!savedKey || savedKey.startsWith('eyJ') || savedKey.length < 20) {
       localStorage.removeItem(STORAGE_KEYS.SUPABASE_KEY);
       savedKey = null;
     }
@@ -109,7 +113,7 @@ class PaskasDataService {
   /**
    * Menunggu hingga Supabase client siap tersambung (anti-race condition jaringan lambat / mobile)
    */
-  async waitForSupabase(timeoutMs = 6000) {
+  async waitForSupabase(timeoutMs = 1200) {
     if (this.ensureSupabaseClient()) return this.supabaseClient;
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
@@ -504,7 +508,7 @@ class PaskasDataService {
    */
   async getRegistrations() {
     // Tunggu Supabase client siap (anti race-condition saat CDN belum fully loaded)
-    await this.waitForSupabase(8000);
+    await this.waitForSupabase(1200);
     let cloudList = null;
     const deletedCodes = new Set(this.getDeletedCodes());
 

@@ -2014,7 +2014,9 @@
                 <h2 class="editorial-main-title">Rekapitulasi Data Peserta Terdaftar</h2>
               </div>
 
-              <div class="rekap-header-actions">
+                <button class="btn btn-editorial-outline" onclick="forceReloadCloudData(this)" title="Sinkronkan data terbaru dari Cloud Supabase">
+                  <i class="fa-solid fa-rotate"></i> Sinkron Cloud
+                </button>
                 <button class="btn btn-editorial-excel" onclick="exportToExcel()" title="Export data ke Microsoft Excel">
                   <i class="fa-solid fa-file-excel"></i> Export Excel
                 </button>
@@ -2772,10 +2774,15 @@
               <i class="fa-solid fa-folder-open"></i>
             </div>
             <h4>Belum Ada Data Peserta Terdaftar</h4>
-            <p>Silakan isi formulir pendaftaran peserta atau ubah kata kunci pencarian Anda.</p>
-            <button class="btn btn-primary" onclick="navigateTo('registration')">
-              <i class="fa-solid fa-plus"></i> Isi Registrasi Sekarang
-            </button>
+            <p>Silakan isi formulir pendaftaran peserta atau klik tombol di bawah untuk menyinkronkan data langsung dari Cloud Supabase.</p>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px;">
+              <button class="btn btn-primary" onclick="forceReloadCloudData(this)">
+                <i class="fa-solid fa-rotate"></i> Muat Ulang Data Cloud
+              </button>
+              <button class="btn btn-outline-cyan" onclick="navigateTo('registration')">
+                <i class="fa-solid fa-plus"></i> Isi Registrasi Sekarang
+              </button>
+            </div>
           </div>
 
           <!-- Table Footer & Pagination -->
@@ -4522,7 +4529,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=116.0"></script>
-  <script src="js/app.js?v=122.0"></script>
+  <script src="js/supabase-config.js?v=117.0"></script>
+  <script src="js/app.js?v=123.0"></script>
 </body>
 </html>

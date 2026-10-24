@@ -6244,6 +6244,40 @@ async function loadAndRenderRegistrations() {
   if (magTotal) magTotal.textContent = allRegistrations.length + ' Jiwa';
 }
 
+async function forceReloadCloudData(btn) {
+  const origHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghubungkan Supabase...';
+  }
+  try {
+    showToast('Menghubungkan & menarik data dari Cloud Supabase...', 'info');
+    allRegistrations = await window.dataService.getRegistrations();
+    filteredRegistrations = [...allRegistrations];
+    currentPage = 1;
+    populateWilayahFilter();
+    updateSummaryMetrics();
+    renderRekapTable();
+    renderCharts();
+
+    const badge = document.getElementById('rekapBadgeCount');
+    if (badge) badge.textContent = allRegistrations.length;
+    const settingsBadge = document.getElementById('settingsRekapBadge');
+    if (settingsBadge) settingsBadge.textContent = allRegistrations.length;
+
+    showToast(`Alhamdulillah! Berhasil memuat ${allRegistrations.length} data peserta dari Supabase.`, 'success');
+  } catch (err) {
+    console.error('Gagal force reload Supabase data:', err);
+    showToast('Kendala menarik data: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
+  }
+}
+window.forceReloadCloudData = forceReloadCloudData;
+
 function populateWilayahFilter() {
   const select = document.getElementById('filterWilayah');
   if (!select) return;
