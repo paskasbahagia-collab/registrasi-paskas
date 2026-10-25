@@ -1,5 +1,5 @@
 
-const safeStorage = (typeof window !== 'undefined' && window.safeStorage) ? window.safeStorage : {
+var safeStorage = (typeof window !== 'undefined' && window.safeStorage) ? window.safeStorage : {
   _mem: {},
   getItem(k) { return Object.prototype.hasOwnProperty.call(this._mem, k) ? this._mem[k] : null; },
   setItem(k, v) { this._mem[k] = String(v); },
