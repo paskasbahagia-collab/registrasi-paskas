@@ -4032,8 +4032,8 @@ CREATE TABLE IF NOT EXISTS registrations (
                       <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">Kata Sandi Saat Ini</label>
                       <div class="input-with-icon" style="position: relative;">
                         <i class="fa-solid fa-key text-gold"></i>
-                        <input type="password" id="cfg_currentAdminPassword" class="form-control" placeholder="Masukkan password saat ini (bawaan: admin123)" style="padding-right: 40px;">
-                        <button type="button" onclick="togglePasswordVisibility('cfg_currentAdminPassword', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #8c8273; cursor: pointer;">
+                        <input type="password" id="cfg_currentAdminPassword" class="form-control" placeholder="Masukkan password saat ini (bawaan: admin123)" style="padding-right: 44px;">
+                        <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('cfg_currentAdminPassword', this)" title="Lihat/Sembunyikan Kata Sandi">
                           <i class="fa-solid fa-eye"></i>
                         </button>
                       </div>
@@ -4043,8 +4043,8 @@ CREATE TABLE IF NOT EXISTS registrations (
                       <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">Kata Sandi Baru</label>
                       <div class="input-with-icon" style="position: relative;">
                         <i class="fa-solid fa-lock text-gold"></i>
-                        <input type="password" id="cfg_newAdminPassword" class="form-control" placeholder="Minimal 4 karakter" style="padding-right: 40px;">
-                        <button type="button" onclick="togglePasswordVisibility('cfg_newAdminPassword', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #8c8273; cursor: pointer;">
+                        <input type="password" id="cfg_newAdminPassword" class="form-control" placeholder="Minimal 4 karakter" style="padding-right: 44px;">
+                        <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('cfg_newAdminPassword', this)" title="Lihat/Sembunyikan Kata Sandi">
                           <i class="fa-solid fa-eye"></i>
                         </button>
                       </div>
@@ -4054,8 +4054,8 @@ CREATE TABLE IF NOT EXISTS registrations (
                       <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">Ulangi Kata Sandi Baru</label>
                       <div class="input-with-icon" style="position: relative;">
                         <i class="fa-solid fa-shield-check text-gold"></i>
-                        <input type="password" id="cfg_confirmAdminPassword" class="form-control" placeholder="Ketik ulang password baru" style="padding-right: 40px;">
-                        <button type="button" onclick="togglePasswordVisibility('cfg_confirmAdminPassword', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #8c8273; cursor: pointer;">
+                        <input type="password" id="cfg_confirmAdminPassword" class="form-control" placeholder="Ketik ulang password baru" style="padding-right: 44px;">
+                        <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('cfg_confirmAdminPassword', this)" title="Lihat/Sembunyikan Kata Sandi">
                           <i class="fa-solid fa-eye"></i>
                         </button>
                       </div>

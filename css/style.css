@@ -4762,6 +4762,38 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--primary);
 }
 
+.btn-toggle-eye {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #8c8273;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-eye:hover {
+  color: var(--primary, #1e522b);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.btn-toggle-eye i {
+  position: static !important;
+  left: auto !important;
+  pointer-events: auto !important;
+  font-size: 14px !important;
+  color: inherit !important;
+}
+
 .form-control {
   width: 100%;
   padding: 13px 18px;
