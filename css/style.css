@@ -9863,7 +9863,7 @@ input:checked + .slider:before {
   }
 
   #groupCoordinatorsTable td:nth-child(2)::before {
-    content: 'Nama Lengkap Koordinator *';
+    content: 'Pas Foto Koordinator (Opsional)';
     display: block;
     font-size: 11.5px;
     font-weight: 700;
@@ -9873,6 +9873,16 @@ input:checked + .slider:before {
   }
 
   #groupCoordinatorsTable td:nth-child(3)::before {
+    content: 'Nama Lengkap Koordinator *';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #854d0e;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  #groupCoordinatorsTable td:nth-child(4)::before {
     content: 'Usia Koordinator *';
     display: block;
     font-size: 11.5px;
@@ -9882,7 +9892,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  #groupCoordinatorsTable td:nth-child(4)::before {
+  #groupCoordinatorsTable td:nth-child(5)::before {
     content: 'Tahun Bergabung Paskas *';
     display: block;
     font-size: 11.5px;
@@ -9892,7 +9902,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  #groupCoordinatorsTable td:nth-child(5)::before {
+  #groupCoordinatorsTable td:nth-child(6)::before {
     content: 'Jenis Kelamin *';
     display: block;
     font-size: 11.5px;
@@ -9902,7 +9912,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  #groupCoordinatorsTable td:nth-child(6)::before {
+  #groupCoordinatorsTable td:nth-child(7)::before {
     content: 'Ukuran Baju *';
     display: block;
     font-size: 11.5px;
@@ -9912,7 +9922,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  #groupCoordinatorsTable td:nth-child(7)::before {
+  #groupCoordinatorsTable td:nth-child(8)::before {
     content: 'Riwayat Penyakit (Opsional)';
     display: block;
     font-size: 11.5px;
@@ -9922,7 +9932,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  #groupCoordinatorsTable td:nth-child(8)::before {
+  #groupCoordinatorsTable td:nth-child(9)::before {
     content: 'No. WhatsApp Koordinator *';
     display: block;
     font-size: 11.5px;
@@ -9932,7 +9942,7 @@ input:checked + .slider:before {
     font-family: 'Outfit', sans-serif;
   }
 
-  #groupCoordinatorsTable td:nth-child(9)::before {
+  #groupCoordinatorsTable td:nth-child(10)::before {
     content: 'Email Koordinator *';
     display: block;
     font-size: 11.5px;
@@ -9963,7 +9973,7 @@ input:checked + .slider:before {
   }
 
   #groupMembersTable td:nth-child(2)::before {
-    content: 'Nama Lengkap Peserta *';
+    content: 'Pas Foto Peserta (Opsional)';
     display: block;
     font-size: 11.5px;
     font-weight: 700;
@@ -9973,7 +9983,7 @@ input:checked + .slider:before {
   }
 
   #groupMembersTable td:nth-child(3)::before {
-    content: 'Usia Peserta *';
+    content: 'Nama Lengkap Peserta *';
     display: block;
     font-size: 11.5px;
     font-weight: 700;
@@ -9983,7 +9993,7 @@ input:checked + .slider:before {
   }
 
   #groupMembersTable td:nth-child(4)::before {
-    content: 'Tahun Bergabung Paskas *';
+    content: 'Usia Peserta *';
     display: block;
     font-size: 11.5px;
     font-weight: 700;
@@ -9993,7 +10003,7 @@ input:checked + .slider:before {
   }
 
   #groupMembersTable td:nth-child(5)::before {
-    content: 'Jenis Kelamin *';
+    content: 'Tahun Bergabung Paskas *';
     display: block;
     font-size: 11.5px;
     font-weight: 700;
@@ -10003,7 +10013,7 @@ input:checked + .slider:before {
   }
 
   #groupMembersTable td:nth-child(6)::before {
-    content: 'Ukuran Baju *';
+    content: 'Jenis Kelamin *';
     display: block;
     font-size: 11.5px;
     font-weight: 700;
@@ -10013,7 +10023,7 @@ input:checked + .slider:before {
   }
 
   #groupMembersTable td:nth-child(7)::before {
-    content: 'Riwayat Medis / Penyakit (Opsional)';
+    content: 'Ukuran Baju *';
     display: block;
     font-size: 11.5px;
     font-weight: 700;
@@ -10023,7 +10033,7 @@ input:checked + .slider:before {
   }
 
   #groupMembersTable td:nth-child(8)::before {
-    content: 'No. WhatsApp / HP (Opsional)';
+    content: 'Riwayat Medis / Penyakit (Opsional)';
     display: block;
     font-size: 11.5px;
     font-weight: 700;
@@ -10033,6 +10043,16 @@ input:checked + .slider:before {
   }
 
   #groupMembersTable td:nth-child(9)::before {
+    content: 'No. WhatsApp / HP (Opsional)';
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4b6354;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  #groupMembersTable td:nth-child(10)::before {
     content: 'No. WA Darurat (Opsional)';
     display: block;
     font-size: 11.5px;
