@@ -9150,7 +9150,11 @@ async function saveNewAdminPassword() {
   const newHash = await hashSHA256(newVal);
   safeStorage.setItem('paskas_admin_password', newHash);
   if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
-    window.dataService.saveCloudSetting('paskas_admin_password', newHash);
+    try {
+      await window.dataService.saveCloudSetting('paskas_admin_password', newHash);
+    } catch (e) {
+      // Dilindungi oleh aturan RLS Supabase agar tidak bisa diubah lewat API publik
+    }
   }
   if (curInput) curInput.value = '';
   if (newInput) newInput.value = '';
@@ -9163,7 +9167,11 @@ function resetAdminPasswordDefault() {
   if (confirm('Kembalikan kata sandi admin ke setelan awal bawaan (admin123)?')) {
     safeStorage.setItem('paskas_admin_password', DEFAULT_ADMIN_PASSWORD_HASH);
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
-      window.dataService.saveCloudSetting('paskas_admin_password', DEFAULT_ADMIN_PASSWORD_HASH);
+      try {
+        window.dataService.saveCloudSetting('paskas_admin_password', DEFAULT_ADMIN_PASSWORD_HASH);
+      } catch (e) {
+        // Dilindungi oleh aturan RLS Supabase
+      }
     }
     const curInput = document.getElementById('cfg_currentAdminPassword');
     const newInput = document.getElementById('cfg_newAdminPassword');
@@ -12460,12 +12468,7 @@ function initAntiInspectGuard() {
   // 3. Kebersihan Console Log di Lingkungan Produksi
   try {
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      const banner = () => {
-        console.clear();
-        console.log('%cSTOP!', 'color: red; font-size: 32px; font-weight: bold;');
-        console.log('%cArea ini adalah konsol peramban web resmi Registrasi PASKAS BAHAGIA. Seluruh aktivitas dan perubahan tidak sah dipantau sistem.', 'color: #38bdf8; font-size: 13px;');
-      };
-      banner();
+      console.clear();
     }
   } catch (err) {}
 }

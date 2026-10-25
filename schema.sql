@@ -98,6 +98,7 @@ CREATE POLICY "Allow public delete for registrations"
 ON registrations FOR DELETE USING (true);
 
 -- Kebijakan App Settings (Hardened): Boleh SELECT, INSERT, UPDATE publik (Anon)
+-- KECUALI 'paskas_admin_password' yang DILARANG di-UPDATE atau di-INSERT oleh publik anonim
 -- DELETE dilarang untuk umum agar pengaturan sistem tidak dapat dihapus sembarangan
 DROP POLICY IF EXISTS "Allow public read access for app_settings" ON app_settings;
 CREATE POLICY "Allow public read access for app_settings" 
@@ -105,11 +106,14 @@ ON app_settings FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Allow public insert for app_settings" ON app_settings;
 CREATE POLICY "Allow public insert for app_settings" 
-ON app_settings FOR INSERT WITH CHECK (true);
+ON app_settings FOR INSERT 
+WITH CHECK (setting_key != 'paskas_admin_password');
 
 DROP POLICY IF EXISTS "Allow public update for app_settings" ON app_settings;
 CREATE POLICY "Allow public update for app_settings" 
-ON app_settings FOR UPDATE USING (true);
+ON app_settings FOR UPDATE 
+USING (setting_key != 'paskas_admin_password')
+WITH CHECK (setting_key != 'paskas_admin_password');
 
 DROP POLICY IF EXISTS "Allow public delete for app_settings" ON app_settings;
 
