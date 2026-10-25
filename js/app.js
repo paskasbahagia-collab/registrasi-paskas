@@ -2317,16 +2317,30 @@ function escapeHtml(str) {
 // ===================================================================
 let ind_selectedPhotoData = null;
 
-function compressImageFile(file, maxWidth = 800, maxHeight = 1000, quality = 0.82) {
+function compressParticipantPhoto(file, maxWidth = 800, maxHeight = 1000, quality = 0.82) {
   return new Promise((resolve, reject) => {
     if (!file || !file.type || !file.type.startsWith('image/')) {
       reject(new Error('File yang dipilih bukan gambar valid.'));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
+    // Kapasitas upgrade hingga 100MB
+    const MAX_PHOTO_BYTES = 100 * 1024 * 1024;
+    if (file.size > MAX_PHOTO_BYTES) {
+      reject(new Error('Ukuran file foto melebihi batas 100MB.'));
+      return;
+    }
+
+    // Gunakan URL.createObjectURL agar hemat memori (bisa proses file besar s/d 100MB tanpa membebani RAM HP/browser)
+    let objectUrl = null;
+    try {
+      objectUrl = URL.createObjectURL(file);
+    } catch (e) {
+      // Fallback aman
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      try {
         let width = img.width;
         let height = img.height;
 
@@ -2345,13 +2359,26 @@ function compressImageFile(file, maxWidth = 800, maxHeight = 1000, quality = 0.8
         ctx.drawImage(img, 0, 0, width, height);
 
         const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
         resolve(dataUrl);
-      };
-      img.onerror = () => reject(new Error('Gagal memuat gambar untuk dikompresi.'));
-      img.src = e.target.result;
+      } catch (procErr) {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        reject(procErr);
+      }
     };
-    reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
-    reader.readAsDataURL(file);
+    img.onerror = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      reject(new Error('Gagal memuat gambar untuk dikompresi.'));
+    };
+
+    if (objectUrl) {
+      img.src = objectUrl;
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => { img.src = e.target.result; };
+      reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
+      reader.readAsDataURL(file);
+    }
   });
 }
 
@@ -2360,9 +2387,10 @@ async function handleIndividuPhotoSelected(e) {
   if (!file) return;
 
   try {
-    showToast('Memproses dan mengoptimalkan pas foto...', 'info');
-    const compressed = await compressImageFile(file, 800, 1000, 0.82);
-    ind_selectedPhotoData = compressed;
+    showToast('Memproses dan mengoptimalkan pas foto (kapasitas s/d 100MB)...', 'info');
+    const compressed = await compressParticipantPhoto(file, 800, 1000, 0.82);
+    const photoDataUrl = (typeof compressed === 'object' && compressed.dataUrl) ? compressed.dataUrl : compressed;
+    ind_selectedPhotoData = photoDataUrl;
 
     const previewSlot = document.getElementById('ind_photoPreviewSlot');
     const emptyState = document.getElementById('ind_photoEmptyState');
@@ -2372,7 +2400,7 @@ async function handleIndividuPhotoSelected(e) {
 
     if (emptyState) emptyState.style.display = 'none';
     if (previewImg) {
-      previewImg.src = compressed;
+      previewImg.src = photoDataUrl;
       previewImg.style.display = 'block';
     }
     if (btnRemove) btnRemove.style.display = 'inline-flex';
@@ -2414,15 +2442,17 @@ async function handleRowPhotoSelected(e, type, id) {
   if (!file) return;
 
   try {
-    const compressed = await compressImageFile(file, 750, 950, 0.80);
+    showToast('Mengoptimalkan foto peserta...', 'info');
+    const compressed = await compressParticipantPhoto(file, 750, 950, 0.80);
+    const photoDataUrl = (typeof compressed === 'object' && compressed.dataUrl) ? compressed.dataUrl : compressed;
     const hiddenInput = document.getElementById(`${type}PhotoData-${id}`);
-    if (hiddenInput) hiddenInput.value = compressed;
+    if (hiddenInput) hiddenInput.value = photoDataUrl;
 
     const slot = document.getElementById(`${type}PhotoSlot-${id}`);
     if (slot) {
       slot.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-          <img src="${compressed}" class="cell-photo-thumb" onclick="openPhotoPreviewLightbox('${compressed.replace(/'/g, "\\'")}', 'Peserta #${id}')" title="Klik untuk lihat foto">
+          <img src="${photoDataUrl}" class="cell-photo-thumb" onclick="openPhotoPreviewLightbox('${photoDataUrl.replace(/'/g, "\\'")}', 'Peserta #${id}')" title="Klik untuk lihat foto">
           <i class="fa-solid fa-circle-xmark" style="color: #ef4444; font-size: 14px; cursor: pointer;" onclick="removeRowPhoto('${type}', ${id})" title="Hapus foto"></i>
         </div>
       `;
