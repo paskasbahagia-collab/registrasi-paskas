@@ -131,6 +131,9 @@ class PaskasDataService {
 
   init() {
     this.ensureSupabaseClient();
+    try {
+      localStorage.removeItem(STORAGE_KEYS.DELETED_CODES);
+    } catch (e) {}
 
     // Inisialisasi data lokal jika masih kosong atau bersihkan data dummy demo / test lama
     const existing = localStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
@@ -569,30 +572,7 @@ class PaskasDataService {
     }
 
     if (cloudList !== null) {
-      // 1. Jika ada data di cloud Supabase yang tercatat pernah dihapus, filter keluar & purge di Supabase
-      if (deletedCodes.size > 0) {
-        const toPurge = cloudList.filter(r => r && r.registration_code && deletedCodes.has(r.registration_code));
-        if (toPurge.length > 0) {
-          cloudList = cloudList.filter(r => r && (!r.registration_code || !deletedCodes.has(r.registration_code)));
-          if (this.isSupabaseConnected && this.supabaseClient) {
-            const purgeCodes = toPurge.map(p => p.registration_code).filter(Boolean);
-            if (purgeCodes.length > 0) {
-              try {
-                this.supabaseClient
-                  .from('registrations')
-                  .delete()
-                  .in('registration_code', purgeCodes)
-                  .then(
-                    ({ error }) => { if (error) console.warn('Supabase purge error:', error); },
-                    (err) => console.warn('Supabase purge exception:', err)
-                  );
-              } catch (purgeErr) {
-                console.warn('Purge error:', purgeErr);
-              }
-            }
-          }
-        }
-      }
+      // Gabungkan data lokal yang belum tersinkron ke cloud (offline pending) jika ada
 
       // 2. Gabungkan data lokal yang belum tersinkron ke cloud (dan bukan data yang sengaja dihapus)
       // Hanya data yang ditandai _is_offline_pending (gagal tersimpan ke cloud) yang boleh di-sync ulang,
