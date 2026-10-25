@@ -397,37 +397,15 @@ class PaskasDataService {
   }
 
   getDeletedCodes() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.DELETED_CODES);
-      const list = raw ? JSON.parse(raw) : [];
-      return Array.isArray(list) ? list : [];
-    } catch {
-      return [];
-    }
+    return [];
   }
 
   recordDeletedCode(code) {
-    if (!code) return;
-    try {
-      const list = this.getDeletedCodes();
-      if (!list.includes(code)) {
-        list.push(code);
-        if (list.length > 500) list.shift();
-        localStorage.setItem(STORAGE_KEYS.DELETED_CODES, JSON.stringify(list));
-      }
-    } catch (e) {
-      console.warn('Gagal record deleted code:', e);
-    }
+    // Dinonaktifkan: penghapusan data hanya dilakukan secara sah via deleteRegistration di Cloud Supabase
   }
 
   removeDeletedCode(code) {
-    if (!code) return;
-    try {
-      const list = this.getDeletedCodes().filter(c => c !== code);
-      localStorage.setItem(STORAGE_KEYS.DELETED_CODES, JSON.stringify(list));
-    } catch (e) {
-      console.warn('Gagal remove deleted code:', e);
-    }
+    // Dinonaktifkan
   }
 
   /**

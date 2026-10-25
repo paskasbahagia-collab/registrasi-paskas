@@ -24,6 +24,11 @@
       document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
     }
   </script>
+  <script>
+    try {
+      localStorage.removeItem('paskas_deleted_registration_codes');
+    } catch (e) {}
+  </script>
 
   <!-- Canvas Confetti for Registration Celebration -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
@@ -4584,7 +4589,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=118.0"></script>
-  <script src="js/app.js?v=124.0"></script>
+  <script src="js/supabase-config.js?v=125.0"></script>
+  <script src="js/app.js?v=128.0"></script>
 </body>
 </html>
