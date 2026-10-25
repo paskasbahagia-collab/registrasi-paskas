@@ -2442,8 +2442,8 @@ function removeRowPhoto(type, id) {
   const slot = document.getElementById(`${type}PhotoSlot-${id}`);
   if (slot) {
     slot.innerHTML = `
-      <button type="button" class="cell-photo-btn" onclick="triggerRowPhotoUpload('${type}', ${id})" title="Unggah Pas Foto">
-        <i class="fa-solid fa-camera"></i> +Foto
+      <button type="button" class="cell-photo-btn" onclick="triggerRowPhotoUpload('${type}', ${id})" title="Wajib Unggah Pas Foto">
+        <i class="fa-solid fa-camera"></i> +Foto <span style="color: #ef4444; font-size: 12px; font-weight: bold;">*</span>
       </button>
     `;
   }
@@ -2763,6 +2763,20 @@ window.checkEmergencyPhoneMatch = checkEmergencyPhoneMatch;
 
 function validateIndividuStep(step) {
   if (step === 1) {
+    if (!ind_selectedPhotoData) {
+      showToast('Mohon unggah pas foto peserta terlebih dahulu (wajib tampak dekat / close-up).', 'error');
+      const photoSlot = document.getElementById('ind_photoPreviewSlot');
+      if (photoSlot) {
+        photoSlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        photoSlot.style.borderColor = '#ef4444';
+        photoSlot.style.boxShadow = '0 0 14px rgba(239, 68, 68, 0.45)';
+        setTimeout(() => {
+          photoSlot.style.borderColor = '';
+          photoSlot.style.boxShadow = '';
+        }, 3500);
+      }
+      return false;
+    }
     const fullName = document.getElementById('ind_fullName')?.value.trim();
     if (!fullName) {
       showToast('Mohon lengkapi nama lengkap sesuai tanda pengenal.', 'error');
@@ -3939,6 +3953,23 @@ function handleKelompokPreview(e) {
       return;
     }
 
+    const coordPhoto = card.querySelector('.grp-coord-photo-data')?.value.trim() || '';
+    if (!coordPhoto) {
+      showToast(`Mohon unggah pas foto untuk Koordinator "${name}" (wajib tampak dekat / close-up).`, 'warning');
+      const photoBtn = card.querySelector('.cell-photo-btn');
+      if (photoBtn) {
+        photoBtn.focus();
+        photoBtn.style.outline = '2px solid #ef4444';
+        photoBtn.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.6)';
+        setTimeout(() => {
+          photoBtn.style.outline = '';
+          photoBtn.style.boxShadow = '';
+        }, 3500);
+      }
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     const lowerName = name.toLowerCase();
     if (seenTableNames.has(lowerName)) {
       showToast(`Nama "${name}" terdaftar lebih dari satu kali di rombongan ini. Mohon periksa kembali.`, 'error');
@@ -4065,6 +4096,23 @@ function handleKelompokPreview(e) {
     if (!name) {
       showToast(`Mohon isi nama lengkap untuk Anggota baris ke-${idx + 1}.`, 'warning');
       card.querySelector('.grp-member-name')?.focus();
+      return;
+    }
+
+    const memberPhoto = card.querySelector('.grp-member-photo-data')?.value.trim() || '';
+    if (!memberPhoto) {
+      showToast(`Mohon unggah pas foto untuk Anggota "${name}" di baris ke-${idx + 1} (wajib tampak dekat / close-up).`, 'warning');
+      const photoBtn = card.querySelector('.cell-photo-btn');
+      if (photoBtn) {
+        photoBtn.focus();
+        photoBtn.style.outline = '2px solid #ef4444';
+        photoBtn.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.6)';
+        setTimeout(() => {
+          photoBtn.style.outline = '';
+          photoBtn.style.boxShadow = '';
+        }, 3500);
+      }
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
@@ -4505,8 +4553,8 @@ function addGroupCoordinatorCard(opts = {}) {
             <i class="fa-solid fa-circle-xmark" style="color: #ef4444; font-size: 14px; cursor: pointer;" onclick="removeRowPhoto('coord', ${coordId})" title="Hapus foto"></i>
           </div>
         ` : `
-          <button type="button" class="cell-photo-btn" onclick="triggerRowPhotoUpload('coord', ${coordId})" title="Unggah Pas Foto Koordinator">
-            <i class="fa-solid fa-camera"></i> +Foto
+          <button type="button" class="cell-photo-btn" onclick="triggerRowPhotoUpload('coord', ${coordId})" title="Wajib Unggah Pas Foto Koordinator">
+            <i class="fa-solid fa-camera"></i> +Foto <span style="color: #ef4444; font-size: 12px; font-weight: bold;">*</span>
           </button>
         `}
       </div>
@@ -4731,8 +4779,8 @@ function addGroupMemberCard(opts = {}) {
             <i class="fa-solid fa-circle-xmark" style="color: #ef4444; font-size: 14px; cursor: pointer;" onclick="removeRowPhoto('member', ${memberId})" title="Hapus foto"></i>
           </div>
         ` : `
-          <button type="button" class="cell-photo-btn" onclick="triggerRowPhotoUpload('member', ${memberId})" title="Unggah Pas Foto Anggota">
-            <i class="fa-solid fa-camera"></i> +Foto
+          <button type="button" class="cell-photo-btn" onclick="triggerRowPhotoUpload('member', ${memberId})" title="Wajib Unggah Pas Foto Anggota">
+            <i class="fa-solid fa-camera"></i> +Foto <span style="color: #ef4444; font-size: 12px; font-weight: bold;">*</span>
           </button>
         `}
       </div>
