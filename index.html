@@ -24,10 +24,82 @@
       document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
     }
   </script>
+  <!-- Cross-Platform Safe Storage (LocalStorage with In-Memory fallback for Incognito/In-App Browsers) -->
   <script>
-    try {
-      localStorage.removeItem('paskas_deleted_registration_codes');
-    } catch (e) {}
+    (function() {
+      var memoryStorage = {};
+      var isSupported = null;
+
+      function checkSupport() {
+        if (isSupported !== null) return isSupported;
+        try {
+          if (typeof window === 'undefined' || !window.localStorage) {
+            isSupported = false;
+            return false;
+          }
+          var testKey = '__paskas_probe__';
+          window.localStorage.setItem(testKey, testKey);
+          window.localStorage.removeItem(testKey);
+          isSupported = true;
+          return true;
+        } catch (e) {
+          isSupported = false;
+          return false;
+        }
+      }
+
+      var safeStorage = {
+        getItem: function(key) {
+          if (checkSupport()) {
+            try {
+              return window.localStorage.getItem(key);
+            } catch (e) {}
+          }
+          return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null;
+        },
+        setItem: function(key, val) {
+          var str = String(val);
+          if (checkSupport()) {
+            try {
+              window.localStorage.setItem(key, str);
+            } catch (e) {}
+          }
+          memoryStorage[key] = str;
+        },
+        removeItem: function(key) {
+          if (checkSupport()) {
+            try {
+              window.localStorage.removeItem(key);
+            } catch (e) {}
+          }
+          delete memoryStorage[key];
+        },
+        clear: function() {
+          if (checkSupport()) {
+            try {
+              window.localStorage.clear();
+            } catch (e) {}
+          }
+          memoryStorage = {};
+        }
+      };
+
+      window.safeStorage = safeStorage;
+
+      try {
+        if (!checkSupport()) {
+          Object.defineProperty(window, 'localStorage', {
+            value: safeStorage,
+            configurable: true,
+            writable: true
+          });
+        }
+      } catch (e) {}
+
+      try {
+        safeStorage.removeItem('paskas_deleted_registration_codes');
+      } catch (e) {}
+    })();
   </script>
 
   <!-- Canvas Confetti for Registration Celebration -->
@@ -4589,7 +4661,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=125.0"></script>
-  <script src="js/app.js?v=128.0"></script>
+  <script src="js/supabase-config.js?v=126.0"></script>
+  <script src="js/app.js?v=129.0"></script>
 </body>
 </html>

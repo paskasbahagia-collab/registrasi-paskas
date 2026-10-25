@@ -1,3 +1,11 @@
+
+const safeStorage = (typeof window !== 'undefined' && window.safeStorage) ? window.safeStorage : {
+  _mem: {},
+  getItem(k) { return Object.prototype.hasOwnProperty.call(this._mem, k) ? this._mem[k] : null; },
+  setItem(k, v) { this._mem[k] = String(v); },
+  removeItem(k) { delete this._mem[k]; },
+  clear() { this._mem = {}; }
+};
 /**
  * ===================================================================
  * PASKAS BAHAGIA - MAIN APPLICATION LOGIC
@@ -357,7 +365,7 @@ const CARDS_SCHEMA_VERSION = 'v40_tugu_jogja';
 // Inisialisasi kartu dinamis (disimpan di browser & Supabase cloud)
 function loadStoredCards() {
   try {
-    const saved = localStorage.getItem('paskas_custom_cards');
+    const saved = safeStorage.getItem('paskas_custom_cards');
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -371,7 +379,7 @@ function loadStoredCards() {
         });
         if (needsSave) {
           try {
-            localStorage.setItem('paskas_custom_cards', JSON.stringify(parsed));
+            safeStorage.setItem('paskas_custom_cards', JSON.stringify(parsed));
           } catch(e) {}
         }
         return parsed;
@@ -419,7 +427,7 @@ const DEFAULT_REGISTRATION_CONTENT = {
 
 function loadStoredRegistrationContent() {
   try {
-    const saved = localStorage.getItem('paskas_reg_content');
+    const saved = safeStorage.getItem('paskas_reg_content');
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && typeof parsed === 'object') {
@@ -506,7 +514,7 @@ function normalizeWilayahName(str) {
 
 function getMasterWilayahList() {
   try {
-    const raw = localStorage.getItem('paskas_master_wilayah');
+    const raw = safeStorage.getItem('paskas_master_wilayah');
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -522,7 +530,7 @@ function getMasterWilayahList() {
 function saveMasterWilayahList(list) {
   try {
     const cleanList = Array.isArray(list) ? list.filter(w => typeof w === 'string' && w.trim()) : [];
-    localStorage.setItem('paskas_master_wilayah', JSON.stringify(cleanList));
+    safeStorage.setItem('paskas_master_wilayah', JSON.stringify(cleanList));
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
       window.dataService.saveCloudSetting('paskas_master_wilayah', cleanList);
     }
@@ -893,12 +901,12 @@ window.handleIndividuWilayahSelect = handleIndividuWilayahSelect;
 document.addEventListener('DOMContentLoaded', async () => {
   // Auto-clean any corrupt ticket template image in localStorage
   try {
-    const rawSettings = localStorage.getItem('paskas_settings_cache');
+    const rawSettings = safeStorage.getItem('paskas_settings_cache');
     if (rawSettings && (rawSettings.includes('[object') || rawSettings.includes('boarding-pass-template.png'))) {
       const parsed = JSON.parse(rawSettings);
       if (!parsed.ticket_template_image || typeof parsed.ticket_template_image !== 'string' || parsed.ticket_template_image.includes('[object') || parsed.ticket_template_image.includes('boarding-pass-template.png')) {
         parsed.ticket_template_image = 'images/boarding-pass-canva.png';
-        localStorage.setItem('paskas_settings_cache', JSON.stringify(parsed));
+        safeStorage.setItem('paskas_settings_cache', JSON.stringify(parsed));
       }
     }
   } catch (e) {
@@ -1330,23 +1338,23 @@ function getUniformSettings() {
     ? window.dataService.getSettings()
     : {};
 
-  let ikhwanChart = settings.uniform_size_chart_ikhwan || localStorage.getItem('paskas_uniform_size_chart_ikhwan');
+  let ikhwanChart = settings.uniform_size_chart_ikhwan || safeStorage.getItem('paskas_uniform_size_chart_ikhwan');
   if (!ikhwanChart || ikhwanChart.includes('Lebar 46cm / LD 92cm')) {
     ikhwanChart = DEFAULT_SIZE_CHART_IKHWAN;
   }
 
-  let akhwatChart = settings.uniform_size_chart_akhwat || localStorage.getItem('paskas_uniform_size_chart_akhwat');
+  let akhwatChart = settings.uniform_size_chart_akhwat || safeStorage.getItem('paskas_uniform_size_chart_akhwat');
   if (!akhwatChart || akhwatChart.includes('Lebar 46cm / LD 92cm')) {
     akhwatChart = DEFAULT_SIZE_CHART_AKHWAT;
   }
 
   return {
-    ikhwanImg: settings.uniform_ikhwan_image || localStorage.getItem('paskas_uniform_ikhwan_image') || 'images/seragam-ikhwan.jpg',
-    akhwatImg: settings.uniform_akhwat_image || localStorage.getItem('paskas_uniform_akhwat_image') || 'images/seragam-akhwat.jpg',
-    ikhwanTitle: settings.uniform_title_ikhwan || localStorage.getItem('paskas_uniform_ikhwan_title') || 'Model Kaos Resmi Ikhwan',
-    akhwatTitle: settings.uniform_title_akhwat || localStorage.getItem('paskas_uniform_akhwat_title') || 'Model Kaos / Tunik Resmi Akhwat',
-    ikhwanDesc: settings.uniform_desc_ikhwan || localStorage.getItem('paskas_uniform_ikhwan_desc') || 'Bahan katun combed 24s premium adem, sablon plastisol emas logo resmi Paskas Bahagia.',
-    akhwatDesc: settings.uniform_desc_akhwat || localStorage.getItem('paskas_uniform_akhwat_desc') || 'Model tunik lengan panjang syar\'i & anggun, bahan katun combed 24s adem dengan aksen list emas.',
+    ikhwanImg: settings.uniform_ikhwan_image || safeStorage.getItem('paskas_uniform_ikhwan_image') || 'images/seragam-ikhwan.jpg',
+    akhwatImg: settings.uniform_akhwat_image || safeStorage.getItem('paskas_uniform_akhwat_image') || 'images/seragam-akhwat.jpg',
+    ikhwanTitle: settings.uniform_title_ikhwan || safeStorage.getItem('paskas_uniform_ikhwan_title') || 'Model Kaos Resmi Ikhwan',
+    akhwatTitle: settings.uniform_title_akhwat || safeStorage.getItem('paskas_uniform_akhwat_title') || 'Model Kaos / Tunik Resmi Akhwat',
+    ikhwanDesc: settings.uniform_desc_ikhwan || safeStorage.getItem('paskas_uniform_ikhwan_desc') || 'Bahan katun combed 24s premium adem, sablon plastisol emas logo resmi Paskas Bahagia.',
+    akhwatDesc: settings.uniform_desc_akhwat || safeStorage.getItem('paskas_uniform_akhwat_desc') || 'Model tunik lengan panjang syar\'i & anggun, bahan katun combed 24s adem dengan aksen list emas.',
     ikhwanSizeChart: ikhwanChart,
     akhwatSizeChart: akhwatChart
   };
@@ -1581,7 +1589,7 @@ async function handleUniformImageUpload(event, genderType) {
     const localKey = genderType === 'ikhwan' ? 'paskas_uniform_ikhwan_image' : 'paskas_uniform_akhwat_image';
 
     try {
-      localStorage.setItem(localKey, finalUrl);
+      safeStorage.setItem(localKey, finalUrl);
     } catch(err) {
       console.warn('Storage quota warning for uniform image:', err);
     }
@@ -3535,7 +3543,7 @@ function closeDuplicateModal() {
 }
 
 function isRoomGroupAllocationEnabled() {
-  const localVal = localStorage.getItem('paskas_room_group_enabled');
+  const localVal = safeStorage.getItem('paskas_room_group_enabled');
   if (localVal !== null) {
     return localVal !== 'false';
   }
@@ -3669,7 +3677,7 @@ function generateRegistrationCode(type = 'individu', index = 0) {
   });
 
   try {
-    const raw = localStorage.getItem('paskas_registrations_data');
+    const raw = safeStorage.getItem('paskas_registrations_data');
     const local = raw ? JSON.parse(raw) : [];
     if (Array.isArray(local)) {
       local.forEach(r => {
@@ -8943,7 +8951,7 @@ async function hashSHA256(text) {
 }
 
 function getStoredAdminPasswordHash() {
-  return localStorage.getItem('paskas_admin_password') || DEFAULT_ADMIN_PASSWORD_HASH;
+  return safeStorage.getItem('paskas_admin_password') || DEFAULT_ADMIN_PASSWORD_HASH;
 }
 
 /**
@@ -8964,7 +8972,7 @@ async function verifyAdminPassword(entered) {
   // 2. Backward compatibility & Auto-migration: Jika data lama di localStorage/Supabase masih plaintext
   if (stored === entered || stored === 'admin123') {
     // Migrasikan otomatis ke hash SHA-256
-    localStorage.setItem('paskas_admin_password', enteredHash);
+    safeStorage.setItem('paskas_admin_password', enteredHash);
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
       window.dataService.saveCloudSetting('paskas_admin_password', enteredHash);
     }
@@ -9140,7 +9148,7 @@ async function saveNewAdminPassword() {
   }
 
   const newHash = await hashSHA256(newVal);
-  localStorage.setItem('paskas_admin_password', newHash);
+  safeStorage.setItem('paskas_admin_password', newHash);
   if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
     window.dataService.saveCloudSetting('paskas_admin_password', newHash);
   }
@@ -9153,7 +9161,7 @@ async function saveNewAdminPassword() {
 
 function resetAdminPasswordDefault() {
   if (confirm('Kembalikan kata sandi admin ke setelan awal bawaan (admin123)?')) {
-    localStorage.setItem('paskas_admin_password', DEFAULT_ADMIN_PASSWORD_HASH);
+    safeStorage.setItem('paskas_admin_password', DEFAULT_ADMIN_PASSWORD_HASH);
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
       window.dataService.saveCloudSetting('paskas_admin_password', DEFAULT_ADMIN_PASSWORD_HASH);
     }
@@ -9482,7 +9490,7 @@ async function saveEventInfoSettings() {
   if (loc) {
     REGISTRATION_CONTENT.location = loc;
     try {
-      localStorage.setItem('paskas_reg_content', JSON.stringify(REGISTRATION_CONTENT));
+      safeStorage.setItem('paskas_reg_content', JSON.stringify(REGISTRATION_CONTENT));
     } catch (e) { }
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
       window.dataService.saveCloudSetting('paskas_reg_content', REGISTRATION_CONTENT).catch(() => { });
@@ -9532,7 +9540,7 @@ function loadStoredAnnouncements() {
   };
 
   try {
-    const raw = localStorage.getItem('paskas_announcements_list');
+    const raw = safeStorage.getItem('paskas_announcements_list');
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -9995,7 +10003,7 @@ async function saveAllAnnouncementSettings() {
 async function saveAnnouncementsToStorage(list, isEnabledOverride) {
   const safeList = Array.isArray(list) ? list : [];
   try {
-    localStorage.setItem('paskas_announcements_list', JSON.stringify(safeList));
+    safeStorage.setItem('paskas_announcements_list', JSON.stringify(safeList));
   } catch (e) {}
 
   const enabledInput = document.getElementById('cfg_announcementEnabled');
@@ -10054,7 +10062,7 @@ const DEFAULT_GROUPS = [
 
 function getMasterRooms() {
   try {
-    const raw = localStorage.getItem('paskas_rooms_data');
+    const raw = safeStorage.getItem('paskas_rooms_data');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -10066,7 +10074,7 @@ function getMasterRooms() {
 }
 
 function saveMasterRooms(rooms) {
-  localStorage.setItem('paskas_rooms_data', JSON.stringify(rooms));
+  safeStorage.setItem('paskas_rooms_data', JSON.stringify(rooms));
   if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
     window.dataService.saveCloudSetting('paskas_rooms_data', rooms);
   }
@@ -10309,7 +10317,7 @@ function saveGlobalMaxGroupMembersSetting() {
 
 function getMasterGroups() {
   try {
-    const raw = localStorage.getItem('paskas_groups_data');
+    const raw = safeStorage.getItem('paskas_groups_data');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -10321,7 +10329,7 @@ function getMasterGroups() {
 }
 
 function saveMasterGroups(groups) {
-  localStorage.setItem('paskas_groups_data', JSON.stringify(groups));
+  safeStorage.setItem('paskas_groups_data', JSON.stringify(groups));
   if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
     window.dataService.saveCloudSetting('paskas_groups_data', groups);
   }
@@ -10605,7 +10613,7 @@ async function toggleRoomGroupAllocation() {
   const newStatus = !currentStatus;
   const statusStr = newStatus ? 'true' : 'false';
 
-  localStorage.setItem('paskas_room_group_enabled', statusStr);
+  safeStorage.setItem('paskas_room_group_enabled', statusStr);
 
   if (window.dataService) {
     if (typeof window.dataService.saveSettings === 'function') {
@@ -11590,7 +11598,7 @@ async function handleUniformSettingsUpload(event, genderType, cardIdx) {
     const localKey = genderType === 'ikhwan' ? 'paskas_uniform_ikhwan_image' : 'paskas_uniform_akhwat_image';
 
     try {
-      localStorage.setItem(localKey, finalUrl);
+      safeStorage.setItem(localKey, finalUrl);
     } catch (err) {
       console.warn('Storage quota warning for uniform image:', err);
     }
@@ -11769,14 +11777,14 @@ async function saveCardsFromSettings() {
         }
       }
 
-      if (ikhwanImg) localStorage.setItem('paskas_uniform_ikhwan_image', ikhwanImg);
-      if (akhwatImg) localStorage.setItem('paskas_uniform_akhwat_image', akhwatImg);
-      if (ikhwanTitle) localStorage.setItem('paskas_uniform_ikhwan_title', ikhwanTitle);
-      if (akhwatTitle) localStorage.setItem('paskas_uniform_akhwat_title', akhwatTitle);
-      if (ikhwanDesc) localStorage.setItem('paskas_uniform_ikhwan_desc', ikhwanDesc);
-      if (akhwatDesc) localStorage.setItem('paskas_uniform_akhwat_desc', akhwatDesc);
-      if (ikhwanSizeChart) localStorage.setItem('paskas_uniform_size_chart_ikhwan', ikhwanSizeChart);
-      if (akhwatSizeChart) localStorage.setItem('paskas_uniform_size_chart_akhwat', akhwatSizeChart);
+      if (ikhwanImg) safeStorage.setItem('paskas_uniform_ikhwan_image', ikhwanImg);
+      if (akhwatImg) safeStorage.setItem('paskas_uniform_akhwat_image', akhwatImg);
+      if (ikhwanTitle) safeStorage.setItem('paskas_uniform_ikhwan_title', ikhwanTitle);
+      if (akhwatTitle) safeStorage.setItem('paskas_uniform_akhwat_title', akhwatTitle);
+      if (ikhwanDesc) safeStorage.setItem('paskas_uniform_ikhwan_desc', ikhwanDesc);
+      if (akhwatDesc) safeStorage.setItem('paskas_uniform_akhwat_desc', akhwatDesc);
+      if (ikhwanSizeChart) safeStorage.setItem('paskas_uniform_size_chart_ikhwan', ikhwanSizeChart);
+      if (akhwatSizeChart) safeStorage.setItem('paskas_uniform_size_chart_akhwat', akhwatSizeChart);
 
       if (window.dataService) {
         const uPayload = {
@@ -11860,7 +11868,7 @@ async function saveCardsFromSettings() {
   }));
 
   try {
-    localStorage.setItem('paskas_custom_cards', JSON.stringify(cleanCardsPayload));
+    safeStorage.setItem('paskas_custom_cards', JSON.stringify(cleanCardsPayload));
   } catch (e) {
     console.warn('LocalStorage limit reached for custom cards:', e);
   }
@@ -11899,7 +11907,7 @@ async function saveCardsFromSettings() {
 async function resetCardsToDefault() {
   if (confirm('Kembalikan semua kartu informasi ke pengaturan dan gambar bawaan awal?')) {
     DASHBOARD_CARDS = JSON.parse(JSON.stringify(DEFAULT_DASHBOARD_CARDS));
-    localStorage.removeItem('paskas_custom_cards');
+    safeStorage.removeItem('paskas_custom_cards');
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
       await window.dataService.saveCloudSetting('paskas_custom_cards', DASHBOARD_CARDS);
     }
@@ -12140,7 +12148,7 @@ async function saveRegistrationContent() {
 
     // 2. Simpan ke LocalStorage sebagai cadangan cepat
     try {
-      localStorage.setItem('paskas_reg_content', JSON.stringify(REGISTRATION_CONTENT));
+      safeStorage.setItem('paskas_reg_content', JSON.stringify(REGISTRATION_CONTENT));
     } catch (lsErr) {
       console.warn('LocalStorage limit reached, data tetap aman di Cloud Supabase:', lsErr);
     }
@@ -12169,7 +12177,7 @@ async function saveRegistrationContent() {
 async function resetRegistrationContent() {
   if (confirm('Kembalikan lokasi, narasi dan galeri foto polaroid registrasi ke setelan awal?')) {
     REGISTRATION_CONTENT = JSON.parse(JSON.stringify(DEFAULT_REGISTRATION_CONTENT));
-    localStorage.removeItem('paskas_reg_content');
+    safeStorage.removeItem('paskas_reg_content');
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
       await window.dataService.saveCloudSetting('paskas_reg_content', REGISTRATION_CONTENT);
     }

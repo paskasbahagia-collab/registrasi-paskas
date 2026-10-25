@@ -19,6 +19,14 @@ const STORAGE_KEYS = {
   SETTINGS: 'paskas_app_settings',
   DELETED_CODES: 'paskas_deleted_registration_codes'
 };
+const safeStorage = (typeof window !== 'undefined' && window.safeStorage) ? window.safeStorage : {
+  _mem: {},
+  getItem(k) { return Object.prototype.hasOwnProperty.call(this._mem, k) ? this._mem[k] : null; },
+  setItem(k, v) { this._mem[k] = String(v); },
+  removeItem(k) { delete this._mem[k]; },
+  clear() { this._mem = {}; }
+};
+
 
 // Default Settings Awal
 const DEFAULT_SETTINGS = {
@@ -88,21 +96,21 @@ class PaskasDataService {
     if (this.supabaseClient && this.isSupabaseConnected) {
       return this.supabaseClient;
     }
-    let savedUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL);
+    let savedUrl = safeStorage.getItem(STORAGE_KEYS.SUPABASE_URL);
     if (!savedUrl || !savedUrl.startsWith('https://') || savedUrl.length < 15) {
-      localStorage.removeItem(STORAGE_KEYS.SUPABASE_URL);
+      safeStorage.removeItem(STORAGE_KEYS.SUPABASE_URL);
       savedUrl = DEFAULT_SUPABASE_URL;
     }
-    let savedKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY);
+    let savedKey = safeStorage.getItem(STORAGE_KEYS.SUPABASE_KEY);
     if (!savedKey || savedKey.startsWith('eyJ') || savedKey.length < 20) {
-      localStorage.removeItem(STORAGE_KEYS.SUPABASE_KEY);
+      safeStorage.removeItem(STORAGE_KEYS.SUPABASE_KEY);
       savedKey = null;
     }
     const effectiveKey = savedKey || DEFAULT_SUPABASE_KEY;
 
     if (savedUrl && effectiveKey && typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
       try {
-        this.supabaseClient = window.supabase.createClient(savedUrl, effectiveKey);
+        this.supabaseClient = window.supabase.createClient(savedUrl, effectiveKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
         this.isSupabaseConnected = true;
         return this.supabaseClient;
       } catch (e) {
@@ -132,13 +140,13 @@ class PaskasDataService {
   init() {
     this.ensureSupabaseClient();
     try {
-      localStorage.removeItem(STORAGE_KEYS.DELETED_CODES);
+      safeStorage.removeItem(STORAGE_KEYS.DELETED_CODES);
     } catch (e) {}
 
     // Inisialisasi data lokal jika masih kosong atau bersihkan data dummy demo / test lama
-    const existing = localStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
+    const existing = safeStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
     if (!existing) {
-      localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify([]));
+      safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify([]));
     } else {
       try {
         const parsed = JSON.parse(existing);
@@ -146,15 +154,15 @@ class PaskasDataService {
           const testCodes = new Set(['PKB-001', 'PKB-002', 'PKB-003', 'PKB-004', 'PKB-IND-2026-001']);
           const cleaned = parsed.filter(p => p && !testCodes.has(p.registration_code) && p.full_name !== 'Ustadz Ahmad Fauzi');
           if (cleaned.length !== parsed.length) {
-            localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cleaned));
+            safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cleaned));
             ['PKB-001', 'PKB-002', 'PKB-003', 'PKB-004'].forEach(code => this.recordDeletedCode(code));
           }
         }
       } catch (e) { }
     }
 
-    if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
-      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
+    if (!safeStorage.getItem(STORAGE_KEYS.SETTINGS)) {
+      safeStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
     }
 
     // Auto-sync otomatis ketika browser/HP pengguna kembali mendapatkan sinyal online
@@ -226,56 +234,56 @@ class PaskasDataService {
           // Sinkronisasi data struktur khusus ke LocalStorage jika tersimpan di Supabase
           if (row.setting_key === 'paskas_rooms_data' || row.setting_key === 'master_rooms') {
             try {
-              if (row.setting_value) localStorage.setItem('paskas_rooms_data', row.setting_value);
+              if (row.setting_value) safeStorage.setItem('paskas_rooms_data', row.setting_value);
             } catch (e) { }
           } else if (row.setting_key === 'paskas_groups_data' || row.setting_key === 'master_groups') {
             try {
-              if (row.setting_value) localStorage.setItem('paskas_groups_data', row.setting_value);
+              if (row.setting_value) safeStorage.setItem('paskas_groups_data', row.setting_value);
             } catch (e) { }
           } else if (row.setting_key === 'paskas_master_wilayah' || row.setting_key === 'master_wilayah') {
             try {
-              if (row.setting_value) localStorage.setItem('paskas_master_wilayah', row.setting_value);
+              if (row.setting_value) safeStorage.setItem('paskas_master_wilayah', row.setting_value);
             } catch (e) { }
           } else if (row.setting_key === 'paskas_custom_cards' || row.setting_key === 'dashboard_cards') {
             try {
-              if (row.setting_value) localStorage.setItem('paskas_custom_cards', row.setting_value);
+              if (row.setting_value) safeStorage.setItem('paskas_custom_cards', row.setting_value);
             } catch (e) { }
           } else if (row.setting_key === 'paskas_reg_content' || row.setting_key === 'reg_content') {
             try {
-              if (row.setting_value) localStorage.setItem('paskas_reg_content', row.setting_value);
+              if (row.setting_value) safeStorage.setItem('paskas_reg_content', row.setting_value);
             } catch (e) { }
           } else if (row.setting_key === 'paskas_admin_password') {
             try {
-              if (row.setting_value) localStorage.setItem('paskas_admin_password', row.setting_value);
+              if (row.setting_value) safeStorage.setItem('paskas_admin_password', row.setting_value);
             } catch (e) { }
           } else if (row.setting_key === 'is_room_group_enabled' || row.setting_key === 'paskas_room_group_enabled') {
             try {
-              if (row.setting_value) localStorage.setItem('paskas_room_group_enabled', row.setting_value);
+              if (row.setting_value) safeStorage.setItem('paskas_room_group_enabled', row.setting_value);
             } catch (e) { }
           } else if (row.setting_key === 'paskas_announcements_list' || row.setting_key === 'announcements_list') {
             try {
-              if (row.setting_value) localStorage.setItem('paskas_announcements_list', row.setting_value);
+              if (row.setting_value) safeStorage.setItem('paskas_announcements_list', row.setting_value);
             } catch (e) { }
           } else if (row.setting_key === 'uniform_ikhwan_image') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_image', row.setting_value); } catch (e) { }
+            try { if (row.setting_value) safeStorage.setItem('paskas_uniform_ikhwan_image', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_akhwat_image') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_image', row.setting_value); } catch (e) { }
+            try { if (row.setting_value) safeStorage.setItem('paskas_uniform_akhwat_image', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_title_ikhwan') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_title', row.setting_value); } catch (e) { }
+            try { if (row.setting_value) safeStorage.setItem('paskas_uniform_ikhwan_title', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_title_akhwat') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_title', row.setting_value); } catch (e) { }
+            try { if (row.setting_value) safeStorage.setItem('paskas_uniform_akhwat_title', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_desc_ikhwan') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_ikhwan_desc', row.setting_value); } catch (e) { }
+            try { if (row.setting_value) safeStorage.setItem('paskas_uniform_ikhwan_desc', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_desc_akhwat') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_akhwat_desc', row.setting_value); } catch (e) { }
+            try { if (row.setting_value) safeStorage.setItem('paskas_uniform_akhwat_desc', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_size_chart_ikhwan' || row.setting_key === 'paskas_uniform_size_chart_ikhwan') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_size_chart_ikhwan', row.setting_value); } catch (e) { }
+            try { if (row.setting_value) safeStorage.setItem('paskas_uniform_size_chart_ikhwan', row.setting_value); } catch (e) { }
           } else if (row.setting_key === 'uniform_size_chart_akhwat' || row.setting_key === 'paskas_uniform_size_chart_akhwat') {
-            try { if (row.setting_value) localStorage.setItem('paskas_uniform_size_chart_akhwat', row.setting_value); } catch (e) { }
+            try { if (row.setting_value) safeStorage.setItem('paskas_uniform_size_chart_akhwat', row.setting_value); } catch (e) { }
           }
         });
         const merged = { ...this.getSettings(), ...cloudSettings };
-        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(merged));
+        safeStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(merged));
         return merged;
       } catch (e) {
         console.warn('Gagal membaca app_settings dari Supabase:', e);
@@ -288,8 +296,8 @@ class PaskasDataService {
    * Mengambil kredensial yang tersimpan
    */
   getCredentials() {
-    const localUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL);
-    const localKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY);
+    const localUrl = safeStorage.getItem(STORAGE_KEYS.SUPABASE_URL);
+    const localKey = safeStorage.getItem(STORAGE_KEYS.SUPABASE_KEY);
     return {
       url: (localUrl && localUrl.trim() !== '') ? localUrl.trim() : (DEFAULT_SUPABASE_URL || ''),
       key: (localKey && localKey.trim() !== '') ? localKey.trim() : (DEFAULT_SUPABASE_KEY || '')
@@ -301,15 +309,15 @@ class PaskasDataService {
    */
   setCredentials(url, key) {
     if (url && key) {
-      localStorage.setItem(STORAGE_KEYS.SUPABASE_URL, url.trim());
-      localStorage.setItem(STORAGE_KEYS.SUPABASE_KEY, key.trim());
+      safeStorage.setItem(STORAGE_KEYS.SUPABASE_URL, url.trim());
+      safeStorage.setItem(STORAGE_KEYS.SUPABASE_KEY, key.trim());
       if (window.supabase) {
-        this.supabaseClient = window.supabase.createClient(url.trim(), key.trim());
+        this.supabaseClient = window.supabase.createClient(url.trim(), key.trim(), { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
         this.isSupabaseConnected = true;
       }
     } else {
-      localStorage.removeItem(STORAGE_KEYS.SUPABASE_URL);
-      localStorage.removeItem(STORAGE_KEYS.SUPABASE_KEY);
+      safeStorage.removeItem(STORAGE_KEYS.SUPABASE_URL);
+      safeStorage.removeItem(STORAGE_KEYS.SUPABASE_KEY);
       this.supabaseClient = null;
       this.isSupabaseConnected = false;
     }
@@ -323,7 +331,7 @@ class PaskasDataService {
       throw new Error('Pustaka Supabase JS belum siap');
     }
     try {
-      const testClient = window.supabase.createClient(url.trim(), key.trim());
+      const testClient = window.supabase.createClient(url.trim(), key.trim(), { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
       const { data, error } = await testClient.from('registrations').select('id').limit(1);
       if (error) {
         // Jika tabel belum dibuat tapi kredensial benar
@@ -542,7 +550,7 @@ class PaskasDataService {
 
     let local = [];
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
+      const raw = safeStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
       local = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(local)) local = [];
     } catch {
@@ -590,7 +598,7 @@ class PaskasDataService {
       }
 
       // Update LocalStorage agar selalu konsisten dengan data gabungan cloud & lokal yang valid
-      localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cloudList));
+      safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cloudList));
       return cloudList;
     }
 
@@ -723,7 +731,7 @@ class PaskasDataService {
       newRecord.id = Date.now();
     }
     current.unshift(newRecord);
-    localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(current));
+    safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(current));
     return newRecord;
   }
 
@@ -846,7 +854,7 @@ class PaskasDataService {
       if (!item.id) item.id = Date.now() + index;
     });
     const updated = [...stampedList, ...current];
-    localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(updated));
+    safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(updated));
     return stampedList;
   }
 
@@ -876,7 +884,7 @@ class PaskasDataService {
       }
       return item;
     });
-    localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(updated));
+    safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(updated));
     return updated.find(item => String(item.id) === String(id));
   }
 
@@ -960,7 +968,7 @@ class PaskasDataService {
       if (idToDelete && String(item.id) === String(idToDelete)) return false;
       return true;
     });
-    localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(filtered));
+    safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(filtered));
     return true;
   }
 
@@ -969,7 +977,7 @@ class PaskasDataService {
    */
   getLocalRegistrations() {
     try {
-      const local = localStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
+      const local = safeStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
       return local ? JSON.parse(local) : [];
     } catch {
       return [];
@@ -1021,7 +1029,7 @@ class PaskasDataService {
         ? { ...item, id: savedMap.get(item.registration_code).id, _is_offline_pending: false }
         : item
     );
-    localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(updatedLocal));
+    safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(updatedLocal));
 
     return { count: cleanedData.length, message: `Berhasil sinkronisasi ${cleanedData.length} data ke Supabase!` };
   }
@@ -1031,7 +1039,7 @@ class PaskasDataService {
    */
   getSettings() {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      const saved = safeStorage.getItem(STORAGE_KEYS.SETTINGS);
       const res = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS };
       if (!res.ticket_template_image ||
         typeof res.ticket_template_image !== 'string' ||
@@ -1060,7 +1068,7 @@ class PaskasDataService {
       }
     }
     const updated = { ...current, ...newSettings };
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
+    safeStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
 
     // Bila terhubung ke Supabase, HANYA upsert keys yang benar-benar diubah (newSettings)
     // agar TIDAK menimpa pengaturan lain dengan cache lama yang tertumpuk
@@ -1096,7 +1104,7 @@ class PaskasDataService {
     this.ensureSupabaseClient();
     const stringVal = typeof value === 'string' ? value : JSON.stringify(value);
     try {
-      localStorage.setItem(key, stringVal);
+      safeStorage.setItem(key, stringVal);
     } catch (e) { }
 
     if (this.isSupabaseConnected && this.supabaseClient) {
