@@ -5167,9 +5167,10 @@ select.form-control optgroup {
    Inspired by Reference: 4-Pillar Model, Watermark Numbers & Circular KPIs
    =================================================================== */
 
-/* Page Rekap & Presensi Full View with Crisp, Elegant Islamic Geometric Lattice Background */
+/* Page Rekap, Presensi, & Keuangan Full View with Crisp, Elegant Islamic Geometric Lattice Background */
 #page-rekap,
-#page-presensi {
+#page-presensi,
+#page-keuangan {
   background-color: #f2f5f3 !important;
   background-image: 
     linear-gradient(rgba(242, 245, 243, 0.80), rgba(242, 245, 243, 0.80)),
@@ -5181,9 +5182,10 @@ select.form-control optgroup {
   position: relative;
 }
 
-/* Full-width container override for Rekap & Presensi Page */
+/* Full-width container override for Rekap, Presensi, & Keuangan Page */
 #page-rekap .content-container,
-#page-presensi .content-container {
+#page-presensi .content-container,
+#page-keuangan .content-container {
   max-width: 100% !important;
   width: 100% !important;
   padding: 85px 36px 60px !important;

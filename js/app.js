@@ -13346,47 +13346,107 @@ function checkTreasurerSessionState() {
   const stored = sessionStorage.getItem('paskas_treasurer_session');
   isTreasurerLoggedIn = stored === 'active';
 
-  const lockScreen = document.getElementById('treasurerLockScreen');
+  const modal = document.getElementById('treasurerAuthModal');
   const mainDash = document.getElementById('treasurerMainDashboard');
+  const pwdInput = document.getElementById('treasurerLoginPasswordInput');
+  const errEl = document.getElementById('treasurerLoginError');
+  const card = modal?.querySelector('.modal-auth-green-card');
 
   if (isTreasurerLoggedIn) {
-    if (lockScreen) lockScreen.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('active');
+      modal.style.display = 'none';
+    }
     if (mainDash) mainDash.style.display = 'block';
     renderFinanceView();
   } else {
-    if (lockScreen) lockScreen.style.display = 'block';
     if (mainDash) mainDash.style.display = 'none';
-    const pwdInput = document.getElementById('treasurerLoginPasswordInput');
-    if (pwdInput) pwdInput.value = '';
+    if (pwdInput) {
+      pwdInput.value = '';
+      pwdInput.type = 'password';
+    }
+    if (errEl) errEl.style.display = 'none';
+    if (card) card.classList.remove('shake-animation');
+    if (modal) {
+      modal.style.display = 'flex';
+      modal.classList.add('active');
+    }
+    setTimeout(() => {
+      if (pwdInput) pwdInput.focus();
+    }, 120);
+  }
+}
+
+function closeTreasurerAuthModal() {
+  const modal = document.getElementById('treasurerAuthModal');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+  }
+  // Bila belum login dan modal ditutup (klik Batal / tanda X), arahkan ke Beranda
+  if (!isTreasurerLoggedIn) {
+    navigateTo('dashboard');
   }
 }
 
 async function submitTreasurerLogin() {
   const pwdInput = document.getElementById('treasurerLoginPasswordInput');
   const errEl = document.getElementById('treasurerLoginError');
+  const modal = document.getElementById('treasurerAuthModal');
+  const card = modal?.querySelector('.modal-auth-green-card');
   const entered = (pwdInput?.value || '').trim();
 
   if (!entered) {
     if (errEl) {
-      errEl.style.display = 'block';
-      errEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Masukkan kata sandi bendahara.';
+      errEl.style.display = 'flex';
+      errEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Silakan masukkan password.';
+    }
+    if (card) {
+      card.classList.remove('shake-animation');
+      void card.offsetWidth;
+      card.classList.add('shake-animation');
     }
     return;
   }
 
-  const isValid = await window.dataService.verifyTreasurerPassword(entered);
+  let isValid = false;
+  try {
+    if (window.dataService && typeof window.dataService.verifyTreasurerPassword === 'function') {
+      isValid = await window.dataService.verifyTreasurerPassword(entered);
+    }
+  } catch (e) {
+    console.warn('verifyTreasurerPassword error:', e);
+  }
+
+  if (!isValid && typeof verifyAdminPassword === 'function') {
+    try {
+      isValid = await verifyAdminPassword(entered);
+    } catch (e) {
+      console.warn('verifyAdminPassword fallback error:', e);
+    }
+  }
+
   if (isValid) {
     sessionStorage.setItem('paskas_treasurer_session', 'active');
     isTreasurerLoggedIn = true;
     if (errEl) errEl.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('active');
+      modal.style.display = 'none';
+    }
     checkTreasurerSessionState();
-    showToast('Sesi Bendahara Berhasil Masuk!', 'success');
+    showToast('Akses Modul Keuangan Berhasil Dibuka!', 'success');
   } else {
     if (errEl) {
-      errEl.style.display = 'block';
+      errEl.style.display = 'flex';
       errEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>bendahara123</code>.';
     }
-    showToast('Kata sandi bendahara salah.', 'error');
+    if (card) {
+      card.classList.remove('shake-animation');
+      void card.offsetWidth;
+      card.classList.add('shake-animation');
+    }
+    showToast('Kata sandi tidak sesuai. Silakan coba lagi.', 'error');
   }
 }
 
@@ -13394,7 +13454,7 @@ function lockTreasurerSession() {
   sessionStorage.removeItem('paskas_treasurer_session');
   isTreasurerLoggedIn = false;
   checkTreasurerSessionState();
-  showToast('Sesi bendahara telah dikunci.', 'info');
+  showToast('Sesi akses keuangan telah dikunci.', 'info');
 }
 
 function calculateParticipantFee(p) {
@@ -13767,6 +13827,7 @@ window.submitCancelParticipantFromModal = submitCancelParticipantFromModal;
 
 window.checkTreasurerSessionState = checkTreasurerSessionState;
 window.submitTreasurerLogin = submitTreasurerLogin;
+window.closeTreasurerAuthModal = closeTreasurerAuthModal;
 window.lockTreasurerSession = lockTreasurerSession;
 window.renderFinanceView = renderFinanceView;
 window.setFinanceFilter = setFinanceFilter;

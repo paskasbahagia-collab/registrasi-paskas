@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=110.0">
+  <link rel="stylesheet" href="css/style.css?v=111.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -2134,35 +2134,40 @@
     <section class="page-view" id="page-keuangan">
       <div class="content-container">
         
-        <!-- Screen 1: Form Login Bendahara Jika Belum Autentikasi -->
-        <div id="treasurerLockScreen" style="display: none; max-width: 480px; margin: 40px auto; padding: 32px; background: #ffffff; border: 1.5px solid #e2dac9; border-radius: var(--radius-lg); box-shadow: 0 12px 36px rgba(0,0,0,0.06); text-align: center;">
-          <div style="width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 50%; background: #fef3c7; border: 2px solid #fde68a; display: flex; align-items: center; justify-content: center; font-size: 26px; color: #b45309;">
-            <i class="fa-solid fa-coins"></i>
-          </div>
-          <h3 style="font-family: var(--font-headline); font-size: 22px; color: #1a1815; margin: 0 0 8px;">Akses Modul Keuangan</h3>
-          <p style="font-size: 13.5px; color: #635a4d; line-height: 1.5; margin-bottom: 22px;">
-            Area ini khusus untuk <strong>Bendahara &amp; Divisi Keuangan</strong>. Silakan masukkan kata sandi bendahara Anda untuk membuka pencatatan termin dan kas masuk.
-          </p>
-          <form onsubmit="event.preventDefault(); submitTreasurerLogin();">
-            <div class="input-with-icon" style="position: relative; margin-bottom: 12px;">
-              <i class="fa-solid fa-key text-gold"></i>
-              <input type="password" id="treasurerLoginPasswordInput" class="form-control" placeholder="Kata sandi bendahara..." style="padding-right: 44px; font-size: 14px;">
-              <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('treasurerLoginPasswordInput', this)" title="Lihat Kata Sandi">
-                <i class="fa-solid fa-eye"></i>
-              </button>
-            </div>
-            <div id="treasurerLoginError" style="display: none; color: #b91c1c; font-size: 12.5px; margin-bottom: 14px; text-align: left;">
-              <i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan awal: <code>bendahara123</code>.
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-weight: 700; font-size: 14px; justify-content: center;">
-              <i class="fa-solid fa-unlock"></i> Buka Akses Keuangan
+        <!-- Screen 1: Modal Pop-up Autentikasi Keuangan (Green Modal Pop-up Style Sesuai Gambar Referensi) -->
+        <div class="modal-backdrop" id="treasurerAuthModal" style="display: none;">
+          <div class="modal-auth-green-card">
+            <button type="button" class="modal-auth-close-btn" onclick="closeTreasurerAuthModal()" title="Tutup">
+              <i class="fa-solid fa-xmark"></i>
             </button>
-            <div style="margin-top: 14px;">
-              <button type="button" class="btn btn-link btn-xs" onclick="navigateTo('dashboard')" style="color: #64748b; font-size: 12.5px; border: none; background: transparent; cursor: pointer;">
-                <i class="fa-solid fa-arrow-left"></i> Kembali ke Beranda
-              </button>
+
+            <div class="modal-auth-green-header">
+              <h3 class="modal-auth-green-title">Akses Admin</h3>
+              <p class="modal-auth-green-sub">Silahkan isi passwordnya:</p>
             </div>
-          </form>
+
+            <form id="treasurerAuthForm" onsubmit="event.preventDefault(); submitTreasurerLogin();" style="margin-top: 18px;">
+              <div class="modal-auth-green-input-wrap">
+                <input type="password" id="treasurerLoginPasswordInput" class="modal-auth-green-input" placeholder="Password admin..." autocomplete="current-password">
+                <button type="button" class="modal-auth-green-eye" onclick="togglePasswordVisibility('treasurerLoginPasswordInput', this)" title="Lihat/Sembunyikan Kata Sandi">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+
+              <div id="treasurerLoginError" class="admin-auth-error-msg" style="display: none;">
+                <i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>bendahara123</code>.
+              </div>
+
+              <div class="modal-auth-green-actions">
+                <button type="button" class="btn-auth-green-cancel" onclick="closeTreasurerAuthModal()">
+                  Batal
+                </button>
+                <button type="submit" class="btn-auth-green-submit">
+                  Masuk
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <!-- Screen 2: Dashboard Keuangan & Termin Jemaah -->
@@ -5579,6 +5584,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=128.0"></script>
-  <script src="js/app.js?v=133.0"></script>
+  <script src="js/app.js?v=134.0"></script>
 </body>
 </html>
