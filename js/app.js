@@ -1735,9 +1735,9 @@ function navigateTo(pageId) {
     mountRekapStandalone();
   }
 
-  // 2. Pengaturan Sistem (Khusus Admin Utama Ber-Password)
-  if (pageId === 'settings' && !isAdminLoggedIn) {
-    openSettingsWithAuth('rekap');
+  // 2. Pengaturan Sistem & Halaman Panitia (Harus Login Admin/Panitia)
+  if (['settings', 'rekap', 'presensi', 'keuangan'].includes(pageId) && !isAdminLoggedIn) {
+    openSettingsWithAuth(pageId);
     return;
   }
 
@@ -9289,7 +9289,26 @@ function initSettingsPage(defaultTab = 'rekap', skipSwitchTab = false) {
 // ADMIN AUTHENTICATION & PASSWORD PROTECTION FOR SETTINGS
 // ===================================================================
 let isAdminLoggedIn = false;
+try {
+  isAdminLoggedIn = sessionStorage.getItem('paskas_admin_session') === 'active';
+} catch (e) {}
+
 let pendingAuthTargetTab = 'rekap';
+
+function setAdminLoggedInState(isLoggedIn) {
+  isAdminLoggedIn = !!isLoggedIn;
+  try {
+    if (isAdminLoggedIn) {
+      sessionStorage.setItem('paskas_admin_session', 'active');
+    } else {
+      sessionStorage.removeItem('paskas_admin_session');
+    }
+  } catch (e) {}
+  if (document.body) {
+    document.body.classList.toggle('admin-logged-in', isAdminLoggedIn);
+  }
+}
+window.setAdminLoggedInState = setAdminLoggedInState;
 
 // Hash bawaan untuk kata sandi default 'admin123' (SHA-256)
 const DEFAULT_ADMIN_PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
@@ -9379,9 +9398,13 @@ function resetAdminFailedAttempts() {
 function openSettingsWithAuth(targetTab = 'rekap') {
   pendingAuthTargetTab = targetTab;
   if (isAdminLoggedIn) {
-    navigateTo('settings');
-    const cleanTab = (targetTab || 'rekap').replace('tab-', '');
-    switchSettingsTab(cleanTab);
+    if (['rekap', 'presensi', 'keuangan'].includes(targetTab)) {
+      navigateTo(targetTab);
+    } else {
+      navigateTo('settings');
+      const cleanTab = (targetTab || 'rekap').replace('tab-', '');
+      switchSettingsTab(cleanTab);
+    }
     return;
   }
 
@@ -9437,13 +9460,17 @@ async function submitAdminPassword() {
 
   if (isValid) {
     resetAdminFailedAttempts();
-    isAdminLoggedIn = true;
+    setAdminLoggedInState(true);
     if (typeof resetAdminInactivityTimer === 'function') resetAdminInactivityTimer();
     closeAdminAuthModal();
-    navigateTo('settings');
-    const cleanTab = (pendingAuthTargetTab || 'rekap').replace('tab-', '');
-    switchSettingsTab(cleanTab);
-    showToast('Akses administrator berhasil diverifikasi!', 'success');
+    if (['rekap', 'presensi', 'keuangan'].includes(pendingAuthTargetTab)) {
+      navigateTo(pendingAuthTargetTab);
+    } else {
+      navigateTo('settings');
+      const cleanTab = (pendingAuthTargetTab || 'rekap').replace('tab-', '');
+      switchSettingsTab(cleanTab);
+    }
+    showToast('Akses administrator & panitia berhasil diverifikasi!', 'success');
   } else {
     const failedCount = recordAdminFailedAttempt();
     const remaining = ADMIN_MAX_ATTEMPTS - failedCount;
@@ -9474,7 +9501,7 @@ async function submitAdminPassword() {
 }
 
 function lockAdminSession() {
-  isAdminLoggedIn = false;
+  setAdminLoggedInState(false);
   if (typeof clearAdminInactivityTimer === 'function') clearAdminInactivityTimer();
   navigateTo('dashboard');
   showToast('Sesi administrator telah dikunci.', 'info');
@@ -9545,7 +9572,7 @@ function resetAdminPasswordDefault() {
 }
 
 function lockSettingsSession() {
-  isAdminLoggedIn = false;
+  setAdminLoggedInState(false);
   showToast('Sesi administrator telah dikunci kembali.', 'info');
   navigateTo('dashboard');
 }
@@ -12880,6 +12907,9 @@ function handleHashRoute() {
 window.addEventListener('hashchange', handleHashRoute);
 
 function initInitialRoute() {
+  if (typeof setAdminLoggedInState === 'function') {
+    setAdminLoggedInState(isAdminLoggedIn);
+  }
   mountRekapStandalone();
   if (window.location.hash) {
     handleHashRoute();
