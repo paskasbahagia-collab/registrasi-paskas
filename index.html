@@ -163,10 +163,14 @@
             <i class="fa-solid fa-coins"></i>
             <span>Keuangan</span>
           </button>
+          <button class="nav-link admin-only" data-page="settings" onclick="navigateTo('settings')">
+            <i class="fa-solid fa-gear"></i>
+            <span>Pengaturan</span>
+          </button>
         </nav>
 
         <!-- Tombol Pengaturan di Pojok Kanan (Khusus Admin Ber-Password) -->
-        <button class="btn-icon" id="btnNavSettingsIcon" data-page="settings" onclick="openSettingsWithAuth()" title="Pengaturan Sistem & Info Acara (Khusus Admin)">
+        <button class="btn-icon" id="btnNavSettingsIcon" data-page="settings" onclick="openSettingsWithAuth('settings')" title="Pengaturan Sistem & Info Acara (Khusus Admin)">
           <i class="fa-solid fa-gear"></i>
         </button>
       </div>
@@ -194,8 +198,8 @@
       <button class="mobile-link admin-only" data-page="keuangan" onclick="navigateTo('keuangan'); toggleMobileNav();">
         <i class="fa-solid fa-coins"></i> Keuangan &amp; Termin
       </button>
-      <button class="mobile-link" data-page="settings" onclick="openSettingsWithAuth(); toggleMobileNav();">
-        <i class="fa-solid fa-gear"></i> Pengaturan (Admin)
+      <button class="mobile-link admin-only" data-page="settings" onclick="navigateTo('settings'); toggleMobileNav();">
+        <i class="fa-solid fa-gear"></i> Pengaturan
       </button>
     </div>
   </header>
@@ -5584,6 +5588,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=128.0"></script>
-  <script src="js/app.js?v=134.0"></script>
+  <script src="js/app.js?v=135.0"></script>
 </body>
 </html>

@@ -9297,7 +9297,7 @@ try {
   isAdminLoggedIn = sessionStorage.getItem('paskas_admin_session') === 'active';
 } catch (e) {}
 
-let pendingAuthTargetTab = 'rekap';
+let pendingAuthTargetTab = 'settings';
 
 function setAdminLoggedInState(isLoggedIn) {
   isAdminLoggedIn = !!isLoggedIn;
@@ -9403,15 +9403,15 @@ function resetAdminFailedAttempts() {
   sessionStorage.removeItem('paskas_admin_lockout_until');
 }
 
-function openSettingsWithAuth(targetTab = 'rekap') {
-  pendingAuthTargetTab = targetTab;
+function openSettingsWithAuth(targetTab = 'settings') {
+  pendingAuthTargetTab = targetTab || 'settings';
   if (isAdminLoggedIn) {
     if (['rekap', 'presensi', 'keuangan'].includes(targetTab)) {
       navigateTo(targetTab);
     } else {
       navigateTo('settings');
-      const cleanTab = (targetTab || 'rekap').replace('tab-', '');
-      switchSettingsTab(cleanTab);
+      const cleanTab = (targetTab === 'settings' ? 'info' : targetTab).replace('tab-', '');
+      if (typeof switchSettingsTab === 'function') switchSettingsTab(cleanTab);
     }
     return;
   }
@@ -9475,8 +9475,8 @@ async function submitAdminPassword() {
       navigateTo(pendingAuthTargetTab);
     } else {
       navigateTo('settings');
-      const cleanTab = (pendingAuthTargetTab || 'rekap').replace('tab-', '');
-      switchSettingsTab(cleanTab);
+      const cleanTab = (pendingAuthTargetTab === 'settings' ? 'info' : (pendingAuthTargetTab || 'info')).replace('tab-', '');
+      if (typeof switchSettingsTab === 'function') switchSettingsTab(cleanTab);
     }
     showToast('Akses administrator & panitia berhasil diverifikasi!', 'success');
   } else {
