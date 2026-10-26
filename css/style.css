@@ -261,18 +261,18 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Sembunyikan menu operasional panitia secara default untuk umum */
+/* Sembunyikan menu operasional panitia secara default untuk umum / saat di Beranda & Registrasi */
 .nav-link.admin-only,
 .mobile-link.admin-only {
   display: none !important;
 }
 
-/* Tampilkan hanya saat admin/panitia berhasil masuk/login */
-body.admin-logged-in .nav-link.admin-only {
+/* Tampilkan HANYA saat admin/panitia login DAN sedang berada di area operasional panitia */
+body.in-panitia-area.admin-logged-in .nav-link.admin-only {
   display: flex !important;
 }
 
-body.admin-logged-in .mobile-link.admin-only {
+body.in-panitia-area.admin-logged-in .mobile-link.admin-only {
   display: flex !important;
 }
 

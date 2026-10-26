@@ -1795,6 +1795,10 @@ function navigateTo(pageId) {
   // Toggle theme class for settings page
   document.body.classList.toggle('page-settings-active', pageId === 'settings');
 
+  // Toggle class for panitia operational area (Rekap, Presensi, Keuangan, Settings)
+  const isPanitiaArea = ['settings', 'rekap', 'presensi', 'keuangan'].includes(pageId);
+  document.body.classList.toggle('in-panitia-area', isPanitiaArea && isAdminLoggedIn);
+
   // If going to registration page, reset to show start button initially
   if (pageId === 'registration') {
     populateWilayahDropdowns();
@@ -9306,6 +9310,10 @@ function setAdminLoggedInState(isLoggedIn) {
   } catch (e) {}
   if (document.body) {
     document.body.classList.toggle('admin-logged-in', isAdminLoggedIn);
+    const activeView = document.querySelector('.page-view.active');
+    const pageId = activeView ? activeView.id.replace('page-', '') : '';
+    const isPanitiaArea = ['settings', 'rekap', 'presensi', 'keuangan'].includes(pageId);
+    document.body.classList.toggle('in-panitia-area', isPanitiaArea && isAdminLoggedIn);
   }
 }
 window.setAdminLoggedInState = setAdminLoggedInState;
