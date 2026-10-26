@@ -12933,6 +12933,7 @@ if (document.readyState === 'loading') {
 // 3. PRESENSI & CHECK-IN HARI-H MODULE
 let currentPresensiFilter = 'all';
 let presensiDonutChartInstance = null;
+let presensiWilayahChartInstance = null;
 let activeDetailParticipantId = null;
 
 function renderPresensiView() {
@@ -13027,8 +13028,45 @@ function renderPresensiView() {
   if (tabDeparted) tabDeparted.textContent = departed;
   if (tabCancelled) tabCancelled.textContent = cancelled;
 
+  // Update 4 Bar Indikator Individual Masing-masing
+  const onTimeIndPct = total > 0 ? Math.round((onTime / total) * 100) : 0;
+  const lateIndPct = total > 0 ? Math.round((late / total) * 100) : 0;
+  const pendingIndPct = total > 0 ? Math.round((pending / total) * 100) : 0;
+  const cancelledIndPct = total > 0 ? Math.round((cancelled / total) * 100) : 0;
+
+  const elIndOnTimeCount = document.getElementById('presIndOnTimeCount');
+  const elIndOnTimePct = document.getElementById('presIndOnTimePct');
+  const elIndBarOnTime = document.getElementById('presIndBarOnTime');
+  if (elIndOnTimeCount) elIndOnTimeCount.textContent = onTime;
+  if (elIndOnTimePct) elIndOnTimePct.textContent = `${onTimeIndPct}%`;
+  if (elIndBarOnTime) elIndBarOnTime.style.width = `${onTimeIndPct}%`;
+
+  const elIndLateCount = document.getElementById('presIndLateCount');
+  const elIndLatePct = document.getElementById('presIndLatePct');
+  const elIndBarLate = document.getElementById('presIndBarLate');
+  if (elIndLateCount) elIndLateCount.textContent = late;
+  if (elIndLatePct) elIndLatePct.textContent = `${lateIndPct}%`;
+  if (elIndBarLate) elIndBarLate.style.width = `${lateIndPct}%`;
+
+  const elIndPendingCount = document.getElementById('presIndPendingCount');
+  const elIndPendingPct = document.getElementById('presIndPendingPct');
+  const elIndBarPending = document.getElementById('presIndBarPending');
+  if (elIndPendingCount) elIndPendingCount.textContent = pending;
+  if (elIndPendingPct) elIndPendingPct.textContent = `${pendingIndPct}%`;
+  if (elIndBarPending) elIndBarPending.style.width = `${pendingIndPct}%`;
+
+  const elIndCancelledCount = document.getElementById('presIndCancelledCount');
+  const elIndCancelledPct = document.getElementById('presIndCancelledPct');
+  const elIndBarCancelled = document.getElementById('presIndBarCancelled');
+  if (elIndCancelledCount) elIndCancelledCount.textContent = cancelled;
+  if (elIndCancelledPct) elIndCancelledPct.textContent = `${cancelledIndPct}%`;
+  if (elIndBarCancelled) elIndBarCancelled.style.width = `${cancelledIndPct}%`;
+
   // Render / Update Donut Chart
   renderPresensiDonutChart(onTime, late, pending, cancelled);
+
+  // Render / Update Chart Kehadiran Kontingen Wilayah
+  renderPresensiWilayahChart();
 
   // Render Table
   renderPresensiTable();
@@ -13062,6 +13100,139 @@ function renderPresensiDonutChart(onTime, late, pending, cancelled) {
         legend: { display: false }
       },
       cutout: '72%'
+    }
+  });
+}
+
+function getPresenceWilayahStats() {
+  const list = allRegistrations || [];
+  const map = {};
+
+  list.forEach(p => {
+    let rawWil = (p.wilayah || '').trim();
+    if (!rawWil) rawWil = 'Wilayah Lain / Belum Isi';
+    const wil = rawWil;
+
+    if (!map[wil]) {
+      map[wil] = {
+        wilayah: wil,
+        total: 0,
+        hadir: 0,
+        belum: 0,
+        batal: 0
+      };
+    }
+    map[wil].total++;
+    const st = p.attendance_status || 'registered';
+    if (st === 'attended' || st === 'attended_late' || st === 'departed') {
+      map[wil].hadir++;
+    } else if (st === 'cancelled') {
+      map[wil].batal++;
+    } else {
+      map[wil].belum++;
+    }
+  });
+
+  // Urutkan dari wilayah dengan pendaftar terbanyak
+  return Object.values(map).sort((a, b) => b.total - a.total);
+}
+
+function renderPresensiWilayahChart() {
+  const canvas = document.getElementById('chartPresensiWilayah');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  if (presensiWilayahChartInstance) {
+    try { presensiWilayahChartInstance.destroy(); } catch (e) {}
+  }
+
+  const stats = getPresenceWilayahStats();
+  if (!stats || stats.length === 0) return;
+
+  const labels = stats.map(s => s.wilayah);
+  const dataHadir = stats.map(s => s.hadir);
+  const dataBelum = stats.map(s => s.belum);
+  const dataBatal = stats.map(s => s.batal);
+
+  const ctx = canvas.getContext('2d');
+  presensiWilayahChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Sudah Hadir',
+          data: dataHadir,
+          backgroundColor: '#10b981',
+          borderRadius: 4,
+          stack: 'presensiStack'
+        },
+        {
+          label: 'Belum Tiba',
+          data: dataBelum,
+          backgroundColor: '#cbd5e1',
+          borderRadius: 4,
+          stack: 'presensiStack'
+        },
+        {
+          label: 'Batal',
+          data: dataBatal,
+          backgroundColor: '#fca5a5',
+          borderRadius: 4,
+          stack: 'presensiStack'
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            boxWidth: 12,
+            font: { size: 11, weight: '600' },
+            color: '#475569'
+          }
+        },
+        tooltip: {
+          callbacks: {
+            footer: (items) => {
+              if (!items || !items.length) return '';
+              const idx = items[0].dataIndex;
+              const s = stats[idx];
+              if (!s) return '';
+              const pct = s.total > 0 ? Math.round((s.hadir / s.total) * 100) : 0;
+              return `Total Pendaftar: ${s.total} Jiwa (${pct}% Hadir)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: {
+            precision: 0,
+            font: { size: 10 },
+            color: '#64748b'
+          },
+          grid: {
+            color: '#f1f5f9'
+          }
+        },
+        y: {
+          stacked: true,
+          ticks: {
+            font: { size: 11, weight: '600' },
+            color: '#1e293b'
+          },
+          grid: {
+            display: false
+          }
+        }
+      }
     }
   });
 }

@@ -2025,61 +2025,108 @@
             </div>
           </div>
 
-          <!-- Split Visual Presensi: Donut Chart Kehadiran Realtime & Panduan Meja Front Desk -->
+          <!-- Split Visual Presensi: 4 Indikator Detail & Monitoring Per Kontingen Wilayah -->
           <div class="presensi-split-grid">
-            <div class="presensi-panel-card" style="align-items: center; text-align: center; justify-content: center;">
-              <div style="font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 0.05em; color: #183a27; margin-bottom: 16px; text-transform: uppercase;">
-                <i class="fa-solid fa-chart-pie" style="color: #2e6949; margin-right: 6px;"></i> Proporsi Kehadiran Real-time
-              </div>
-              <div style="position: relative; width: 210px; height: 210px;">
-                <canvas id="chartPresensiDonut"></canvas>
-              </div>
-              <div style="display: flex; gap: 8px; font-size: 11.5px; margin-top: 18px; flex-wrap: wrap; justify-content: center;">
-                <span class="badge" style="background:#e8f5e9;color:#1b5e20;border:1px solid #c8e6c9;font-weight:700;padding:5px 10px;border-radius:999px;"><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;margin-right:5px;"></span>Tepat Waktu</span>
-                <span class="badge" style="background:#fff8e1;color:#b78103;border:1px solid #ffecb3;font-weight:700;padding:5px 10px;border-radius:999px;"><span style="display:inline-block;width:8px;height:8px;background:#f59e0b;border-radius:50%;margin-right:5px;"></span>Hadir Telat</span>
-                <span class="badge" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;font-weight:700;padding:5px 10px;border-radius:999px;"><span style="display:inline-block;width:8px;height:8px;background:#94a3b8;border-radius:50%;margin-right:5px;"></span>Belum Tiba</span>
-                <span class="badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;font-weight:700;padding:5px 10px;border-radius:999px;"><span style="display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:50%;margin-right:5px;"></span>Batal</span>
+            
+            <!-- Panel 1: Proporsi Kehadiran & 4 Indikator Detail Masing-masing -->
+            <div class="presensi-panel-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 0.05em; color: #183a27; margin-bottom: 12px; text-transform: uppercase;">
+                  <i class="fa-solid fa-chart-pie" style="color: #2e6949; margin-right: 6px;"></i> 4 Indikator Kehadiran Real-time
+                </div>
+                
+                <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+                  <div style="position: relative; width: 160px; height: 160px;">
+                    <canvas id="chartPresensiDonut"></canvas>
+                  </div>
+                </div>
+
+                <!-- 4 Indikator Progres Masing-Masing (Sesuai Permintaan User) -->
+                <div class="pres-indicators-stack" style="display: flex; flex-direction: column; gap: 8px;">
+                  
+                  <!-- Indikator 1: Tepat Waktu -->
+                  <div style="background: #f8fafc; border: 1px solid #d1fae5; border-radius: 8px; padding: 7px 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 4px;">
+                      <span style="font-weight: 700; color: #065f46;"><i class="fa-solid fa-circle" style="color: #10b981; font-size: 8px; margin-right: 5px;"></i> Tepat Waktu</span>
+                      <strong style="color: #047857;"><span id="presIndOnTimeCount">0</span> Jiwa (<span id="presIndOnTimePct">0%</span>)</strong>
+                    </div>
+                    <div style="height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                      <div id="presIndBarOnTime" style="height: 100%; width: 0%; background: #10b981; transition: width 0.4s ease;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Indikator 2: Hadir Telat -->
+                  <div style="background: #f8fafc; border: 1px solid #fef3c7; border-radius: 8px; padding: 7px 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 4px;">
+                      <span style="font-weight: 700; color: #92400e;"><i class="fa-solid fa-circle" style="color: #f59e0b; font-size: 8px; margin-right: 5px;"></i> Hadir Telat</span>
+                      <strong style="color: #b45309;"><span id="presIndLateCount">0</span> Jiwa (<span id="presIndLatePct">0%</span>)</strong>
+                    </div>
+                    <div style="height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                      <div id="presIndBarLate" style="height: 100%; width: 0%; background: #f59e0b; transition: width 0.4s ease;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Indikator 3: Belum Tiba -->
+                  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 4px;">
+                      <span style="font-weight: 700; color: #334155;"><i class="fa-solid fa-circle" style="color: #94a3b8; font-size: 8px; margin-right: 5px;"></i> Belum Tiba</span>
+                      <strong style="color: #475569;"><span id="presIndPendingCount">0</span> Jiwa (<span id="presIndPendingPct">0%</span>)</strong>
+                    </div>
+                    <div style="height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                      <div id="presIndBarPending" style="height: 100%; width: 0%; background: #94a3b8; transition: width 0.4s ease;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Indikator 4: Batal -->
+                  <div style="background: #f8fafc; border: 1px solid #fee2e2; border-radius: 8px; padding: 7px 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 4px;">
+                      <span style="font-weight: 700; color: #991b1b;"><i class="fa-solid fa-circle" style="color: #ef4444; font-size: 8px; margin-right: 5px;"></i> Batal</span>
+                      <strong style="color: #b91c1c;"><span id="presIndCancelledCount">0</span> Jiwa (<span id="presIndCancelledPct">0%</span>)</strong>
+                    </div>
+                    <div style="height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                      <div id="presIndBarCancelled" style="height: 100%; width: 0%; background: #ef4444; transition: width 0.4s ease;"></div>
+                    </div>
+                  </div>
+
+                </div>
               </div>
             </div>
 
-            <div class="presensi-panel-card" style="justify-content: space-between;">
+            <!-- Panel 2: Chart Kehadiran Kontingen Wilayah & Panduan Ringkas -->
+            <div class="presensi-panel-card" style="display: flex; flex-direction: column; justify-content: space-between;">
               <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
-                  <h4 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #183a27;">
-                    <i class="fa-solid fa-stopwatch" style="color: #b45309; margin-right: 6px;"></i> Panduan Operasional Meja Front Desk
-                  </h4>
-                  <span class="settings-chip-badge" style="background: #eaf3ed; color: #183a27; border: 1px solid #b7dfc8; font-weight: 800; padding: 4px 10px; border-radius: 999px; font-size: 11px;">
-                    <i class="fa-solid fa-bolt"></i> Auto-Timestamp Cloud
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                  <div style="font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 0.05em; color: #183a27; text-transform: uppercase;">
+                    <i class="fa-solid fa-map-location-dot" style="color: #2e6949; margin-right: 6px;"></i> Progres Kehadiran Kontingen Wilayah
+                  </div>
+                  <span class="settings-chip-badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 11px; padding: 3px 8px; font-weight: 700;">
+                    <i class="fa-solid fa-users"></i> Hadir vs Belum Tiba
                   </span>
                 </div>
-                <div style="font-size: 13px; color: #374151; line-height: 1.7; margin-bottom: 16px;">
-                  <div style="display: flex; gap: 10px; margin-bottom: 8px; align-items: flex-start;">
-                    <span style="width: 22px; height: 22px; border-radius: 50%; background: #183a27; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;">1</span>
-                    <span>Minta jemaah menyebutkan <strong>Kode Tiket (PKB-xxx)</strong> atau <strong>Nama Lengkap</strong>.</span>
-                  </div>
-                  <div style="display: flex; gap: 10px; margin-bottom: 8px; align-items: flex-start;">
-                    <span style="width: 22px; height: 22px; border-radius: 50%; background: #183a27; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;">2</span>
-                    <span>Ketik di kolom pencarian cepat di bawah untuk menemukan baris jemaah seketika.</span>
-                  </div>
-                  <div style="display: flex; gap: 10px; margin-bottom: 8px; align-items: flex-start;">
-                    <span style="width: 22px; height: 22px; border-radius: 50%; background: #183a27; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;">3</span>
-                    <span>Klik tombol hijau <strong>[ ✅ Ceklis Hadir ]</strong>. Jam kedatangan langsung tercatat detik itu juga ke Cloud Supabase.</span>
-                  </div>
-                  <div style="display: flex; gap: 10px; margin-bottom: 8px; align-items: flex-start;">
-                    <span style="width: 22px; height: 22px; border-radius: 50%; background: #183a27; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;">4</span>
-                    <span>Bila status pembayaran bertuliskan <span class="badge" style="background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;">KURANG</span>, arahkan koordinator kafilah ke meja bendahara di samping.</span>
-                  </div>
-                  <div style="display: flex; gap: 10px; align-items: flex-start;">
-                    <span style="width: 22px; height: 22px; border-radius: 50%; background: #183a27; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;">5</span>
-                    <span>Saat acara selesai dan jemaah pamit pulang, klik <strong>[ 🛫 Ceklis Pulang ]</strong>.</span>
-                  </div>
+                
+                <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">
+                  Grafik perbandingan pendaftar per wilayah: <strong>Hijau = Sudah Hadir</strong>, <strong>Abu-abu = Belum Tiba</strong>.
+                </p>
+
+                <!-- Canvas Chart Bar Wilayah -->
+                <div style="position: relative; width: 100%; height: 230px;">
+                  <canvas id="chartPresensiWilayah"></canvas>
                 </div>
               </div>
-              <div style="background: #fdf8eb; border: 1px solid #f3d489; border-radius: 10px; padding: 12px 16px; font-size: 12px; color: #855909; display: flex; gap: 10px; align-items: center;">
-                <i class="fa-solid fa-shield-halved" style="font-size: 18px; color: #b45309;"></i>
-                <div><strong>Proteksi Pembatalan:</strong> Pembatalan kehadiran hanya bisa dilakukan lewat tombol detail <strong>[ 👁️ ]</strong> dan wajib mengisi alasan pembatalan agar tidak salah pencet saat antrean padat.</div>
+
+              <!-- Panduan Operasional Ringkas di Bawah Chart Wilayah -->
+              <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11.5px; color: #475569;">
+                <div><i class="fa-solid fa-stopwatch" style="color: #b45309;"></i> <strong>Panduan:</strong> Cari tiket &bull; Klik <strong>[ ✅ Ceklis Hadir ]</strong> saat tiba &bull; Klik <strong>[ 🛫 Ceklis Pulang ]</strong> saat selesai.</div>
+                <div style="font-weight: 700; color: #059669;"><i class="fa-solid fa-bolt"></i> Auto-Sync Cloud</div>
               </div>
             </div>
+
+          </div>
+
+          <!-- Proteksi Pembatalan Info Banner -->
+          <div style="background: #fdf8eb; border: 1px solid #f3d489; border-radius: 10px; padding: 10px 16px; font-size: 12px; color: #855909; display: flex; gap: 10px; align-items: center; margin-bottom: 16px;">
+            <i class="fa-solid fa-shield-halved" style="font-size: 16px; color: #b45309; flex-shrink: 0;"></i>
+            <div><strong>Proteksi Pembatalan:</strong> Pembatalan kehadiran hanya bisa dilakukan lewat tombol detail <strong>[ 👁️ ]</strong> dan wajib mengisi alasan pembatalan agar tidak salah pencet saat antrean padat.</div>
           </div>
 
           <!-- Frosted Search & Filter Card -->
@@ -5578,6 +5625,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=128.0"></script>
-  <script src="js/app.js?v=139.0"></script>
+  <script src="js/app.js?v=140.0"></script>
 </body>
 </html>
