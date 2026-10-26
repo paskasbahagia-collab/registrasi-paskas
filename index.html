@@ -2106,9 +2106,18 @@
                 <span class="mag-status-mini-pill"><span class="status-dot gold"></span> Cloud: <strong id="magPillDb">Supabase Connected</strong></span>
                 <span class="mag-status-mini-pill"><span class="status-dot gold"></span> Peserta: <strong id="magPillTotal">0 Jiwa</strong></span>
               </div>
-              <div class="mag-meta-right">
+              <div class="mag-meta-right" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <button type="button" class="btn-mag-top-action" onclick="navigateTo('rekap')" title="Buka Halaman Rekapitulasi Data Peserta" style="background: #e0f2fe; border: 1.5px solid #7dd3fc; color: #0369a1; font-weight: 800;">
+                  <i class="fa-solid fa-chart-pie"></i> Rekap Data
+                </button>
+                <button type="button" class="btn-mag-top-action" onclick="navigateTo('presensi')" title="Buka Meja Presensi &amp; Check-in Hari-H" style="background: #ecfdf5; border: 1.5px solid #6ee7b7; color: #047857; font-weight: 800;">
+                  <i class="fa-solid fa-clipboard-check"></i> Presensi Hari-H
+                </button>
+                <button type="button" class="btn-mag-top-action" onclick="navigateTo('keuangan')" title="Buka Meja Keuangan &amp; Termin Pembayaran" style="background: #fef3c7; border: 1.5px solid #fcd34d; color: #b45309; font-weight: 800;">
+                  <i class="fa-solid fa-coins"></i> Keuangan &amp; Termin
+                </button>
                 <button type="button" class="btn-mag-top-action lock" onclick="lockAdminSession()" title="Kunci sesi admin dan kembali ke Beranda">
-                  <i class="fa-solid fa-lock"></i> Kunci Sesi Admin
+                  <i class="fa-solid fa-lock"></i> Kunci Sesi
                 </button>
                 <button type="button" class="btn-mag-top-action back" onclick="navigateTo('dashboard')" title="Kembali ke Beranda">
                   <i class="fa-solid fa-arrow-left"></i> Beranda
@@ -2119,6 +2128,54 @@
             <!-- Giant Didot Headline: PENGATURAN -->
             <div class="mag-giant-title-row">
               <h1 class="mag-giant-didot-title">PENGATURAN</h1>
+            </div>
+
+            <!-- 3 GRAND EXECUTIVE PORTALS (REKAP, PRESENSI, KEUANGAN) -->
+            <div style="background: #ffffff; border: 2px solid #e2dac9; border-radius: 14px; padding: 18px 20px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 12px; font-weight: 800; color: #8a6a24; letter-spacing: 0.08em; text-transform: uppercase;">
+                  <i class="fa-solid fa-layer-group text-gold"></i> 3 PORTAL OPERASIONAL PANITIA (KLIK UNTUK BUKA HALAMAN KHUSUS)
+                </div>
+                <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">Halaman mandiri tanpa campur aduk</span>
+              </div>
+              
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+                <!-- Portal 1: Rekap Data -->
+                <div onclick="navigateTo('rekap')" style="background: #f8fafc; border: 1.5px solid #bae6fd; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s ease; display: flex; gap: 12px; align-items: center;" onmouseover="this.style.background='#f0f9ff';this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#f8fafc';this.style.transform='none';">
+                  <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+                    <i class="fa-solid fa-chart-pie"></i>
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 800; font-size: 14px; color: #0f172a;">1. Rekap Data Peserta</div>
+                    <div style="font-size: 11.5px; color: #64748b;">Logistik, seragam, &amp; posko medis</div>
+                  </div>
+                  <div style="color: #0284c7;"><i class="fa-solid fa-arrow-right"></i></div>
+                </div>
+
+                <!-- Portal 2: Presensi Hari-H -->
+                <div onclick="navigateTo('presensi')" style="background: #f8fafc; border: 1.5px solid #a7f3d0; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s ease; display: flex; gap: 12px; align-items: center;" onmouseover="this.style.background='#ecfdf5';this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#f8fafc';this.style.transform='none';">
+                  <div style="width: 44px; height: 44px; border-radius: 10px; background: #dcfce7; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 800; font-size: 14px; color: #0f172a;">2. Presensi &amp; Check-in</div>
+                    <div style="font-size: 11.5px; color: #64748b;">Meja front desk kedatangan</div>
+                  </div>
+                  <div style="color: #059669;"><i class="fa-solid fa-arrow-right"></i></div>
+                </div>
+
+                <!-- Portal 3: Keuangan & Termin -->
+                <div onclick="navigateTo('keuangan')" style="background: #f8fafc; border: 1.5px solid #fde68a; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s ease; display: flex; gap: 12px; align-items: center;" onmouseover="this.style.background='#fefce8';this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#f8fafc';this.style.transform='none';">
+                  <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+                    <i class="fa-solid fa-coins"></i>
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 800; font-size: 14px; color: #0f172a;">3. Keuangan &amp; Termin</div>
+                    <div style="font-size: 11.5px; color: #64748b;">Tarif 3 usia, termin DP, &amp; kas</div>
+                  </div>
+                  <div style="color: #b45309;"><i class="fa-solid fa-arrow-right"></i></div>
+                </div>
+              </div>
             </div>
 
             <!-- Two-Column Editorial Cover Split -->
