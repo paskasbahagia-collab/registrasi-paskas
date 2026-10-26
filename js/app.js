@@ -13299,6 +13299,71 @@ function openPresensiDetailModal(id) {
   const reasonInput = document.getElementById('detCancelReasonInput');
   if (reasonInput) reasonInput.value = '';
 
+  // Kontrol Tampilan Pembatalan: HANYA MUNCUL DI SAAT PESERTA BELUM ABSEN HADIR
+  const st = p.attendance_status || 'registered';
+  const cancelSection = document.getElementById('detCancelSection');
+  const statusNotice = document.getElementById('detStatusNoticeContainer');
+
+  if (cancelSection && statusNotice) {
+    if (st === 'registered' || !st) {
+      // 1. Peserta Belum Absen Hadir: Tampilkan form pembatalan
+      cancelSection.style.display = 'block';
+      statusNotice.style.display = 'none';
+      statusNotice.innerHTML = '';
+    } else {
+      // 2. Peserta Sudah Hadir / Sudah Pulang / Sudah Batal: Sembunyikan form pembatalan
+      cancelSection.style.display = 'none';
+      statusNotice.style.display = 'block';
+
+      if (st === 'attended' || st === 'attended_late') {
+        let checkInTime = '-';
+        if (p.check_in_at) {
+          try {
+            const d = new Date(p.check_in_at);
+            checkInTime = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + ', ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+          } catch (e) {}
+        }
+        const lateTag = st === 'attended_late' ? ' (Hadir Telat)' : ' (Tepat Waktu)';
+        statusNotice.innerHTML = `
+          <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 10px; padding: 12px 14px; color: #065f46; font-size: 13px; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px;">
+            <i class="fa-solid fa-circle-check" style="font-size: 18px; color: #059669; margin-top: 2px;"></i>
+            <div>
+              <strong style="color: #065f46;">Peserta Sudah Hadir di Lokasi${lateTag}</strong>
+              <div style="font-size: 12px; color: #047857; margin-top: 2px;">Tercatat check-in pada: <strong>${checkInTime}</strong>. Formulir pembatalan ditutup karena jemaah sudah hadir mengikuti kegiatan.</div>
+            </div>
+          </div>
+        `;
+      } else if (st === 'departed') {
+        let checkOutTime = '-';
+        if (p.check_out_at) {
+          try {
+            const d = new Date(p.check_out_at);
+            checkOutTime = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + ', ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+          } catch (e) {}
+        }
+        statusNotice.innerHTML = `
+          <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 10px; padding: 12px 14px; color: #0369a1; font-size: 13px; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px;">
+            <i class="fa-solid fa-plane-departure" style="font-size: 18px; color: #0284c7; margin-top: 2px;"></i>
+            <div>
+              <strong style="color: #0369a1;">Peserta Telah Selesai &amp; Pulang</strong>
+              <div style="font-size: 12px; color: #0284c7; margin-top: 2px;">Tercatat check-out kepulangan pada: <strong>${checkOutTime}</strong>.</div>
+            </div>
+          </div>
+        `;
+      } else if (st === 'cancelled') {
+        statusNotice.innerHTML = `
+          <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; padding: 12px 14px; color: #991b1b; font-size: 13px; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px;">
+            <i class="fa-solid fa-ban" style="font-size: 18px; color: #dc2626; margin-top: 2px;"></i>
+            <div>
+              <strong style="color: #991b1b;">Kehadiran Peserta Ini Telah Dibatalkan</strong>
+              <div style="font-size: 12px; color: #b91c1c; margin-top: 2px;">Alasan: <em>"${p.cancel_reason || 'Tanpa keterangan'}"</em>. Data otomatis tercatat di antrean refund modul keuangan.</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+  }
+
   modal.classList.add('active');
 }
 
