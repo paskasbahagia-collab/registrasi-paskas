@@ -1730,32 +1730,12 @@ function navigateHeroStory(direction) {
 // 2. NAVIGATION & ROUTING
 // ===================================================================
 function navigateTo(pageId) {
-  // 1. Rekap Data Peserta Mandiri (/#rekap)
+  // 1. Standalone Rekap Mount
   if (pageId === 'rekap') {
     mountRekapStandalone();
-    if (typeof renderRekapTable === 'function') renderRekapTable();
-    if (window.location.hash !== '#rekap') {
-      try { history.replaceState(null, '', '#rekap'); } catch (e) {}
-    }
   }
 
-  // 2. Presensi & Check-in Hari-H Mandiri (/#presensi)
-  if (pageId === 'presensi') {
-    if (typeof renderPresensiView === 'function') renderPresensiView();
-    if (window.location.hash !== '#presensi') {
-      try { history.replaceState(null, '', '#presensi'); } catch (e) {}
-    }
-  }
-
-  // 3. Keuangan & Termin Pembayaran Mandiri (/#keuangan)
-  if (pageId === 'keuangan') {
-    if (typeof checkTreasurerSessionState === 'function') checkTreasurerSessionState();
-    if (window.location.hash !== '#keuangan') {
-      try { history.replaceState(null, '', '#keuangan'); } catch (e) {}
-    }
-  }
-
-  // 4. Pengaturan Sistem (Khusus Admin Utama Ber-Password)
+  // 2. Pengaturan Sistem (Khusus Admin Utama Ber-Password)
   if (pageId === 'settings' && !isAdminLoggedIn) {
     openSettingsWithAuth('rekap');
     return;
@@ -1771,6 +1751,12 @@ function navigateTo(pageId) {
   if (pageId === 'registration') {
     if (window.location.hash !== '#registration') {
       try { history.replaceState(null, '', '#registration'); } catch (e) {}
+    }
+  }
+
+  if (['rekap', 'presensi', 'keuangan'].includes(pageId)) {
+    if (window.location.hash !== `#${pageId}`) {
+      try { history.replaceState(null, '', `#${pageId}`); } catch (e) {}
     }
   }
 
@@ -1790,7 +1776,7 @@ function navigateTo(pageId) {
     btn.classList.toggle('active', text.includes(pageId));
   });
 
-  // Switch page view
+  // Switch page view immediately so content shows right away without black screen
   document.querySelectorAll('.page-view').forEach(view => {
     view.classList.remove('active');
   });
@@ -1839,12 +1825,35 @@ function navigateTo(pageId) {
     }
   }
 
-  // If going to rekap page, refresh data from cloud & re-render charts
+  // Trigger page-specific renders & cloud refresh
   if (pageId === 'rekap') {
+    if (typeof renderRekapTable === 'function') renderRekapTable();
     if (typeof loadAndRenderRegistrations === 'function') {
       loadAndRenderRegistrations().catch(err => console.warn('Gagal refresh rekap:', err));
     } else {
       renderCharts();
+    }
+  }
+
+  if (pageId === 'presensi') {
+    if (typeof renderPresensiView === 'function') {
+      try { renderPresensiView(); } catch (e) { console.warn('renderPresensiView error:', e); }
+    }
+    if ((!allRegistrations || allRegistrations.length === 0) && typeof loadAndRenderRegistrations === 'function') {
+      loadAndRenderRegistrations().then(() => {
+        if (typeof renderPresensiView === 'function') renderPresensiView();
+      }).catch(err => console.warn('Gagal refresh presensi data:', err));
+    }
+  }
+
+  if (pageId === 'keuangan') {
+    if (typeof checkTreasurerSessionState === 'function') {
+      try { checkTreasurerSessionState(); } catch (e) { console.warn('checkTreasurerSessionState error:', e); }
+    }
+    if ((!allRegistrations || allRegistrations.length === 0) && typeof loadAndRenderRegistrations === 'function') {
+      loadAndRenderRegistrations().then(() => {
+        if (typeof renderFinanceView === 'function') renderFinanceView();
+      }).catch(err => console.warn('Gagal refresh keuangan data:', err));
     }
   }
 
@@ -6449,6 +6458,14 @@ async function loadAndRenderRegistrations() {
   if (settingsBadge) settingsBadge.textContent = allRegistrations.length;
   const magTotal = document.getElementById('magPillTotal');
   if (magTotal) magTotal.textContent = allRegistrations.length + ' Jiwa';
+
+  // Also update Presensi and Keuangan views if currently open
+  if (typeof renderPresensiView === 'function') {
+    try { renderPresensiView(); } catch (e) {}
+  }
+  if (typeof renderFinanceView === 'function') {
+    try { renderFinanceView(); } catch (e) {}
+  }
 }
 
 async function forceReloadCloudData(btn) {
@@ -12830,7 +12847,8 @@ window.moveCardToPosition = moveCardToPosition;
 // 1. STANDALONE REKAP MOUNTING
 function mountRekapStandalone() {
   const mount = document.getElementById('rekapMainContainer');
-  const sheet = document.querySelector('.rekap-editorial-sheet');
+  // Specifically target the original settings rekap sheet, NEVER Presensi or Keuangan
+  const sheet = document.getElementById('rekapEditorialOriginalSheet') || document.querySelector('#settingsPanel-rekap .rekap-editorial-sheet');
   if (mount && sheet && sheet.parentElement !== mount) {
     mount.appendChild(sheet);
   }
@@ -12855,14 +12873,19 @@ function handleHashRoute() {
 }
 
 window.addEventListener('hashchange', handleHashRoute);
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    mountRekapStandalone();
-    if (window.location.hash) {
-      handleHashRoute();
-    }
-  }, 250);
-});
+
+function initInitialRoute() {
+  mountRekapStandalone();
+  if (window.location.hash) {
+    handleHashRoute();
+  }
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initInitialRoute);
+} else {
+  initInitialRoute();
+}
 
 // 3. PRESENSI & CHECK-IN HARI-H MODULE
 let currentPresensiFilter = 'all';
