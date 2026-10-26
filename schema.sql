@@ -43,6 +43,24 @@ ALTER TABLE registrations ADD COLUMN IF NOT EXISTS group_code VARCHAR(50);
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS join_year INT;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS photo_url TEXT;
 
+-- Migrasi Modul Presensi & Keuangan Terpadu (Blueprint Maulana)
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS attendance_status VARCHAR(30) DEFAULT 'registered';
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS check_in_at TIMESTAMPTZ;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS check_out_at TIMESTAMPTZ;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status VARCHAR(30) DEFAULT 'pending';
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS total_fee NUMERIC DEFAULT 0;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS paid_amount NUMERIC DEFAULT 0;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS remaining_amount NUMERIC DEFAULT 0;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_installments JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS refund_status VARCHAR(30) DEFAULT 'none';
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS refund_amount NUMERIC DEFAULT 0;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS refund_notes TEXT;
+
+-- Index untuk mempercepat query pencarian presensi dan keuangan
+CREATE INDEX IF NOT EXISTS idx_reg_attendance ON registrations(attendance_status);
+CREATE INDEX IF NOT EXISTS idx_reg_payment ON registrations(payment_status);
+
 -- Index untuk mempercepat query pencarian
 CREATE INDEX IF NOT EXISTS idx_reg_code ON registrations(registration_code);
 CREATE INDEX IF NOT EXISTS idx_reg_wilayah ON registrations(wilayah);
@@ -71,6 +89,11 @@ VALUES
     ('event_date', '2026-11-10 s/d 2026-11-13', 'Tanggal pelaksanaan kegiatan'),
     ('google_email_script_url', 'https://script.google.com/macros/s/AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A/exec', 'URL Apps Script Web App untuk pengiriman email otomatis dari paskasbahagia@gmail.com'),
     ('paskas_admin_password', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Hash SHA-256 kata sandi administrator (aman terenkripsi: bawaan admin123)'),
+    ('paskas_treasurer_password', 'dff9cd137cab8b96431ccd81f8bb433fc71f0329eefb54bd4380b3fc3a9fc5d1', 'Hash SHA-256 kata sandi bendahara (aman terenkripsi: bawaan bendahara123)'),
+    ('adult_fee', '350000', 'Tarif standar registrasi peserta dewasa (>15 tahun)'),
+    ('child_fee', '100000', 'Tarif registrasi anak-anak (5-15 tahun)'),
+    ('toddler_fee', '50000', 'Tarif registrasi balita (<5 tahun)'),
+    ('event_late_threshold', '2026-11-12T12:00:00', 'Batas jam kehadiran tepat waktu hari-H (melewati jam ini otomatis berstatus Hadir Telat)'),
     ('uniform_size_chart_ikhwan', E'S: Lebar 46cm / LD 92cm\nM: Lebar 48cm / LD 96cm\nL: Lebar 50cm / LD 100cm\nXL: Lebar 52cm / LD 104cm\nXXL: Lebar 54cm / LD 108cm\n3XL: Lebar 56cm / LD 112cm\n4XL: Lebar 58cm / LD 116cm', 'Panduan standar size chart seragam ikhwan'),
     ('uniform_size_chart_akhwat', E'S: Lebar 46cm / LD 92cm\nM: Lebar 48cm / LD 96cm\nL: Lebar 50cm / LD 100cm\nXL: Lebar 52cm / LD 104cm\nXXL: Lebar 54cm / LD 108cm\n3XL: Lebar 56cm / LD 112cm\n4XL: Lebar 58cm / LD 116cm', 'Panduan standar size chart seragam akhwat')
 ON CONFLICT (setting_key) DO NOTHING;

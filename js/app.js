@@ -1730,17 +1730,32 @@ function navigateHeroStory(direction) {
 // 2. NAVIGATION & ROUTING
 // ===================================================================
 function navigateTo(pageId) {
+  // 1. Rekap Data Peserta Mandiri (/#rekap)
   if (pageId === 'rekap') {
-    if (!isAdminLoggedIn) {
-      openSettingsWithAuth('rekap');
-      return;
-    } else {
-      navigateTo('settings');
-      switchSettingsTab('rekap');
-      return;
+    mountRekapStandalone();
+    if (typeof renderRekapTable === 'function') renderRekapTable();
+    if (window.location.hash !== '#rekap') {
+      try { history.replaceState(null, '', '#rekap'); } catch (e) {}
     }
   }
 
+  // 2. Presensi & Check-in Hari-H Mandiri (/#presensi)
+  if (pageId === 'presensi') {
+    if (typeof renderPresensiView === 'function') renderPresensiView();
+    if (window.location.hash !== '#presensi') {
+      try { history.replaceState(null, '', '#presensi'); } catch (e) {}
+    }
+  }
+
+  // 3. Keuangan & Termin Pembayaran Mandiri (/#keuangan)
+  if (pageId === 'keuangan') {
+    if (typeof checkTreasurerSessionState === 'function') checkTreasurerSessionState();
+    if (window.location.hash !== '#keuangan') {
+      try { history.replaceState(null, '', '#keuangan'); } catch (e) {}
+    }
+  }
+
+  // 4. Pengaturan Sistem (Khusus Admin Utama Ber-Password)
   if (pageId === 'settings' && !isAdminLoggedIn) {
     openSettingsWithAuth('rekap');
     return;
@@ -1748,6 +1763,15 @@ function navigateTo(pageId) {
 
   if (pageId === 'dashboard') {
     closeHeroStory();
+    if (window.location.hash && window.location.hash !== '#dashboard' && !['#rekap', '#presensi', '#keuangan', '#registration'].includes(window.location.hash)) {
+      try { history.replaceState(null, '', '#dashboard'); } catch (e) {}
+    }
+  }
+
+  if (pageId === 'registration') {
+    if (window.location.hash !== '#registration') {
+      try { history.replaceState(null, '', '#registration'); } catch (e) {}
+    }
   }
 
   // Update nav links
@@ -8571,7 +8595,8 @@ function exportToExcel() {
     'Orang Tua / Wali', 'Gedung / Asrama', 'Kamar / Tenda', 'Jenis Kelamin', 'Wilayah', 
     'Daerah', 'Email', 'No WhatsApp', 'No HP Darurat', 'Tgl Kedatangan', 'Jam Kedatangan', 
     'Transport Berangkat', 'Tgl Kepulangan', 'Jam Kepulangan', 'Transport Pulang', 
-    'Ukuran Baju', 'Riwayat Medis', 'Catatan'
+    'Ukuran Baju', 'Riwayat Medis', 'Status Presensi', 'Waktu Check-in', 'Total Tagihan', 
+    'Total Terbayar', 'Sisa Tagihan', 'Status Pembayaran', 'Catatan'
   ];
   const s1Rows = [s1Headers];
   sourceData.forEach((item, idx) => {
@@ -8604,6 +8629,12 @@ function exportToExcel() {
       sanitizeSpreadsheetValue(item.transport_departure),
       sanitizeSpreadsheetValue(item.cloth_size),
       sanitizeSpreadsheetValue(item.medical_history || 'Tidak Ada'),
+      sanitizeSpreadsheetValue(item.attendance_status || 'Belum Hadir'),
+      sanitizeSpreadsheetValue(item.check_in_at || '-'),
+      Number(item.total_fee || 0),
+      Number(item.paid_amount || 0),
+      Number(item.remaining_amount !== undefined ? item.remaining_amount : (item.total_fee || 0)),
+      sanitizeSpreadsheetValue(item.payment_status || 'pending'),
       sanitizeSpreadsheetValue(item.notes || '-')
     ]);
   });
@@ -12791,4 +12822,852 @@ window.applyTextFormatting = applyTextFormatting;
 window.moveCardUp = moveCardUp;
 window.moveCardDown = moveCardDown;
 window.moveCardToPosition = moveCardToPosition;
+
+/* ===================================================================
+   MASTER BLUEPRINT MAULANA: MODUL TERPADU PRESENSI, REKAP & KEUANGAN
+   =================================================================== */
+
+// 1. STANDALONE REKAP MOUNTING
+function mountRekapStandalone() {
+  const mount = document.getElementById('rekapMainContainer');
+  const sheet = document.querySelector('.rekap-editorial-sheet');
+  if (mount && sheet && sheet.parentElement !== mount) {
+    mount.appendChild(sheet);
+  }
+}
+
+// 2. HASH ROUTING LISTENER
+function handleHashRoute() {
+  const hash = (window.location.hash || '').replace('#', '').trim().toLowerCase();
+  if (hash === 'rekap') {
+    navigateTo('rekap');
+  } else if (hash === 'presensi') {
+    navigateTo('presensi');
+  } else if (hash === 'keuangan') {
+    navigateTo('keuangan');
+  } else if (hash === 'registration') {
+    navigateTo('registration');
+  } else if (hash === 'settings') {
+    navigateTo('settings');
+  } else if (hash === 'dashboard') {
+    navigateTo('dashboard');
+  }
+}
+
+window.addEventListener('hashchange', handleHashRoute);
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    mountRekapStandalone();
+    if (window.location.hash) {
+      handleHashRoute();
+    }
+  }, 250);
+});
+
+// 3. PRESENSI & CHECK-IN HARI-H MODULE
+let currentPresensiFilter = 'all';
+let presensiDonutChartInstance = null;
+let activeDetailParticipantId = null;
+
+function renderPresensiView() {
+  const list = allRegistrations || [];
+  
+  // Hitung metrik
+  let onTime = 0;
+  let late = 0;
+  let pending = 0;
+  let departed = 0;
+  let cancelled = 0;
+
+  list.forEach(p => {
+    const st = p.attendance_status || 'registered';
+    if (st === 'attended') onTime++;
+    else if (st === 'attended_late') late++;
+    else if (st === 'departed') departed++;
+    else if (st === 'cancelled') cancelled++;
+    else pending++;
+  });
+
+  const total = list.length;
+  const onTimePct = total > 0 ? Math.round((onTime / total) * 100) : 0;
+
+  const elTotal = document.getElementById('presensiStatTotal');
+  const elOnTime = document.getElementById('presensiStatOnTime');
+  const elLate = document.getElementById('presensiStatLate');
+  const elPending = document.getElementById('presensiStatPending');
+  const elPctOnTime = document.getElementById('presensiPctOnTime');
+
+  if (elTotal) elTotal.innerHTML = `${total} <small style="font-size:14px;font-weight:600;">Jiwa</small>`;
+  if (elOnTime) elOnTime.innerHTML = `${onTime} <small style="font-size:14px;font-weight:600;">Jiwa</small>`;
+  if (elLate) elLate.innerHTML = `${late} <small style="font-size:14px;font-weight:600;">Jiwa</small>`;
+  if (elPending) elPending.innerHTML = `${pending} <small style="font-size:14px;font-weight:600;">Jiwa</small>`;
+  if (elPctOnTime) elPctOnTime.textContent = `${onTimePct}%`;
+
+  // Update badge tabs
+  const tabAll = document.getElementById('presTabAll');
+  const tabOnTime = document.getElementById('presTabOnTime');
+  const tabLate = document.getElementById('presTabLate');
+  const tabPending = document.getElementById('presTabPending');
+  const tabDeparted = document.getElementById('presTabDeparted');
+  const tabCancelled = document.getElementById('presTabCancelled');
+
+  if (tabAll) tabAll.textContent = total;
+  if (tabOnTime) tabOnTime.textContent = onTime;
+  if (tabLate) tabLate.textContent = late;
+  if (tabPending) tabPending.textContent = pending;
+  if (tabDeparted) tabDeparted.textContent = departed;
+  if (tabCancelled) tabCancelled.textContent = cancelled;
+
+  // Render / Update Donut Chart
+  renderPresensiDonutChart(onTime, late, pending, cancelled);
+
+  // Render Table
+  renderPresensiTable();
+}
+
+function renderPresensiDonutChart(onTime, late, pending, cancelled) {
+  const canvas = document.getElementById('chartPresensiDonut');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  if (presensiDonutChartInstance) {
+    try { presensiDonutChartInstance.destroy(); } catch (e) {}
+  }
+
+  const ctx = canvas.getContext('2d');
+  presensiDonutChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Tepat Waktu', 'Hadir Telat', 'Belum Tiba', 'Batal'],
+      datasets: [{
+        data: [onTime, late, pending, cancelled],
+        backgroundColor: ['#10b981', '#f59e0b', '#cbd5e1', '#ef4444'],
+        borderWidth: 2,
+        borderColor: '#ffffff',
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      cutout: '72%'
+    }
+  });
+}
+
+function setPresensiFilter(filterKey, btnEl) {
+  currentPresensiFilter = filterKey;
+  if (btnEl) {
+    document.querySelectorAll('#presensiFilterTabs .btn-outline-filter').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+  }
+  renderPresensiTable();
+}
+
+function filterPresensiData() {
+  renderPresensiTable();
+}
+
+function renderPresensiTable() {
+  const tbody = document.getElementById('presensiTableBody');
+  if (!tbody) return;
+
+  const query = (document.getElementById('presensiSearchInput')?.value || '').toLowerCase().trim();
+  const list = allRegistrations || [];
+
+  const filtered = list.filter(p => {
+    const st = p.attendance_status || 'registered';
+    // Status filter
+    if (currentPresensiFilter !== 'all') {
+      if (currentPresensiFilter === 'registered') {
+        if (st !== 'registered' && st !== '') return false;
+      } else if (st !== currentPresensiFilter) {
+        return false;
+      }
+    }
+    // Search query filter
+    if (query) {
+      const matchName = (p.full_name || '').toLowerCase().includes(query);
+      const matchCode = (p.registration_code || '').toLowerCase().includes(query);
+      const matchGroup = (p.group_name || '').toLowerCase().includes(query);
+      const matchWil = (p.wilayah || '').toLowerCase().includes(query);
+      if (!matchName && !matchCode && !matchGroup && !matchWil) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 36px; color: #94a3b8;">
+          <i class="fa-solid fa-user-slash" style="font-size: 26px; margin-bottom: 8px; display: block; color: #cbd5e1;"></i>
+          Tidak ada data peserta yang cocok dengan kriteria filter presensi.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((p, idx) => {
+    const st = p.attendance_status || 'registered';
+    let statusBadge = '<span class="badge-pending"><i class="fa-solid fa-clock"></i> Belum Tiba</span>';
+    let timeStr = '';
+
+    if (p.check_in_at) {
+      try {
+        const d = new Date(p.check_in_at);
+        timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      } catch (e) {}
+    }
+
+    if (st === 'attended') {
+      statusBadge = `<span class="badge-attended"><i class="fa-solid fa-circle-check"></i> Hadir Tepat (${timeStr || 'OK'})</span>`;
+    } else if (st === 'attended_late') {
+      statusBadge = `<span class="badge-attended-late"><i class="fa-solid fa-triangle-exclamation"></i> Hadir Telat (${timeStr || 'OK'})</span>`;
+    } else if (st === 'departed') {
+      let outStr = '';
+      if (p.check_out_at) {
+        try {
+          const od = new Date(p.check_out_at);
+          outStr = od.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+        } catch (e) {}
+      }
+      statusBadge = `<span class="badge-departed"><i class="fa-solid fa-plane-departure"></i> Pulang (${outStr || 'Selesai'})</span>`;
+    } else if (st === 'cancelled') {
+      statusBadge = `<span class="badge-cancelled"><i class="fa-solid fa-ban"></i> Batal</span>`;
+    }
+
+    // Payment badge
+    const payStatus = p.payment_status || 'pending';
+    const remaining = Number(p.remaining_amount !== undefined ? p.remaining_amount : (p.total_fee || 0));
+    let payBadge = '<span class="badge-debt">KURANG</span>';
+    if (payStatus === 'paid' || remaining <= 0) {
+      payBadge = '<span class="badge-paid">LUNAS</span>';
+    } else if (payStatus === 'partial') {
+      payBadge = `<span class="badge-partial">KURANG: Rp ${remaining.toLocaleString('id-ID')}</span>`;
+    }
+
+    // Action buttons
+    let actionButtons = '';
+    if (st === 'registered' || !st) {
+      actionButtons = `
+        <button type="button" class="btn-checkin-action" onclick="doPresenceCheckIn(${p.id})">
+          <i class="fa-solid fa-check"></i> Ceklis Hadir
+        </button>
+      `;
+    } else if (st === 'attended' || st === 'attended_late') {
+      actionButtons = `
+        <button type="button" class="btn-checkout-action" onclick="doPresenceCheckOut(${p.id})">
+          <i class="fa-solid fa-plane-departure"></i> Pulang
+        </button>
+      `;
+    }
+
+    actionButtons += `
+      <button type="button" class="btn btn-secondary btn-xs" onclick="openPresensiDetailModal(${p.id})" title="Lihat Detail & Keamanan Pembatalan" style="padding: 6px 10px; margin-left: 6px;">
+        <i class="fa-solid fa-eye"></i>
+      </button>
+    `;
+
+    const genderIcon = p.gender === 'Laki-laki' 
+      ? '<i class="fa-solid fa-mars" style="color: #0284c7;"></i>' 
+      : '<i class="fa-solid fa-venus" style="color: #ec4899;"></i>';
+
+    const avatarHtml = p.photo_url 
+      ? `<img src="${p.photo_url}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid #10b981;">`
+      : `<div style="width: 34px; height: 34px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #475569;">${(p.full_name || 'P')[0]}</div>`;
+
+    return `
+      <tr>
+        <td style="font-weight: 700; color: #64748b;">${idx + 1}</td>
+        <td>
+          <span style="font-family: monospace; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">
+            ${p.registration_code || '-'}
+          </span>
+        </td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            ${avatarHtml}
+            <div>
+              <div style="font-weight: 800; color: #0f172a; font-size: 13.5px;">${p.full_name || '-'}</div>
+              <div style="font-size: 11.5px; color: #64748b;">${genderIcon} ${p.age ? p.age + ' thn' : 'Dewasa'} &bull; Seragam: <strong>${p.cloth_size || '-'}</strong></div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 700; color: #1e293b; font-size: 13px;">${p.group_name || 'Mandiri / Perorangan'}</div>
+          <div style="font-size: 11.5px; color: #64748b;"><i class="fa-solid fa-location-dot"></i> ${p.wilayah || '-'}</div>
+        </td>
+        <td>${payBadge}</td>
+        <td>${statusBadge}</td>
+        <td style="text-align: center; white-space: nowrap;">
+          ${actionButtons}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function doPresenceCheckIn(id) {
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  if (!p) return;
+
+  const now = new Date();
+  let isLate = false;
+
+  // Cek ambang batas telat
+  const settings = window.dataService ? window.dataService.getSettings() : {};
+  const thresholdStr = settings.event_late_threshold || '2026-11-12T12:00:00';
+  try {
+    const thresholdDate = new Date(thresholdStr);
+    if (now.getTime() > thresholdDate.getTime()) {
+      isLate = true;
+    }
+  } catch (e) {}
+
+  showToast('Mencatat kehadiran jemaah...', 'info');
+
+  try {
+    const updated = await window.dataService.recordPresenceCheckIn(id, isLate, now.toISOString());
+    const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
+    if (idx !== -1) {
+      allRegistrations[idx] = { ...allRegistrations[idx], ...updated, attendance_status: isLate ? 'attended_late' : 'attended', check_in_at: now.toISOString() };
+    }
+    renderPresensiView();
+    showToast(isLate ? `Check-in dicatat: [⚠️ Hadir Telat] untuk ${p.full_name}` : `Alhamdulillah! Check-in Berhasil untuk ${p.full_name}`, 'success');
+  } catch (err) {
+    console.error('Checkin error:', err);
+    showToast('Gagal mencatat presensi: ' + err.message, 'error');
+  }
+}
+
+async function doPresenceCheckOut(id) {
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  if (!p) return;
+
+  const now = new Date();
+  showToast('Mencatat kepulangan jemaah...', 'info');
+
+  try {
+    const updated = await window.dataService.recordPresenceCheckOut(id, now.toISOString());
+    const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
+    if (idx !== -1) {
+      allRegistrations[idx] = { ...allRegistrations[idx], ...updated, attendance_status: 'departed', check_out_at: now.toISOString() };
+    }
+    renderPresensiView();
+    showToast(`Kepulangan dicatat untuk ${p.full_name}. Selamat jalan fii amanillah!`, 'success');
+  } catch (err) {
+    console.error('Checkout error:', err);
+    showToast('Gagal mencatat kepulangan: ' + err.message, 'error');
+  }
+}
+
+function openPresensiDetailModal(id) {
+  activeDetailParticipantId = id;
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  if (!p) return;
+
+  const modal = document.getElementById('modalPresensiDetail');
+  if (!modal) return;
+
+  document.getElementById('detModalName').textContent = p.full_name || '-';
+  document.getElementById('detModalTicketCode').textContent = p.registration_code || '-';
+  document.getElementById('detModalGroup').textContent = p.group_name || 'Mandiri';
+  document.getElementById('detModalWilayah').textContent = p.wilayah || '-';
+  document.getElementById('detModalCategory').textContent = `${p.gender || '-'} (${p.age ? p.age + ' thn' : 'Dewasa'})`;
+  document.getElementById('detModalCloth').textContent = p.cloth_size || '-';
+  document.getElementById('detModalRoom').textContent = (p.building || '-') + ' / ' + (p.room_number || '-');
+  document.getElementById('detModalPhone').textContent = p.phone_number || '-';
+  document.getElementById('detModalMedical').textContent = p.medical_history || 'Tidak Ada';
+
+  const remaining = Number(p.remaining_amount !== undefined ? p.remaining_amount : (p.total_fee || 0));
+  document.getElementById('detModalPayment').innerHTML = remaining <= 0 
+    ? '<span class="badge-paid">LUNAS</span>' 
+    : `<span class="badge-partial">KURANG: Rp ${remaining.toLocaleString('id-ID')}</span>`;
+
+  const reasonInput = document.getElementById('detCancelReasonInput');
+  if (reasonInput) reasonInput.value = '';
+
+  modal.classList.add('active');
+}
+
+function closePresensiDetailModal() {
+  const modal = document.getElementById('modalPresensiDetail');
+  if (modal) modal.classList.remove('active');
+}
+
+async function submitCancelParticipantFromModal() {
+  if (!activeDetailParticipantId) return;
+  const reasonInput = document.getElementById('detCancelReasonInput');
+  const reason = (reasonInput?.value || '').trim();
+
+  if (!reason) {
+    showToast('Wajib memasukkan alasan pembatalan kehadiran!', 'warning');
+    if (reasonInput) reasonInput.focus();
+    return;
+  }
+
+  showToast('Memproses pembatalan kehadiran jemaah...', 'info');
+
+  try {
+    const updated = await window.dataService.cancelParticipant(activeDetailParticipantId, reason);
+    const idx = allRegistrations.findIndex(x => Number(x.id) === Number(activeDetailParticipantId));
+    if (idx !== -1) {
+      allRegistrations[idx] = { ...allRegistrations[idx], ...updated, attendance_status: 'cancelled', cancel_reason: reason };
+    }
+    closePresensiDetailModal();
+    renderPresensiView();
+    if (typeof renderFinanceView === 'function') renderFinanceView();
+    showToast('Kehadiran peserta berhasil dibatalkan dan otomatis masuk antrean refund.', 'success');
+  } catch (err) {
+    console.error('Cancel participant error:', err);
+    showToast('Gagal membatalkan peserta: ' + err.message, 'error');
+  }
+}
+
+// 4. KEUANGAN & TERMIN MODULE
+let isTreasurerLoggedIn = false;
+let currentFinanceFilter = 'all';
+let financeRatioChartInstance = null;
+let activePayParticipantId = null;
+
+function checkTreasurerSessionState() {
+  const stored = sessionStorage.getItem('paskas_treasurer_session');
+  isTreasurerLoggedIn = stored === 'active';
+
+  const lockScreen = document.getElementById('treasurerLockScreen');
+  const mainDash = document.getElementById('treasurerMainDashboard');
+
+  if (isTreasurerLoggedIn) {
+    if (lockScreen) lockScreen.style.display = 'none';
+    if (mainDash) mainDash.style.display = 'block';
+    renderFinanceView();
+  } else {
+    if (lockScreen) lockScreen.style.display = 'block';
+    if (mainDash) mainDash.style.display = 'none';
+    const pwdInput = document.getElementById('treasurerLoginPasswordInput');
+    if (pwdInput) pwdInput.value = '';
+  }
+}
+
+async function submitTreasurerLogin() {
+  const pwdInput = document.getElementById('treasurerLoginPasswordInput');
+  const errEl = document.getElementById('treasurerLoginError');
+  const entered = (pwdInput?.value || '').trim();
+
+  if (!entered) {
+    if (errEl) {
+      errEl.style.display = 'block';
+      errEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Masukkan kata sandi bendahara.';
+    }
+    return;
+  }
+
+  const isValid = await window.dataService.verifyTreasurerPassword(entered);
+  if (isValid) {
+    sessionStorage.setItem('paskas_treasurer_session', 'active');
+    isTreasurerLoggedIn = true;
+    if (errEl) errEl.style.display = 'none';
+    checkTreasurerSessionState();
+    showToast('Sesi Bendahara Berhasil Masuk!', 'success');
+  } else {
+    if (errEl) {
+      errEl.style.display = 'block';
+      errEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>bendahara123</code>.';
+    }
+    showToast('Kata sandi bendahara salah.', 'error');
+  }
+}
+
+function lockTreasurerSession() {
+  sessionStorage.removeItem('paskas_treasurer_session');
+  isTreasurerLoggedIn = false;
+  checkTreasurerSessionState();
+  showToast('Sesi bendahara telah dikunci.', 'info');
+}
+
+function calculateParticipantFee(p) {
+  if (p.total_fee && Number(p.total_fee) > 0) {
+    return Number(p.total_fee);
+  }
+  const settings = window.dataService ? window.dataService.getSettings() : {};
+  const adultFee = Number(settings.adult_fee || 350000);
+  const childFee = Number(settings.child_fee || 100000);
+  const toddlerFee = Number(settings.toddler_fee || 50000);
+
+  const age = Number(p.age);
+  if (age > 0 && age < 5) return toddlerFee;
+  if (age >= 5 && age <= 15) return childFee;
+  return adultFee;
+}
+
+function renderFinanceView() {
+  const list = allRegistrations || [];
+  const settings = window.dataService ? window.dataService.getSettings() : {};
+  const adultFeeDisplay = document.getElementById('financeAdultFeeDisplay');
+  if (adultFeeDisplay) {
+    adultFeeDisplay.textContent = `Rp ${Number(settings.adult_fee || 350000).toLocaleString('id-ID')}`;
+  }
+
+  let totalTagihan = 0;
+  let totalMasuk = 0;
+  let totalPiutang = 0;
+  let countRefund = 0;
+  let totalRefund = 0;
+
+  list.forEach(p => {
+    const fee = calculateParticipantFee(p);
+    p.total_fee = fee;
+
+    let paid = 0;
+    if (p.payment_installments) {
+      try {
+        const inst = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments);
+        paid = inst.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      } catch (e) {}
+    } else if (p.paid_amount) {
+      paid = Number(p.paid_amount);
+    }
+
+    p.paid_amount = paid;
+    const remaining = Math.max(0, fee - paid);
+    p.remaining_amount = remaining;
+
+    if (p.attendance_status === 'cancelled') {
+      if (paid > 0 && p.refund_status !== 'completed') {
+        countRefund++;
+        totalRefund += paid;
+      }
+    } else {
+      totalTagihan += fee;
+      totalMasuk += paid;
+      totalPiutang += remaining;
+    }
+  });
+
+  const pctMasuk = totalTagihan > 0 ? Math.round((totalMasuk / totalTagihan) * 100) : 0;
+
+  const elTagihan = document.getElementById('financeStatTotalTagihan');
+  const elMasuk = document.getElementById('financeStatTotalMasuk');
+  const elPiutang = document.getElementById('financeStatTotalPiutang');
+  const elRefund = document.getElementById('financeStatTotalRefund');
+  const elPctMasuk = document.getElementById('financePctMasuk');
+  const elCountRefund = document.getElementById('financeCountRefund');
+
+  if (elTagihan) elTagihan.textContent = `Rp ${totalTagihan.toLocaleString('id-ID')}`;
+  if (elMasuk) elMasuk.textContent = `Rp ${totalMasuk.toLocaleString('id-ID')}`;
+  if (elPiutang) elPiutang.textContent = `Rp ${totalPiutang.toLocaleString('id-ID')}`;
+  if (elRefund) elRefund.textContent = `Rp ${totalRefund.toLocaleString('id-ID')}`;
+  if (elPctMasuk) elPctMasuk.textContent = `${pctMasuk}%`;
+  if (elCountRefund) elCountRefund.textContent = countRefund;
+
+  // Render Visual Chart Kas Masuk vs Piutang
+  renderFinanceRatioChart(totalMasuk, totalPiutang);
+
+  // Render Table
+  renderFinanceTable();
+}
+
+function renderFinanceRatioChart(totalMasuk, totalPiutang) {
+  const canvas = document.getElementById('chartFinanceRatio');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  if (financeRatioChartInstance) {
+    try { financeRatioChartInstance.destroy(); } catch (e) {}
+  }
+
+  const ctx = canvas.getContext('2d');
+  financeRatioChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Kas Masuk', 'Sisa Piutang'],
+      datasets: [{
+        data: [totalMasuk, totalPiutang],
+        backgroundColor: ['#10b981', '#ef4444'],
+        borderWidth: 2,
+        borderColor: '#ffffff',
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      cutout: '72%'
+    }
+  });
+}
+
+function setFinanceFilter(filterKey, btnEl) {
+  currentFinanceFilter = filterKey;
+  if (btnEl) {
+    document.querySelectorAll('#financeFilterTabs .btn-outline-filter').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+  }
+  renderFinanceTable();
+}
+
+function filterFinanceData() {
+  renderFinanceTable();
+}
+
+function renderFinanceTable() {
+  const tbody = document.getElementById('financeTableBody');
+  if (!tbody) return;
+
+  const query = (document.getElementById('financeSearchInput')?.value || '').toLowerCase().trim();
+  const list = allRegistrations || [];
+
+  const filtered = list.filter(p => {
+    const fee = calculateParticipantFee(p);
+    const paid = Number(p.paid_amount || 0);
+    const remaining = Math.max(0, fee - paid);
+
+    if (currentFinanceFilter === 'paid') {
+      if (remaining > 0 || paid === 0) return false;
+    } else if (currentFinanceFilter === 'partial') {
+      if (paid === 0 || remaining === 0) return false;
+    } else if (currentFinanceFilter === 'pending') {
+      if (paid > 0) return false;
+    } else if (currentFinanceFilter === 'group') {
+      if (!p.group_name || p.group_name === 'Mandiri') return false;
+    } else if (currentFinanceFilter === 'refund') {
+      if (p.attendance_status !== 'cancelled' || paid === 0) return false;
+    }
+
+    if (query) {
+      const matchName = (p.full_name || '').toLowerCase().includes(query);
+      const matchCode = (p.registration_code || '').toLowerCase().includes(query);
+      const matchGroup = (p.group_name || '').toLowerCase().includes(query);
+      const matchWil = (p.wilayah || '').toLowerCase().includes(query);
+      if (!matchName && !matchCode && !matchGroup && !matchWil) return false;
+    }
+
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 36px; color: #94a3b8;">
+          <i class="fa-solid fa-receipt" style="font-size: 26px; margin-bottom: 8px; display: block; color: #cbd5e1;"></i>
+          Tidak ada data keuangan yang cocok dengan filter.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((p, idx) => {
+    const fee = calculateParticipantFee(p);
+    const paid = Number(p.paid_amount || 0);
+    const remaining = Math.max(0, fee - paid);
+
+    let statusBadge = '<span class="badge-debt">BELUM BAYAR</span>';
+    if (remaining <= 0 && paid > 0) {
+      statusBadge = '<span class="badge-paid">LUNAS</span>';
+    } else if (paid > 0 && remaining > 0) {
+      statusBadge = '<span class="badge-partial">CICILAN</span>';
+    }
+
+    if (p.attendance_status === 'cancelled') {
+      statusBadge = '<span class="badge-cancelled">BATAL (REFUND)</span>';
+    }
+
+    return `
+      <tr>
+        <td style="font-weight: 700; color: #64748b;">${idx + 1}</td>
+        <td>
+          <span style="font-family: monospace; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">
+            ${p.registration_code || '-'}
+          </span>
+        </td>
+        <td>
+          <div style="font-weight: 800; color: #0f172a; font-size: 13.5px;">${p.full_name || '-'}</div>
+          <div style="font-size: 11px; color: #64748b;">Kategori: ${p.age ? (p.age < 5 ? 'Balita' : (p.age <= 15 ? 'Anak' : 'Dewasa')) : 'Dewasa'} (${p.age || '16+'} thn)</div>
+        </td>
+        <td>
+          <div style="font-weight: 700; color: #1e293b; font-size: 13px;">${p.group_name || 'Mandiri'}</div>
+          <div style="font-size: 11px; color: #64748b;">${p.wilayah || '-'}</div>
+        </td>
+        <td style="font-weight: 800; color: #1e293b;">Rp ${fee.toLocaleString('id-ID')}</td>
+        <td style="font-weight: 800; color: #059669;">Rp ${paid.toLocaleString('id-ID')}</td>
+        <td style="font-weight: 800; color: #dc2626;">Rp ${remaining.toLocaleString('id-ID')}</td>
+        <td>${statusBadge}</td>
+        <td style="text-align: center;">
+          <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})">
+            <i class="fa-solid fa-receipt"></i> Catat Bayar
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openRecordPaymentModal(id) {
+  activePayParticipantId = id;
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  if (!p) return;
+
+  const modal = document.getElementById('modalRecordPayment');
+  if (!modal) return;
+
+  const fee = calculateParticipantFee(p);
+  const paid = Number(p.paid_amount || 0);
+  const remaining = Math.max(0, fee - paid);
+
+  document.getElementById('payModalParticipantId').value = id;
+  document.getElementById('payModalParticipantName').textContent = `${p.full_name} (${p.registration_code}) - ${p.group_name || 'Mandiri'}`;
+  document.getElementById('payModalTotalFee').textContent = `Rp ${fee.toLocaleString('id-ID')}`;
+  document.getElementById('payModalPaidAmount').textContent = `Rp ${paid.toLocaleString('id-ID')}`;
+  document.getElementById('payModalRemainingAmount').textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
+
+  const amountInput = document.getElementById('payModalAmountInput');
+  if (amountInput) amountInput.value = remaining > 0 ? remaining : '';
+
+  const notesInput = document.getElementById('payModalNotesInput');
+  if (notesInput) notesInput.value = '';
+
+  modal.classList.add('active');
+}
+
+function closeRecordPaymentModal() {
+  const modal = document.getElementById('modalRecordPayment');
+  if (modal) modal.classList.remove('active');
+}
+
+function fillPayModalWithRemaining() {
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
+  if (!p) return;
+  const fee = calculateParticipantFee(p);
+  const paid = Number(p.paid_amount || 0);
+  const remaining = Math.max(0, fee - paid);
+  const amountInput = document.getElementById('payModalAmountInput');
+  if (amountInput) amountInput.value = remaining;
+}
+
+async function submitPaymentInstallment() {
+  if (!activePayParticipantId) return;
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
+  if (!p) return;
+
+  const terminSelect = document.getElementById('payModalTerminSelect');
+  const amountInput = document.getElementById('payModalAmountInput');
+  const methodSelect = document.getElementById('payModalMethodSelect');
+  const notesInput = document.getElementById('payModalNotesInput');
+
+  const terminNo = terminSelect?.value || '1';
+  const amount = Number(amountInput?.value || 0);
+  const method = methodSelect?.value || 'Transfer';
+  const notes = notesInput?.value || '';
+
+  if (amount <= 0) {
+    showToast('Nominal pembayaran harus lebih besar dari 0!', 'warning');
+    if (amountInput) amountInput.focus();
+    return;
+  }
+
+  showToast('Menyimpan pembayaran ke Cloud Supabase...', 'info');
+
+  try {
+    const updated = await window.dataService.recordPaymentInstallment(activePayParticipantId, terminNo, amount, method, notes, 'Bendahara');
+    const idx = allRegistrations.findIndex(x => Number(x.id) === Number(activePayParticipantId));
+    if (idx !== -1) {
+      allRegistrations[idx] = { ...allRegistrations[idx], ...updated };
+    }
+    closeRecordPaymentModal();
+    renderFinanceView();
+    if (typeof renderPresensiView === 'function') renderPresensiView();
+    showToast(`Alhamdulillah! Pembayaran Rp ${amount.toLocaleString('id-ID')} berhasil dicatat.`, 'success');
+  } catch (err) {
+    console.error('Payment error:', err);
+    showToast('Gagal menyimpan pembayaran: ' + err.message, 'error');
+  }
+}
+
+// 5. SECURITY & PASSWORDS (BENDAHARA & TARIF)
+async function saveNewTreasurerPassword() {
+  const newPass = (document.getElementById('cfg_newTreasurerPassword')?.value || '').trim();
+  const confirmPass = (document.getElementById('cfg_confirmTreasurerPassword')?.value || '').trim();
+
+  if (!newPass || newPass.length < 4) {
+    showToast('Kata sandi bendahara minimal 4 karakter!', 'warning');
+    return;
+  }
+  if (newPass !== confirmPass) {
+    showToast('Konfirmasi kata sandi tidak cocok!', 'error');
+    return;
+  }
+
+  showToast('Menyimpan kata sandi bendahara ke Cloud...', 'info');
+  try {
+    await window.dataService.setTreasurerPassword(newPass);
+    document.getElementById('cfg_newTreasurerPassword').value = '';
+    document.getElementById('cfg_confirmTreasurerPassword').value = '';
+    showToast('Kata sandi bendahara berhasil diperbarui!', 'success');
+  } catch (err) {
+    showToast('Gagal menyimpan kata sandi bendahara: ' + err.message, 'error');
+  }
+}
+
+async function resetTreasurerPasswordDefault() {
+  if (!confirm('Kembalikan kata sandi bendahara ke bawaan (bendahara123)?')) return;
+  try {
+    await window.dataService.setTreasurerPassword('bendahara123');
+    showToast('Kata sandi bendahara berhasil direset ke "bendahara123".', 'success');
+  } catch (err) {
+    showToast('Gagal reset: ' + err.message, 'error');
+  }
+}
+
+async function saveTariffAndPresensiConfig() {
+  const adult = document.getElementById('cfg_adultFee')?.value || '350000';
+  const child = document.getElementById('cfg_childFee')?.value || '100000';
+  const toddler = document.getElementById('cfg_toddlerFee')?.value || '50000';
+  const lateThreshold = document.getElementById('cfg_eventLateThreshold')?.value || '2026-11-12T12:00:00';
+
+  showToast('Menyimpan konfigurasi tarif & jam batas...', 'info');
+
+  try {
+    await window.dataService.saveCloudSetting('adult_fee', String(adult));
+    await window.dataService.saveCloudSetting('child_fee', String(child));
+    await window.dataService.saveCloudSetting('toddler_fee', String(toddler));
+    await window.dataService.saveCloudSetting('event_late_threshold', String(lateThreshold));
+
+    showToast('Pengaturan tarif dan jam presensi berhasil disimpan ke Cloud!', 'success');
+    if (typeof renderFinanceView === 'function') renderFinanceView();
+  } catch (err) {
+    showToast('Gagal menyimpan pengaturan: ' + err.message, 'error');
+  }
+}
+
+// Global Exports
+window.mountRekapStandalone = mountRekapStandalone;
+window.renderPresensiView = renderPresensiView;
+window.setPresensiFilter = setPresensiFilter;
+window.filterPresensiData = filterPresensiData;
+window.doPresenceCheckIn = doPresenceCheckIn;
+window.doPresenceCheckOut = doPresenceCheckOut;
+window.openPresensiDetailModal = openPresensiDetailModal;
+window.closePresensiDetailModal = closePresensiDetailModal;
+window.submitCancelParticipantFromModal = submitCancelParticipantFromModal;
+
+window.checkTreasurerSessionState = checkTreasurerSessionState;
+window.submitTreasurerLogin = submitTreasurerLogin;
+window.lockTreasurerSession = lockTreasurerSession;
+window.renderFinanceView = renderFinanceView;
+window.setFinanceFilter = setFinanceFilter;
+window.filterFinanceData = filterFinanceData;
+window.openRecordPaymentModal = openRecordPaymentModal;
+window.closeRecordPaymentModal = closeRecordPaymentModal;
+window.fillPayModalWithRemaining = fillPayModalWithRemaining;
+window.submitPaymentInstallment = submitPaymentInstallment;
+window.saveNewTreasurerPassword = saveNewTreasurerPassword;
+window.resetTreasurerPasswordDefault = resetTreasurerPasswordDefault;
+window.saveTariffAndPresensiConfig = saveTariffAndPresensiConfig;
+
 

@@ -79,7 +79,12 @@ Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`,
   announcement_enabled: 'true',
   announcement_title: 'Pengumuman & Update Acara',
   announcement_date: '20 Oktober 2026, 14:00 WIB',
-  announcement_text: 'Ahlan wa Sahlan! Registrasi peserta Silaturahmi Akbar Paskas Bahagia resmi dibuka. Pastikan melengkapi data rombongan dan ukuran seragam dengan benar sebelum batas akhir pendaftaran.'
+  announcement_text: 'Ahlan wa Sahlan! Registrasi peserta Silaturahmi Akbar Paskas Bahagia resmi dibuka. Pastikan melengkapi data rombongan dan ukuran seragam dengan benar sebelum batas akhir pendaftaran.',
+  paskas_treasurer_password: 'dff9cd137cab8b96431ccd81f8bb433fc71f0329eefb54bd4380b3fc3a9fc5d1',
+  adult_fee: '350000',
+  child_fee: '100000',
+  toddler_fee: '50000',
+  event_late_threshold: '2026-11-12T12:00:00'
 };
 
 // Data Awal Murni (Kosong / 0 Peserta sampai ada pendaftaran baru)
@@ -256,6 +261,18 @@ class PaskasDataService {
             try {
               if (row.setting_value) safeStorage.setItem('paskas_admin_password', row.setting_value);
             } catch (e) { }
+          } else if (row.setting_key === 'paskas_treasurer_password') {
+            try {
+              if (row.setting_value) safeStorage.setItem('paskas_treasurer_password', row.setting_value);
+            } catch (e) { }
+          } else if (row.setting_key === 'paskas_attendance_sync') {
+            try {
+              if (row.setting_value) safeStorage.setItem('paskas_attendance_sync', row.setting_value);
+            } catch (e) { }
+          } else if (row.setting_key === 'paskas_finance_sync') {
+            try {
+              if (row.setting_value) safeStorage.setItem('paskas_finance_sync', row.setting_value);
+            } catch (e) { }
           } else if (row.setting_key === 'is_room_group_enabled' || row.setting_key === 'paskas_room_group_enabled') {
             try {
               if (row.setting_value) safeStorage.setItem('paskas_room_group_enabled', row.setting_value);
@@ -382,7 +399,19 @@ class PaskasDataService {
       'guardian_name',
       'group_code',
       'join_year',
-      'photo_url'
+      'photo_url',
+      'attendance_status',
+      'check_in_at',
+      'check_out_at',
+      'cancel_reason',
+      'payment_status',
+      'total_fee',
+      'paid_amount',
+      'remaining_amount',
+      'payment_installments',
+      'refund_status',
+      'refund_amount',
+      'refund_notes'
     ]);
   }
 
@@ -1128,6 +1157,168 @@ class PaskasDataService {
       }
     }
     return false;
+  }
+
+  /**
+   * ===================================================================
+   * MODUL PRESENSI & KEHADIRAN HARI-H (BLUEPRINT MAULANA)
+   * ===================================================================
+   */
+  async recordPresenceCheckIn(id, isLate = false, customTime = null) {
+    const timestamp = customTime || new Date().toISOString();
+    const status = isLate ? 'attended_late' : 'attended';
+    const updates = {
+      attendance_status: status,
+      check_in_at: timestamp
+    };
+    const updated = await this.updateRegistration(id, updates);
+    await this.syncAttendanceCloudBackup(id, updates);
+    return updated;
+  }
+
+  async recordPresenceCheckOut(id, customTime = null) {
+    const timestamp = customTime || new Date().toISOString();
+    const updates = {
+      attendance_status: 'departed',
+      check_out_at: timestamp
+    };
+    const updated = await this.updateRegistration(id, updates);
+    await this.syncAttendanceCloudBackup(id, updates);
+    return updated;
+  }
+
+  async cancelParticipant(id, reason = '') {
+    const updates = {
+      attendance_status: 'cancelled',
+      cancel_reason: reason || 'Dibatalkan oleh panitia'
+    };
+    const updated = await this.updateRegistration(id, updates);
+    await this.syncAttendanceCloudBackup(id, updates);
+    return updated;
+  }
+
+  async syncAttendanceCloudBackup(id, updates) {
+    try {
+      let syncMap = {};
+      const raw = safeStorage.getItem('paskas_attendance_sync');
+      if (raw) {
+        try { syncMap = JSON.parse(raw); } catch (e) {}
+      }
+      syncMap[id] = { ...(syncMap[id] || {}), ...updates, updated_at: new Date().toISOString() };
+      await this.saveCloudSetting('paskas_attendance_sync', syncMap);
+    } catch (e) {
+      console.warn('Backup presensi cloud sync:', e);
+    }
+  }
+
+  /**
+   * ===================================================================
+   * MODUL KEUANGAN & TERMIN PEMBAYARAN (BLUEPRINT MAULANA)
+   * ===================================================================
+   */
+  async recordPaymentInstallment(id, terminNumber, amount, method = 'Transfer', notes = '', adminName = 'Bendahara') {
+    const current = await this.getLocalRegistrations();
+    const item = current.find(p => String(p.id) === String(id));
+    if (!item) throw new Error('Data peserta tidak ditemukan');
+
+    const totalFee = Number(item.total_fee || 0);
+    let installments = [];
+    if (item.payment_installments) {
+      installments = Array.isArray(item.payment_installments) ? item.payment_installments : (typeof item.payment_installments === 'string' ? JSON.parse(item.payment_installments) : []);
+    }
+
+    const newInstallment = {
+      id: 'TRM-' + Date.now(),
+      termin: Number(terminNumber) || (installments.length + 1),
+      amount: Number(amount) || 0,
+      method: method,
+      notes: notes,
+      admin: adminName,
+      paid_at: new Date().toISOString()
+    };
+    installments.push(newInstallment);
+
+    const paidAmount = installments.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const remaining = Math.max(0, totalFee - paidAmount);
+    const paymentStatus = remaining <= 0 ? 'paid' : (paidAmount > 0 ? 'partial' : 'pending');
+
+    const updates = {
+      total_fee: totalFee,
+      paid_amount: paidAmount,
+      remaining_amount: remaining,
+      payment_status: paymentStatus,
+      payment_installments: installments
+    };
+
+    const updated = await this.updateRegistration(id, updates);
+    await this.syncFinanceCloudBackup(id, updates);
+    return updated;
+  }
+
+  async updateRefundStatus(id, refundStatus, refundAmount, refundNotes) {
+    const updates = {
+      refund_status: refundStatus,
+      refund_amount: Number(refundAmount) || 0,
+      refund_notes: refundNotes || ''
+    };
+    const updated = await this.updateRegistration(id, updates);
+    await this.syncFinanceCloudBackup(id, updates);
+    return updated;
+  }
+
+  async syncFinanceCloudBackup(id, updates) {
+    try {
+      let syncMap = {};
+      const raw = safeStorage.getItem('paskas_finance_sync');
+      if (raw) {
+        try { syncMap = JSON.parse(raw); } catch (e) {}
+      }
+      syncMap[id] = { ...(syncMap[id] || {}), ...updates, updated_at: new Date().toISOString() };
+      await this.saveCloudSetting('paskas_finance_sync', syncMap);
+    } catch (e) {
+      console.warn('Backup keuangan cloud sync:', e);
+    }
+  }
+
+  /**
+   * ===================================================================
+   * MANAJEMEN KATA SANDI BENDAHARA
+   * ===================================================================
+   */
+  getTreasurerPasswordHash() {
+    return safeStorage.getItem('paskas_treasurer_password') || 
+           this.getSettings().paskas_treasurer_password || 
+           'dff9cd137cab8b96431ccd81f8bb433fc71f0329eefb54bd4380b3fc3a9fc5d1'; // Default: bendahara123
+  }
+
+  async verifyTreasurerPassword(entered) {
+    if (!entered) return false;
+    const stored = this.getTreasurerPasswordHash();
+    let enteredHash = entered;
+    if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
+      enteredHash = await window.hashSHA256(entered);
+    }
+    if (enteredHash.toLowerCase() === stored.toLowerCase()) {
+      return true;
+    }
+    if (stored === entered || stored === 'bendahara123') {
+      if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
+        const hash = await window.hashSHA256(entered);
+        await this.setTreasurerPassword(hash);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  async setTreasurerPassword(newHashOrPlain) {
+    let hash = newHashOrPlain;
+    if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function' && newHashOrPlain.length < 64) {
+      hash = await window.hashSHA256(newHashOrPlain);
+    }
+    safeStorage.setItem('paskas_treasurer_password', hash);
+    await this.saveCloudSetting('paskas_treasurer_password', hash);
+    return true;
   }
 
   showCloudSaveWarning() {
