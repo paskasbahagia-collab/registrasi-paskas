@@ -9222,7 +9222,7 @@ function exportToCSV() {
 // ===================================================================
 // 9. SETTINGS PAGE (DEADLINE, SUPABASE, EVENT INFO & CARDS)
 // ===================================================================
-function initSettingsPage(defaultTab = 'rekap', skipSwitchTab = false) {
+function initSettingsPage(defaultTab = 'info', skipSwitchTab = false) {
   const settings = window.dataService.getSettings();
   const credentials = window.dataService.getCredentials();
 
@@ -9284,7 +9284,7 @@ function initSettingsPage(defaultTab = 'rekap', skipSwitchTab = false) {
   }
 
   if (!skipSwitchTab) {
-    const cleanTab = (defaultTab || 'rekap').replace('tab-', '');
+    const cleanTab = (defaultTab || 'info').replace('tab-', '');
     switchSettingsTab(cleanTab);
   }
 }
@@ -9605,7 +9605,7 @@ function closeSettingsModal() {
 }
 
 const SETTINGS_CATEGORIES = {
-  tampilan: ['rekap', 'info', 'deadline', 'reg-content', 'wilayah', 'ticket-template', 'kamar-kelompok', 'pengumuman'],
+  tampilan: ['info', 'deadline', 'reg-content', 'wilayah', 'ticket-template', 'kamar-kelompok', 'pengumuman'],
   web: ['supabase', 'security', 'deploy']
 };
 
@@ -9650,7 +9650,7 @@ function switchSettingsCategory(catName) {
   const tabsInCat = SETTINGS_CATEGORIES[catName] || [];
 
   if (!tabsInCat.includes(activeTabName)) {
-    const defaultTab = catName === 'web' ? 'supabase' : 'rekap';
+    const defaultTab = catName === 'web' ? 'supabase' : 'info';
     switchSettingsTab(defaultTab);
   } else {
     // Re-highlight the active subitem in Gambar 2
