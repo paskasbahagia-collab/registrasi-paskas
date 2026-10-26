@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=106.0">
+  <link rel="stylesheet" href="css/style.css?v=107.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -151,6 +151,18 @@
             <i class="fa-solid fa-user-plus"></i>
             <span>Registrasi</span>
           </button>
+          <button class="nav-link" data-page="rekap" onclick="navigateTo('rekap')">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Rekap Data</span>
+          </button>
+          <button class="nav-link" data-page="presensi" onclick="navigateTo('presensi')">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <span>Presensi</span>
+          </button>
+          <button class="nav-link" data-page="keuangan" onclick="navigateTo('keuangan')">
+            <i class="fa-solid fa-coins"></i>
+            <span>Keuangan</span>
+          </button>
         </nav>
 
         <!-- Tombol Pengaturan di Pojok Kanan (Khusus Admin Ber-Password) -->
@@ -167,13 +179,22 @@
 
     <!-- Mobile Nav Drawer -->
     <div class="mobile-nav-drawer" id="mobileNavDrawer">
-      <button class="mobile-link active" onclick="navigateTo('dashboard'); toggleMobileNav();">
+      <button class="mobile-link active" data-page="dashboard" onclick="navigateTo('dashboard'); toggleMobileNav();">
         <i class="fa-solid fa-compass"></i> Dashboard
       </button>
-      <button class="mobile-link" onclick="navigateTo('registration'); toggleMobileNav();">
+      <button class="mobile-link" data-page="registration" onclick="navigateTo('registration'); toggleMobileNav();">
         <i class="fa-solid fa-user-plus"></i> Registrasi Peserta
       </button>
-      <button class="mobile-link" onclick="openSettingsWithAuth(); toggleMobileNav();">
+      <button class="mobile-link" data-page="rekap" onclick="navigateTo('rekap'); toggleMobileNav();">
+        <i class="fa-solid fa-chart-pie"></i> Rekap Data Peserta
+      </button>
+      <button class="mobile-link" data-page="presensi" onclick="navigateTo('presensi'); toggleMobileNav();">
+        <i class="fa-solid fa-clipboard-check"></i> Presensi Hari-H
+      </button>
+      <button class="mobile-link" data-page="keuangan" onclick="navigateTo('keuangan'); toggleMobileNav();">
+        <i class="fa-solid fa-coins"></i> Keuangan &amp; Termin
+      </button>
+      <button class="mobile-link" data-page="settings" onclick="openSettingsWithAuth(); toggleMobileNav();">
         <i class="fa-solid fa-gear"></i> Pengaturan (Admin)
       </button>
     </div>

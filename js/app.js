@@ -1772,8 +1772,13 @@ function navigateTo(pageId) {
 
   // Update mobile nav links
   document.querySelectorAll('.mobile-link').forEach(btn => {
-    const text = btn.textContent.toLowerCase();
-    btn.classList.toggle('active', text.includes(pageId));
+    const page = btn.dataset.page;
+    if (page) {
+      btn.classList.toggle('active', page === pageId);
+    } else {
+      const text = btn.textContent.toLowerCase();
+      btn.classList.toggle('active', text.includes(pageId) || (pageId === 'registration' && text.includes('registrasi')));
+    }
   });
 
   // Switch page view immediately so content shows right away without black screen
