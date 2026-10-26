@@ -2464,23 +2464,48 @@
             <!-- VIEW 1: UKURAN BAJU SERAGAM (Focus View) -->
             <div class="chart-view-panel active" id="chartViewCloth">
               <div class="chart-focused-grid">
-                <div class="chart-box main-chart-box">
-                  <div class="chart-box-top">
-                    <h4 class="chart-title">
-                      <i class="fa-solid fa-shirt text-green"></i>
-                      Distribusi Ukuran Baju Seragam Peserta
-                    </h4>
-                    <span class="chart-badge-tag" id="tagClothLead">Ukuran Terbanyak: -</span>
+                <!-- Sisi Kiri: 2 Grafik Bertingkat (Atas: Ikhwan, Bawah: Akhwat) -->
+                <div class="cloth-charts-stack" style="display: flex; flex-direction: column; gap: 16px;">
+                  <!-- Grafik 1: Ikhwan (Atas) -->
+                  <div class="chart-box main-chart-box">
+                    <div class="chart-box-top">
+                      <h4 class="chart-title">
+                        <i class="fa-solid fa-person text-green"></i>
+                        Distribusi Ukuran Baju Ikhwan (Laki-laki)
+                      </h4>
+                      <span class="chart-badge-tag" id="tagClothIkhwanLead">Ikhwan Terbanyak: -</span>
+                    </div>
+                    <div class="chart-canvas-wrapper" style="height: 220px;">
+                      <canvas id="chartClothIkhwan"></canvas>
+                    </div>
                   </div>
-                  <div class="chart-canvas-wrapper" style="height: 310px;">
-                    <canvas id="chartClothSize"></canvas>
+
+                  <!-- Grafik 2: Akhwat (Bawah) -->
+                  <div class="chart-box main-chart-box">
+                    <div class="chart-box-top">
+                      <h4 class="chart-title">
+                        <i class="fa-solid fa-person-dress" style="color: #0d9488;"></i>
+                        Distribusi Ukuran Baju Akhwat (Perempuan)
+                      </h4>
+                      <span class="chart-badge-tag" id="tagClothAkhwatLead" style="background: #e6fffa; color: #0f766e; border-color: #99f6e4;">Akhwat Terbanyak: -</span>
+                    </div>
+                    <div class="chart-canvas-wrapper" style="height: 220px;">
+                      <canvas id="chartClothAkhwat"></canvas>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Insight Pod -->
+                <!-- Insight Pod: Ringkasan Terpisah Ikhwan & Akhwat -->
                 <div class="chart-insight-box">
-                  <h5 class="insight-title"><i class="fa-solid fa-circle-info"></i> Ringkasan Logistik Pakaian</h5>
-                  <div class="insight-metric-list" id="clothInsightList">
+                  <div class="insight-header-row" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2ece6; padding-bottom: 10px; margin-bottom: 14px;">
+                    <h5 class="insight-title" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
+                      <i class="fa-solid fa-circle-info"></i> Ringkasan Logistik Pakaian
+                    </h5>
+                    <button type="button" class="btn-copy-cloth-order" id="btnCopyClothOrder" onclick="copyClothOrderSummary()" title="Salin format teks pesanan konveksi/vendor">
+                      <i class="fa-regular fa-copy"></i> Salin Rekap
+                    </button>
+                  </div>
+                  <div class="insight-metric-list" id="clothInsightList" style="max-height: 520px;">
                     <!-- Populated dynamically via JS -->
                   </div>
                 </div>

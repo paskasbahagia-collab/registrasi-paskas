@@ -471,6 +471,8 @@ let isRegistrationLocked = false;
 // Chart Instances
 let currentChartTab = 'cloth';
 let chartClothInstance = null;
+let chartClothIkhwanInstance = null;
+let chartClothAkhwatInstance = null;
 let chartTransportInstance = null;
 let chartWilayahInstance = null;
 let chartGenderInstance = null;
@@ -7240,16 +7242,50 @@ function renderCharts() {
   const totalOrang = allRegistrations.length;
 
   // --- 1. DATA COMPUTATION ---
-  // Cloth
+  // Cloth (Dipisah Ikhwan & Akhwat untuk memudahkan pendataan & pemesanan logistik)
+  const SIZES = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
   const clothCounts = { 'S': 0, 'M': 0, 'L': 0, 'XL': 0, 'XXL': 0, '3XL': 0, '4XL': 0 };
+  const clothIkhwanCounts = { 'S': 0, 'M': 0, 'L': 0, 'XL': 0, 'XXL': 0, '3XL': 0, '4XL': 0 };
+  const clothAkhwatCounts = { 'S': 0, 'M': 0, 'L': 0, 'XL': 0, 'XXL': 0, '3XL': 0, '4XL': 0 };
+  let totalIkhwan = 0;
+  let totalAkhwat = 0;
+
   allRegistrations.forEach(r => {
-    if (clothCounts[r.cloth_size] !== undefined) clothCounts[r.cloth_size]++;
+    const isFemale = (r.gender === 'Perempuan' || (r.gender && r.gender.toLowerCase().includes('perempuan')) || (r.gender && r.gender.toLowerCase().includes('akhwat')));
+    const sz = r.cloth_size;
+    if (clothCounts[sz] !== undefined) {
+      clothCounts[sz]++;
+      if (isFemale) {
+        clothAkhwatCounts[sz]++;
+        totalAkhwat++;
+      } else {
+        clothIkhwanCounts[sz]++;
+        totalIkhwan++;
+      }
+    } else {
+      if (isFemale) totalAkhwat++;
+      else totalIkhwan++;
+    }
   });
+
   let topCloth = '-';
   let topClothCount = 0;
   for (const [s, c] of Object.entries(clothCounts)) {
     if (c > topClothCount) { topClothCount = c; topCloth = s; }
   }
+
+  let topIkhwanSize = '-';
+  let topIkhwanCount = 0;
+  for (const [s, c] of Object.entries(clothIkhwanCounts)) {
+    if (c > topIkhwanCount) { topIkhwanCount = c; topIkhwanSize = s; }
+  }
+
+  let topAkhwatSize = '-';
+  let topAkhwatCount = 0;
+  for (const [s, c] of Object.entries(clothAkhwatCounts)) {
+    if (c > topAkhwatCount) { topAkhwatCount = c; topAkhwatSize = s; }
+  }
+
   const topClothPct = totalOrang > 0 ? Math.round((topClothCount / totalOrang) * 100) : 0;
   const sumStd = (clothCounts['M'] || 0) + (clothCounts['L'] || 0) + (clothCounts['XL'] || 0);
   const stdPct = totalOrang > 0 ? Math.round((sumStd / totalOrang) * 100) : 0;
@@ -7377,28 +7413,128 @@ function renderCharts() {
   const tagCloth = document.getElementById('tagClothLead');
   if (tagCloth) tagCloth.textContent = `Ukuran Terbanyak: ${topCloth} (${topClothCount} Org)`;
 
+  const tagClothIkhwan = document.getElementById('tagClothIkhwanLead');
+  if (tagClothIkhwan) {
+    tagClothIkhwan.textContent = totalIkhwan > 0 ? `Ikhwan Terbanyak: ${topIkhwanSize} (${topIkhwanCount} Org)` : 'Belum ada data';
+  }
+
+  const tagClothAkhwat = document.getElementById('tagClothAkhwatLead');
+  if (tagClothAkhwat) {
+    tagClothAkhwat.textContent = totalAkhwat > 0 ? `Akhwat Terbanyak: ${topAkhwatSize} (${topAkhwatCount} Org)` : 'Belum ada data';
+  }
+
   const listCloth = document.getElementById('clothInsightList');
   if (listCloth) {
-    const sizeItemsHtml = Object.entries(clothCounts).map(([size, count]) => {
-      const pct = totalOrang > 0 ? Math.round((count / totalOrang) * 100) : 0;
-      const isTop = (count === topClothCount && topClothCount > 0);
+    const pctIkhwan = totalOrang > 0 ? Math.round((totalIkhwan / totalOrang) * 100) : 0;
+    const pctAkhwat = totalOrang > 0 ? (100 - pctIkhwan) : 0;
+
+    const makeSizeListHtml = (countsObj, totalCount, topCount, isFemale) => {
+      return Object.entries(countsObj).map(([size, count]) => {
+        const pct = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
+        const isTop = (count === topCount && topCount > 0);
+        const accentColor = isFemale ? '#0d9488' : '#2d6a4f';
+        const bgTop = isFemale ? '#f0fdfa' : '#f0fdf4';
+        const borderTop = isFemale ? '#0d9488' : '#2d6a4f';
+        const textTop = isFemale ? '#0f766e' : '#15803d';
+
+        return `
+          <div class="insight-item" style="${isTop ? `border-color: ${borderTop}; background: ${bgTop};` : ''}">
+            <span class="insight-item-name">
+              <i class="fa-solid fa-shirt" style="${isTop ? `color: ${textTop};` : 'color: #64748b;'}"></i>
+              Ukuran ${size} ${isTop ? `<span style="font-size: 10px; background: ${accentColor}; color: #fff; padding: 1px 7px; border-radius: 999px; margin-left: 4px; font-weight: 700;">Terbanyak</span>` : ''}
+            </span>
+            <span class="insight-item-val" style="${isTop ? `color: ${textTop}; font-weight: 800;` : ''}">${count} Pcs (${pct}%)</span>
+          </div>
+        `;
+      }).join('');
+    };
+
+    const ikhwanItemsHtml = makeSizeListHtml(clothIkhwanCounts, totalIkhwan, topIkhwanCount, false);
+    const akhwatItemsHtml = makeSizeListHtml(clothAkhwatCounts, totalAkhwat, topAkhwatCount, true);
+
+    const matrixRowsHtml = SIZES.map(s => {
+      const ikh = clothIkhwanCounts[s] || 0;
+      const akh = clothAkhwatCounts[s] || 0;
+      const tot = ikh + akh;
       return `
-        <div class="insight-item" style="${isTop ? 'border-color: #2d6a4f; background: #f0fdf4;' : ''}">
-          <span class="insight-item-name">
-            <i class="fa-solid fa-shirt" style="${isTop ? 'color: #15803d;' : 'color: #64748b;'}"></i>
-            Ukuran ${size} ${isTop ? '<span style="font-size: 10px; background: #2d6a4f; color: #fff; padding: 1px 7px; border-radius: 999px; margin-left: 4px; font-weight: 700;">Terbanyak</span>' : ''}
-          </span>
-          <span class="insight-item-val" style="${isTop ? 'color: #15803d; font-weight: 800;' : ''}">${count} Orang (${pct}%)</span>
-        </div>
+        <tr style="border-bottom: 1px solid #edf4f0;">
+          <td style="padding: 6px 8px; text-align: left; font-weight: 700; color: #132a1c;">Ukuran ${s}</td>
+          <td style="padding: 6px 8px; color: #1e4620; font-weight: 600;">${ikh}</td>
+          <td style="padding: 6px 8px; color: #0f766e; font-weight: 600;">${akh}</td>
+          <td style="padding: 6px 8px; font-weight: 800; color: #132a1c;">${tot}</td>
+        </tr>
       `;
     }).join('');
 
     listCloth.innerHTML = `
-      <div class="insight-item" style="background: #eaf4ee; border-color: #b7dfc8;">
-        <span class="insight-item-name" style="font-weight: 700; color: #132a1c;"><i class="fa-solid fa-boxes-stacked text-green"></i> Total Kebutuhan Pakaian</span>
-        <span class="insight-item-val" style="font-weight: 800; color: #132a1c; font-size: 13.5px;">${totalOrang} Potong</span>
+      <!-- Total Ringkasan Pemesanan -->
+      <div class="insight-item" style="background: linear-gradient(135deg, #eaf4ee 0%, #f0fdf4 100%); border: 1px solid #b7dfc8; padding: 12px 14px; border-radius: 12px; margin-bottom: 6px; display: block;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-weight: 800; color: #132a1c; font-size: 13.5px; display: flex; align-items: center; gap: 7px;">
+            <i class="fa-solid fa-boxes-stacked text-green"></i> Total Kebutuhan Pakaian
+          </span>
+          <span style="font-weight: 800; color: #15803d; font-size: 15px;">${totalOrang} Potong</span>
+        </div>
+        <div style="display: flex; gap: 8px; font-size: 11.5px; font-weight: 700;">
+          <span style="background: #ffffff; border: 1px solid #c2e5d3; color: #1e4620; padding: 4px 8px; border-radius: 6px; flex: 1; text-align: center; display: flex; align-items: center; justify-content: center; gap: 5px;">
+            <i class="fa-solid fa-person text-green"></i> Ikhwan: ${totalIkhwan} Pcs (${pctIkhwan}%)
+          </span>
+          <span style="background: #ffffff; border: 1px solid #99f6e4; color: #0f766e; padding: 4px 8px; border-radius: 6px; flex: 1; text-align: center; display: flex; align-items: center; justify-content: center; gap: 5px;">
+            <i class="fa-solid fa-person-dress" style="color: #0d9488;"></i> Akhwat: ${totalAkhwat} Pcs (${pctAkhwat}%)
+          </span>
+        </div>
       </div>
-      ${sizeItemsHtml}
+
+      <!-- KELOMPOK 1: IKHWAN -->
+      <div style="margin-top: 10px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 12px; font-weight: 800; color: #1e4620; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-person text-green"></i> Pemesanan Baju Ikhwan (${totalIkhwan} Pcs)
+        </span>
+        <span style="font-size: 10.5px; font-weight: 700; color: #15803d; background: #eaf4ee; padding: 2px 8px; border-radius: 6px;">
+          Terbanyak: ${topIkhwanSize}
+        </span>
+      </div>
+      ${ikhwanItemsHtml}
+
+      <!-- KELOMPOK 2: AKHWAT -->
+      <div style="margin-top: 14px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 12px; font-weight: 800; color: #0f766e; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-person-dress" style="color: #0d9488;"></i> Pemesanan Baju Akhwat (${totalAkhwat} Pcs)
+        </span>
+        <span style="font-size: 10.5px; font-weight: 700; color: #0f766e; background: #e6fffa; padding: 2px 8px; border-radius: 6px;">
+          Terbanyak: ${topAkhwatSize}
+        </span>
+      </div>
+      ${akhwatItemsHtml}
+
+      <!-- MATRIKS REKAP PEMESANAN VENDOR -->
+      <div style="margin-top: 14px; border: 1px solid #dcece2; border-radius: 10px; overflow: hidden; background: #ffffff;">
+        <div style="padding: 8px 12px; background: #f3f8f5; border-bottom: 1px solid #e2ece6; font-size: 11.5px; font-weight: 700; color: #132a1c; display: flex; align-items: center; justify-content: space-between;">
+          <span><i class="fa-solid fa-table-list text-green"></i> Matriks Pemesanan Vendor</span>
+          <span style="font-size: 10px; color: #64748b;">(Ikhwan vs Akhwat)</span>
+        </div>
+        <table style="width: 100%; font-size: 11.5px; border-collapse: collapse; text-align: center;">
+          <thead>
+            <tr style="background: #fafcfb; border-bottom: 1px solid #edf4f0; color: #475569; font-weight: 700;">
+              <th style="padding: 6px 8px; text-align: left;">Ukuran</th>
+              <th style="padding: 6px 8px; color: #1e4620;">Ikhwan</th>
+              <th style="padding: 6px 8px; color: #0f766e;">Akhwat</th>
+              <th style="padding: 6px 8px; font-weight: 800; color: #132a1c;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${matrixRowsHtml}
+          </tbody>
+          <tfoot>
+            <tr style="background: #f0fdf4; border-top: 2px solid #b7dfc8; font-weight: 800; color: #132a1c;">
+              <td style="padding: 6px 8px; text-align: left;">TOTAL</td>
+              <td style="padding: 6px 8px; color: #1e4620;">${totalIkhwan} Pcs</td>
+              <td style="padding: 6px 8px; color: #0f766e;">${totalAkhwat} Pcs</td>
+              <td style="padding: 6px 8px; color: #15803d;">${totalOrang} Pcs</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     `;
   }
 
@@ -7477,48 +7613,57 @@ function renderCharts() {
   // --- 3. CHART RENDERING ENGINE BASED ON ACTIVE TAB ---
 
   // Chart Function: Cloth
-  function renderClothChart(canvasId, refInstance, isDoughnut = false) {
+  function renderClothChart(canvasId, refInstance, countsData = clothCounts, isFemale = false) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
     if (refInstance) refInstance.destroy();
 
-    const maxVal = Math.max(0, ...Object.values(clothCounts));
+    const currentCounts = countsData || clothCounts;
+    const maxVal = Math.max(0, ...Object.values(currentCounts));
 
     // Plugin custom untuk menampilkan angka ukuran terpampang langsung di atas batang grafik
     const barValuesPlugin = {
-      id: 'barValuesPlugin',
+      id: 'barValuesPlugin_' + canvasId,
       afterDatasetsDraw(chart) {
         const { ctx, data } = chart;
         ctx.save();
         const meta = chart.getDatasetMeta(0);
         meta.data.forEach((bar, index) => {
           const val = data.datasets[0].data[index];
-          ctx.font = 'bold 12.5px "Outfit", sans-serif';
+          ctx.font = 'bold 12px "Outfit", sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
           if (val > 0) {
-            ctx.fillStyle = '#132a1c';
-            ctx.fillText(`${val} Org`, bar.x, bar.y - 5);
+            ctx.fillStyle = isFemale ? '#0f766e' : '#132a1c';
+            ctx.fillText(`${val} Org`, bar.x, bar.y - 4);
           } else {
             ctx.fillStyle = '#94a3b8';
-            ctx.fillText('0', bar.x, bar.y - 5);
+            ctx.fillText('0', bar.x, bar.y - 4);
           }
         });
         ctx.restore();
       }
     };
 
+    const colorPalettes = isFemale ? [
+      '#0f766e', '#115e59', '#0d9488', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4'
+    ] : [
+      '#1e4620', '#265934', '#2d6a4f', '#40916c', '#52b788', '#74c69d', '#b7dfc8'
+    ];
+
+    const chartLabel = canvasId === 'chartClothSizeAll'
+      ? 'Semua Peserta'
+      : (isFemale ? 'Seragam Akhwat (Perempuan)' : 'Seragam Ikhwan (Laki-laki)');
+
     return new Chart(ctx, {
       type: 'bar',
       plugins: [barValuesPlugin],
       data: {
-        labels: Object.keys(clothCounts),
+        labels: Object.keys(currentCounts),
         datasets: [{
-          label: 'Jumlah Peserta',
-          data: Object.values(clothCounts),
-          backgroundColor: [
-            '#1e4620', '#265934', '#2d6a4f', '#40916c', '#52b788', '#74c69d', '#b7dfc8'
-          ],
+          label: chartLabel,
+          data: Object.values(currentCounts),
+          backgroundColor: colorPalettes,
           borderRadius: 8,
           borderWidth: 0
         }]
@@ -7534,13 +7679,18 @@ function renderCharts() {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#132a1c',
+            backgroundColor: isFemale ? '#0f766e' : '#132a1c',
             titleColor: '#ffffff',
             bodyColor: '#eaf4ee',
             padding: 10,
             cornerRadius: 8,
             callbacks: {
-              label: (context) => ` ${context.parsed.y} Orang Peserta (Ukuran ${context.label})`
+              label: (context) => {
+                if (canvasId === 'chartClothSizeAll') {
+                  return ` ${context.parsed.y} Orang Peserta (Ukuran ${context.label})`;
+                }
+                return ` ${context.parsed.y} Orang (${isFemale ? 'Akhwat' : 'Ikhwan'} - Ukuran ${context.label})`;
+              }
             }
           }
         },
@@ -7548,7 +7698,7 @@ function renderCharts() {
           y: {
             beginAtZero: true,
             suggestedMax: Math.max(2, maxVal + 1),
-            ticks: { color: '#52796f', precision: 0, font: { weight: '600' } },
+            ticks: { color: isFemale ? '#0f766e' : '#52796f', precision: 0, font: { weight: '600' } },
             grid: { color: '#edf4f0' }
           },
           x: {
@@ -7920,7 +8070,8 @@ function renderCharts() {
 
   // Execute chart renders according to selected tab
   if (currentChartTab === 'cloth') {
-    chartClothInstance = renderClothChart('chartClothSize', chartClothInstance);
+    chartClothIkhwanInstance = renderClothChart('chartClothIkhwan', chartClothIkhwanInstance, clothIkhwanCounts, false);
+    chartClothAkhwatInstance = renderClothChart('chartClothAkhwat', chartClothAkhwatInstance, clothAkhwatCounts, true);
   } else if (currentChartTab === 'transport') {
     chartTransportInstance = renderTransportChart('chartTransport', chartTransportInstance);
   } else if (currentChartTab === 'wilayah') {
@@ -7933,7 +8084,7 @@ function renderCharts() {
   } else if (currentChartTab === 'paskas') {
     chartPaskasInstance = renderPaskasChart('chartPaskasStatus', chartPaskasInstance);
   } else if (currentChartTab === 'all') {
-    chartClothAllInstance = renderClothChart('chartClothSizeAll', chartClothAllInstance);
+    chartClothAllInstance = renderClothChart('chartClothSizeAll', chartClothAllInstance, clothCounts, false);
     chartTransportAllInstance = renderTransportChart('chartTransportAll', chartTransportAllInstance);
     chartWilayahAllInstance = renderWilayahChart('chartWilayahAll', chartWilayahAllInstance);
     chartGenderAllInstance = renderGenderChart('chartGenderAll', chartGenderAllInstance);
@@ -8194,6 +8345,85 @@ function renderRekapWilayahSummaryTable(sortedList, totalOrang, male, female, in
     `;
   }).join('');
 }
+
+/**
+ * Salin ringkasan pesanan ukuran seragam (Ikhwan, Akhwat, Total) ke clipboard
+ * Format dirancang rapi untuk langsung dikirim ke vendor / konveksi via WA atau Catatan
+ */
+function copyClothOrderSummary() {
+  const SIZES = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
+  const clothIkhwanCounts = { 'S': 0, 'M': 0, 'L': 0, 'XL': 0, 'XXL': 0, '3XL': 0, '4XL': 0 };
+  const clothAkhwatCounts = { 'S': 0, 'M': 0, 'L': 0, 'XL': 0, 'XXL': 0, '3XL': 0, '4XL': 0 };
+  let totalIkhwan = 0;
+  let totalAkhwat = 0;
+
+  allRegistrations.forEach(r => {
+    const isFemale = (r.gender === 'Perempuan' || (r.gender && r.gender.toLowerCase().includes('perempuan')) || (r.gender && r.gender.toLowerCase().includes('akhwat')));
+    const sz = r.cloth_size;
+    if (clothIkhwanCounts[sz] !== undefined) {
+      if (isFemale) {
+        clothAkhwatCounts[sz]++;
+        totalAkhwat++;
+      } else {
+        clothIkhwanCounts[sz]++;
+        totalIkhwan++;
+      }
+    } else {
+      if (isFemale) totalAkhwat++;
+      else totalIkhwan++;
+    }
+  });
+
+  const totalOverall = allRegistrations.length;
+
+  let text = `*REKAP PEMESANAN SERAGAM PASKAS BAHAGIA*\n`;
+  text += `📅 Tanggal Rekap: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}\n`;
+  text += `📦 Total Kebutuhan: ${totalOverall} Potong (Ikhwan: ${totalIkhwan} Pcs, Akhwat: ${totalAkhwat} Pcs)\n\n`;
+
+  text += `*--- 👔 1. SERAGAM IKHWAN (Laki-laki): ${totalIkhwan} Pcs ---*\n`;
+  SIZES.forEach(s => {
+    text += `• Ukuran ${s.padEnd(3, ' ')} : ${clothIkhwanCounts[s]} pcs\n`;
+  });
+
+  text += `\n*--- 🧕 2. SERAGAM AKHWAT (Perempuan): ${totalAkhwat} Pcs ---*\n`;
+  SIZES.forEach(s => {
+    text += `• Ukuran ${s.padEnd(3, ' ')} : ${clothAkhwatCounts[s]} pcs\n`;
+  });
+
+  text += `\n*--- 📊 3. TOTAL GABUNGAN PER UKURAN ---*\n`;
+  SIZES.forEach(s => {
+    const tot = (clothIkhwanCounts[s] || 0) + (clothAkhwatCounts[s] || 0);
+    text += `• Ukuran ${s.padEnd(3, ' ')} : ${tot} pcs\n`;
+  });
+  text += `\nTOTAL KESELURUHAN: ${totalOverall} Potong\n`;
+
+  const copyFallback = (t) => {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      showToast('Rekap pesanan seragam Ikhwan & Akhwat berhasil disalin!', 'success');
+    } catch (e) {
+      showToast('Gagal menyalin teks secara otomatis.', 'error');
+    }
+    document.body.removeChild(ta);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Rekap pesanan seragam Ikhwan & Akhwat berhasil disalin ke clipboard!', 'success');
+    }).catch(() => {
+      copyFallback(text);
+    });
+  } else {
+    copyFallback(text);
+  }
+}
+window.copyClothOrderSummary = copyClothOrderSummary;
 
 // ===================================================================
 // 8. DATA EXPORTS (EXCEL & CSV) - TERLINDUNGI DARI FORMULA INJECTION
