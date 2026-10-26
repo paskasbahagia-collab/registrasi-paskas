@@ -13091,4 +13091,36 @@ input:checked + .slider:before {
   }
 }
 
+/* High-Contrast Search & Form Inputs for Presensi & Keuangan Pages */
+#page-presensi input.form-control,
+#page-presensi .presensi-filter-card input,
+#presensiSearchInput,
+#page-keuangan input.form-control,
+#page-keuangan .rekap-filter-section input,
+#financeSearchInput {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+}
+
+#page-presensi input.form-control::placeholder,
+#presensiSearchInput::placeholder,
+#page-keuangan input.form-control::placeholder,
+#financeSearchInput::placeholder {
+  color: #64748b !important;
+  font-weight: 400 !important;
+  opacity: 1 !important;
+}
+
+#page-presensi input.form-control:focus,
+#presensiSearchInput:focus,
+#page-keuangan input.form-control:focus,
+#financeSearchInput:focus {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+  color: #0f172a !important;
+}
+
+
 

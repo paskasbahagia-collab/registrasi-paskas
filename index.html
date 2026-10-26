@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=111.0">
+  <link rel="stylesheet" href="css/style.css?v=112.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -2087,7 +2087,7 @@
             <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
               <div class="input-with-icon" style="flex: 1; min-width: 300px; position: relative;">
                 <i class="fa-solid fa-magnifying-glass" style="color: #2d6a4f; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 14px;"></i>
-                <input type="text" id="presensiSearchInput" class="form-control" style="padding-left: 40px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 13.5px;" placeholder="Cari nomor tiket (PKB-xxx), nama jemaah, rombongan, atau wilayah..." oninput="filterPresensiData()">
+                <input type="text" id="presensiSearchInput" class="form-control" style="padding-left: 40px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; color: #0f172a !important; font-weight: 600;" placeholder="Cari nomor tiket (PKB-xxx), nama jemaah, rombongan, atau wilayah..." oninput="filterPresensiData()">
               </div>
               
               <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="presensiFilterTabs">
@@ -2284,8 +2284,8 @@
           <div class="rekap-filter-section" style="margin-bottom: 18px;">
             <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
               <div class="input-with-icon" style="flex: 1; min-width: 280px; position: relative;">
-                <i class="fa-solid fa-magnifying-glass text-gold"></i>
-                <input type="text" id="financeSearchInput" class="form-control" placeholder="Cari nomor tiket, nama peserta, rombongan, atau wilayah..." oninput="filterFinanceData()">
+                <i class="fa-solid fa-magnifying-glass text-gold" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%);"></i>
+                <input type="text" id="financeSearchInput" class="form-control" style="padding-left: 40px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; color: #0f172a !important; font-weight: 600;" placeholder="Cari nomor tiket, nama peserta, rombongan, atau wilayah..." oninput="filterFinanceData()">
               </div>
               
               <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="financeFilterTabs">
@@ -5578,6 +5578,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=128.0"></script>
-  <script src="js/app.js?v=138.0"></script>
+  <script src="js/app.js?v=139.0"></script>
 </body>
 </html>
