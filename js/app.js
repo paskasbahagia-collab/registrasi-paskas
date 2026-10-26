@@ -12944,6 +12944,9 @@ function renderPresensiView() {
   let pending = 0;
   let departed = 0;
   let cancelled = 0;
+  let individuCount = 0;
+  let rombonganCount = 0;
+  const kafilahSet = new Set();
 
   list.forEach(p => {
     const st = p.attendance_status || 'registered';
@@ -12952,10 +12955,22 @@ function renderPresensiView() {
     else if (st === 'departed') departed++;
     else if (st === 'cancelled') cancelled++;
     else pending++;
+
+    if (p.registration_type === 'rombongan') {
+      rombonganCount++;
+      if (p.group_name) kafilahSet.add(p.group_name.trim().toLowerCase());
+    } else {
+      individuCount++;
+    }
   });
 
   const total = list.length;
+  const hadirTotal = onTime + late + departed;
+  const hadirPct = total > 0 ? Math.round((hadirTotal / total) * 100) : 0;
   const onTimePct = total > 0 ? Math.round((onTime / total) * 100) : 0;
+  const latePct = hadirTotal > 0 ? Math.round((late / hadirTotal) * 100) : 0;
+  const pendingPct = total > 0 ? Math.round((pending / total) * 100) : 0;
+  const departedPct = hadirTotal > 0 ? Math.round((departed / hadirTotal) * 100) : 0;
 
   const elTotal = document.getElementById('presensiStatTotal');
   const elOnTime = document.getElementById('presensiStatOnTime');
@@ -12963,11 +12978,39 @@ function renderPresensiView() {
   const elPending = document.getElementById('presensiStatPending');
   const elPctOnTime = document.getElementById('presensiPctOnTime');
 
-  if (elTotal) elTotal.innerHTML = `${total} <small style="font-size:14px;font-weight:600;">Jiwa</small>`;
-  if (elOnTime) elOnTime.innerHTML = `${onTime} <small style="font-size:14px;font-weight:600;">Jiwa</small>`;
-  if (elLate) elLate.innerHTML = `${late} <small style="font-size:14px;font-weight:600;">Jiwa</small>`;
-  if (elPending) elPending.innerHTML = `${pending} <small style="font-size:14px;font-weight:600;">Jiwa</small>`;
+  if (elTotal) elTotal.innerHTML = `${total} <small class="pillar-unit">Jiwa</small>`;
+  if (elOnTime) elOnTime.innerHTML = `${onTime} <small class="pillar-unit">Jiwa</small>`;
+  if (elLate) elLate.innerHTML = `${late} <small class="pillar-unit">Jiwa</small>`;
+  if (elPending) elPending.innerHTML = `${pending} <small class="pillar-unit">Jiwa</small>`;
   if (elPctOnTime) elPctOnTime.textContent = `${onTimePct}%`;
+
+  // Subpod items
+  const elSubMandiri = document.getElementById('presSubMandiri');
+  const elSubRombongan = document.getElementById('presSubRombongan');
+  const elKafilahCount = document.getElementById('presSubKafilahCount');
+  const elSubOnTimeCount = document.getElementById('presSubOnTimeCount');
+  const elSubLatePct = document.getElementById('presSubLatePct');
+  const elSubPendingCount = document.getElementById('presSubPendingCount');
+  const elSubDepartedCount = document.getElementById('presSubDepartedCount');
+
+  if (elSubMandiri) elSubMandiri.textContent = `${individuCount} Orang`;
+  if (elSubRombongan) elSubRombongan.textContent = `${rombonganCount} Orang`;
+  if (elKafilahCount) elKafilahCount.textContent = `${kafilahSet.size} Kafilah terdaftar`;
+  if (elSubOnTimeCount) elSubOnTimeCount.textContent = `${onTime} Orang`;
+  if (elSubLatePct) elSubLatePct.textContent = `${latePct}% keterlambatan`;
+  if (elSubPendingCount) elSubPendingCount.textContent = `${pending} Orang`;
+  if (elSubDepartedCount) elSubDepartedCount.textContent = `${departed} Orang`;
+
+  // Ribbon Circular KPI Nodes
+  const elKpiKehadiran = document.getElementById('kpiPresKehadiran');
+  const elKpiKetepatan = document.getElementById('kpiPresKetepatan');
+  const elKpiBelum = document.getElementById('kpiPresBelum');
+  const elKpiPulang = document.getElementById('kpiPresPulang');
+
+  if (elKpiKehadiran) elKpiKehadiran.textContent = `${hadirPct}%`;
+  if (elKpiKetepatan) elKpiKetepatan.textContent = `${onTimePct}%`;
+  if (elKpiBelum) elKpiBelum.textContent = `${pendingPct}%`;
+  if (elKpiPulang) elKpiPulang.textContent = `${departedPct}%`;
 
   // Update badge tabs
   const tabAll = document.getElementById('presTabAll');

@@ -5167,8 +5167,9 @@ select.form-control optgroup {
    Inspired by Reference: 4-Pillar Model, Watermark Numbers & Circular KPIs
    =================================================================== */
 
-/* Page Rekap Full View with Crisp, Elegant Islamic Geometric Lattice Background */
-#page-rekap {
+/* Page Rekap & Presensi Full View with Crisp, Elegant Islamic Geometric Lattice Background */
+#page-rekap,
+#page-presensi {
   background-color: #f2f5f3 !important;
   background-image: 
     linear-gradient(rgba(242, 245, 243, 0.80), rgba(242, 245, 243, 0.80)),
@@ -5180,8 +5181,9 @@ select.form-control optgroup {
   position: relative;
 }
 
-/* Full-width container override for Rekap Page */
-#page-rekap .content-container {
+/* Full-width container override for Rekap & Presensi Page */
+#page-rekap .content-container,
+#page-presensi .content-container {
   max-width: 100% !important;
   width: 100% !important;
   padding: 85px 36px 60px !important;
@@ -5685,6 +5687,71 @@ select.form-control optgroup {
 .kpi-node-step {
   color: rgba(255, 255, 255, 0.35);
   font-size: 18px;
+}
+
+/* ===================================================================
+   PRESENSI EXECUTIVE DECK & SPLIT GRID
+   =================================================================== */
+.presensi-infographic-deck {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 1200px) {
+  .presensi-infographic-deck {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .presensi-infographic-deck {
+    grid-template-columns: 1fr;
+  }
+}
+
+.presensi-split-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 20px;
+  margin-bottom: 26px;
+  align-items: stretch;
+}
+
+@media (max-width: 992px) {
+  .presensi-split-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.presensi-panel-card {
+  background: #ffffff;
+  border: 1px solid #cce0d4;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 25px -8px rgba(20, 50, 30, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.presensi-filter-card {
+  background: #ffffff;
+  border: 1px solid #cce0d4;
+  border-radius: 18px;
+  padding: 18px 22px;
+  margin-bottom: 22px;
+  box-shadow: 0 6px 20px -6px rgba(20, 50, 30, 0.06);
+}
+
+.subpod-icon-circle.amber-circle {
+  background: #b45309 !important;
+  color: #ffffff !important;
+}
+
+.subpod-icon-circle.slate-circle {
+  background: #475569 !important;
+  color: #ffffff !important;
 }
 
 /* ===================================================================
