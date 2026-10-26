@@ -13169,7 +13169,7 @@ function renderPresensiTable() {
     } else if (st === 'attended' || st === 'attended_late') {
       actionButtons = `
         <button type="button" class="btn-checkout-action" onclick="doPresenceCheckOut(${p.id})">
-          <i class="fa-solid fa-plane-departure"></i> Pulang
+          <i class="fa-solid fa-plane-departure"></i> Ceklis Pulang
         </button>
       `;
     }
