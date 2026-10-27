@@ -4880,6 +4880,111 @@ CREATE TABLE IF NOT EXISTS registrations (
                     </div>
                   </div>
                 </div>
+
+                <!-- CARD 3: PUSAT KATA SANDI PRESENSI & REKAP DATA -->
+                <div style="margin-top: 24px; padding-top: 20px; border-top: 1.5px dashed #e2dac9;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 10px;">
+                    <h4 class="settings-item-title" style="margin: 0;">
+                      <i class="fa-solid fa-clipboard-user text-gold"></i> Keamanan Modul Presensi &amp; Rekap Data
+                    </h4>
+                    <span class="settings-chip-badge" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0284c7;">
+                      <i class="fa-solid fa-shield-halved"></i> Hak Akses Petugas
+                    </span>
+                  </div>
+                  <p class="settings-item-desc">
+                    Atur kata sandi khusus untuk petugas Presensi Hari-H (<code>/#presensi</code>) dan Rekap Data (<code>/#rekap</code>) agar masing-masing petugas hanya dapat membuka halaman tugasnya.
+                  </p>
+
+                  <div class="settings-security-grid">
+                    <!-- Kolom Kiri: Form Ubah Password Presensi -->
+                    <div style="background: #fdfbf7; border: 1.5px solid #e2dac9; border-radius: var(--radius-md); padding: 24px;">
+                      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px;">
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: #dcfce7; border: 1px solid #a7f3d0; display: flex; align-items: center; justify-content: center; color: #059669; font-size: 16px;">
+                          <i class="fa-solid fa-clipboard-check"></i>
+                        </div>
+                        <div>
+                          <div style="font-weight: 800; font-size: 15px; color: #1a1815;">Ubah Kata Sandi Presensi</div>
+                          <span style="font-size: 11.5px; color: #635a4d;">Akses khusus halaman /#presensi</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">Kata Sandi Baru Presensi</label>
+                        <div class="input-with-icon" style="position: relative;">
+                          <i class="fa-solid fa-lock text-gold"></i>
+                          <input type="password" id="cfg_newPresensiPassword" class="form-control" placeholder="Minimal 4 karakter (bawaan: presensi123)" style="padding-right: 44px;">
+                          <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('cfg_newPresensiPassword', this)" title="Lihat/Sembunyikan Kata Sandi">
+                            <i class="fa-solid fa-eye"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-bottom: 20px;">
+                        <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">Ulangi Kata Sandi Baru Presensi</label>
+                        <div class="input-with-icon" style="position: relative;">
+                          <i class="fa-solid fa-shield-check text-gold"></i>
+                          <input type="password" id="cfg_confirmPresensiPassword" class="form-control" placeholder="Ketik ulang password baru" style="padding-right: 44px;">
+                          <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('cfg_confirmPresensiPassword', this)" title="Lihat/Sembunyikan Kata Sandi">
+                            <i class="fa-solid fa-eye"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="saveNewPresensiPassword()">
+                          <i class="fa-solid fa-check"></i> Simpan Password Presensi
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="resetPresensiPasswordDefault()">
+                          <i class="fa-solid fa-rotate-left"></i> Reset ke Bawaan (presensi123)
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Kolom Kanan: Form Ubah Password Rekap Data -->
+                    <div style="background: #fdfbf7; border: 1.5px solid #e2dac9; border-radius: var(--radius-md); padding: 24px;">
+                      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px;">
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: #e0f2fe; border: 1px solid #bae6fd; display: flex; align-items: center; justify-content: center; color: #0284c7; font-size: 16px;">
+                          <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <div>
+                          <div style="font-weight: 800; font-size: 15px; color: #1a1815;">Ubah Kata Sandi Rekap Data</div>
+                          <span style="font-size: 11.5px; color: #635a4d;">Akses khusus halaman /#rekap</span>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">Kata Sandi Baru Rekap Data</label>
+                        <div class="input-with-icon" style="position: relative;">
+                          <i class="fa-solid fa-lock text-gold"></i>
+                          <input type="password" id="cfg_newRekapPassword" class="form-control" placeholder="Minimal 4 karakter (bawaan: rekap123)" style="padding-right: 44px;">
+                          <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('cfg_newRekapPassword', this)" title="Lihat/Sembunyikan Kata Sandi">
+                            <i class="fa-solid fa-eye"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin-bottom: 20px;">
+                        <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">Ulangi Kata Sandi Baru Rekap Data</label>
+                        <div class="input-with-icon" style="position: relative;">
+                          <i class="fa-solid fa-shield-check text-gold"></i>
+                          <input type="password" id="cfg_confirmRekapPassword" class="form-control" placeholder="Ketik ulang password baru" style="padding-right: 44px;">
+                          <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('cfg_confirmRekapPassword', this)" title="Lihat/Sembunyikan Kata Sandi">
+                            <i class="fa-solid fa-eye"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="saveNewRekapPassword()">
+                          <i class="fa-solid fa-check"></i> Simpan Password Rekap
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="resetRekapPasswordDefault()">
+                          <i class="fa-solid fa-rotate-left"></i> Reset ke Bawaan (rekap123)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -5583,7 +5688,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=129.0"></script>
-  <script src="js/app.js?v=146.0"></script>
+  <script src="js/supabase-config.js?v=130.0"></script>
+  <script src="js/app.js?v=147.0"></script>
 </body>
 </html>

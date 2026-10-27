@@ -9643,12 +9643,20 @@ async function submitAdminPassword() {
     matchedRole = 'admin';
   }
 
-  // 2. Cek Password Rekap Data (rekap123)
+  // 2. Cek Password Rekap Data (rekap123 atau yang sudah diganti di pengaturan)
   if (!matchedRole && cleanEntered === 'rekap123') {
     matchedRole = 'rekap';
+  } else if (!matchedRole && window.dataService && typeof window.dataService.verifyRekapPassword === 'function') {
+    try {
+      if (await window.dataService.verifyRekapPassword(entered)) {
+        matchedRole = 'rekap';
+      }
+    } catch (e) {
+      console.warn('verifyRekapPassword error:', e);
+    }
   }
 
-  // 3. Cek Password Keuangan (keuangan123 / bendahara123)
+  // 3. Cek Password Keuangan (keuangan123 / bendahara123 atau yang sudah diganti di pengaturan)
   if (!matchedRole && (cleanEntered === 'keuangan123' || cleanEntered === 'bendahara123')) {
     matchedRole = 'keuangan';
   } else if (!matchedRole && window.dataService && typeof window.dataService.verifyTreasurerPassword === 'function') {
@@ -9661,9 +9669,17 @@ async function submitAdminPassword() {
     }
   }
 
-  // 4. Cek Password Presensi (presensi123 / kehadiran123)
+  // 4. Cek Password Presensi (presensi123 / kehadiran123 atau yang sudah diganti di pengaturan)
   if (!matchedRole && (cleanEntered === 'presensi123' || cleanEntered === 'kehadiran123')) {
     matchedRole = 'presensi';
+  } else if (!matchedRole && window.dataService && typeof window.dataService.verifyPresensiPassword === 'function') {
+    try {
+      if (await window.dataService.verifyPresensiPassword(entered)) {
+        matchedRole = 'presensi';
+      }
+    } catch (e) {
+      console.warn('verifyPresensiPassword error:', e);
+    }
   }
 
   // Setiap kata sandi peran yang cocok diizinkan masuk dan langsung diarahkan ke halamannya
@@ -14273,6 +14289,75 @@ async function saveTariffAndPresensiConfig() {
   }
 }
 
+// 6. SECURITY: PRESENSI & REKAP PASSWORDS
+async function saveNewPresensiPassword() {
+  const newPass = (document.getElementById('cfg_newPresensiPassword')?.value || '').trim();
+  const confirmPass = (document.getElementById('cfg_confirmPresensiPassword')?.value || '').trim();
+
+  if (!newPass || newPass.length < 4) {
+    showToast('Kata sandi presensi minimal 4 karakter!', 'warning');
+    return;
+  }
+  if (newPass !== confirmPass) {
+    showToast('Konfirmasi kata sandi presensi tidak cocok!', 'error');
+    return;
+  }
+
+  showToast('Menyimpan kata sandi presensi ke Cloud...', 'info');
+  try {
+    await window.dataService.setPresensiPassword(newPass);
+    document.getElementById('cfg_newPresensiPassword').value = '';
+    document.getElementById('cfg_confirmPresensiPassword').value = '';
+    showToast('Kata sandi petugas presensi berhasil diperbarui!', 'success');
+  } catch (err) {
+    showToast('Gagal menyimpan kata sandi presensi: ' + err.message, 'error');
+  }
+}
+
+async function resetPresensiPasswordDefault() {
+  if (!confirm('Kembalikan kata sandi presensi ke bawaan (presensi123)?')) return;
+  try {
+    await window.dataService.setPresensiPassword('presensi123');
+    showToast('Kata sandi presensi berhasil direset ke "presensi123".', 'success');
+  } catch (err) {
+    showToast('Gagal reset: ' + err.message, 'error');
+  }
+}
+
+async function saveNewRekapPassword() {
+  const newPass = (document.getElementById('cfg_newRekapPassword')?.value || '').trim();
+  const confirmPass = (document.getElementById('cfg_confirmRekapPassword')?.value || '').trim();
+
+  if (!newPass || newPass.length < 4) {
+    showToast('Kata sandi rekap minimal 4 karakter!', 'warning');
+    return;
+  }
+  if (newPass !== confirmPass) {
+    showToast('Konfirmasi kata sandi rekap tidak cocok!', 'error');
+    return;
+  }
+
+  showToast('Menyimpan kata sandi rekap ke Cloud...', 'info');
+  try {
+    await window.dataService.setRekapPassword(newPass);
+    document.getElementById('cfg_newRekapPassword').value = '';
+    document.getElementById('cfg_confirmRekapPassword').value = '';
+    showToast('Kata sandi petugas rekap berhasil diperbarui!', 'success');
+  } catch (err) {
+    showToast('Gagal menyimpan kata sandi rekap: ' + err.message, 'error');
+  }
+}
+
+async function resetRekapPasswordDefault() {
+  if (!confirm('Kembalikan kata sandi rekap data ke bawaan (rekap123)?')) return;
+  try {
+    await window.dataService.setRekapPassword('rekap123');
+    showToast('Kata sandi rekap data berhasil direset ke "rekap123".', 'success');
+  } catch (err) {
+    showToast('Gagal reset: ' + err.message, 'error');
+  }
+}
+
 // Global Exports
 window.mountRekapStandalone = mountRekapStandalone;
 window.renderPresensiView = renderPresensiView;
@@ -14298,5 +14383,9 @@ window.submitPaymentInstallment = submitPaymentInstallment;
 window.saveNewTreasurerPassword = saveNewTreasurerPassword;
 window.resetTreasurerPasswordDefault = resetTreasurerPasswordDefault;
 window.saveTariffAndPresensiConfig = saveTariffAndPresensiConfig;
+window.saveNewPresensiPassword = saveNewPresensiPassword;
+window.resetPresensiPasswordDefault = resetPresensiPasswordDefault;
+window.saveNewRekapPassword = saveNewRekapPassword;
+window.resetRekapPasswordDefault = resetRekapPasswordDefault;
 
 
