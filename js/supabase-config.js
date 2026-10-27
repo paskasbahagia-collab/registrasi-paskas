@@ -639,7 +639,35 @@ class PaskasDataService {
   }
 
   /**
-   * Menyimpan satu peserta baru (Individu) langsung ke Supabase
+   * Mengambil nomor urut (sequence) angka tertinggi dari Supabase secara realtime
+   */
+  async getLatestRemoteSequence() {
+    let maxSeq = 0;
+    if (this.supabaseClient) {
+      try {
+        const { data } = await this.supabaseClient
+          .from('registrations')
+          .select('registration_code')
+          .order('id', { ascending: false })
+          .limit(60);
+        if (data && Array.isArray(data)) {
+          data.forEach(r => {
+            const m = String(r.registration_code || '').match(/PKB-(\d+)/i);
+            if (m && m[1]) {
+              const num = parseInt(m[1], 10);
+              if (!isNaN(num) && num > maxSeq) maxSeq = num;
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Gagal membaca sequence remote terbaru dari Supabase:', e);
+      }
+    }
+    return maxSeq;
+  }
+
+  /**
+   * Menyimpan satu peserta baru (Individu) langsung ke Supabase dengan proteksi anti-tabrakan nomor tiket
    */
   async addRegistration(record) {
     await this.waitForSupabase(6000);
@@ -653,76 +681,94 @@ class PaskasDataService {
       updated_at: now
     };
 
+    // Sinkronisasi realtime sequence remote Supabase sebelum insert untuk meminimalkan race condition
     if (this.isSupabaseConnected && this.supabaseClient) {
-      try {
-        newRecord.photo_url = await this.uploadPhotoIfNeeded(newRecord.photo_url, newRecord.registration_code);
-        const insertData = this.sanitizeRegistrationPayload(newRecord);
-        delete insertData.id;
-        const { data, error } = await this.supabaseClient
-          .from('registrations')
-          .insert([insertData])
-          .select();
+      const remoteMax = await this.getLatestRemoteSequence();
+      if (remoteMax > 0) {
+        const curMatch = String(newRecord.registration_code || '').match(/PKB-(\d+)/i);
+        const curNum = curMatch ? parseInt(curMatch[1], 10) : 0;
+        if (curNum <= remoteMax || !curMatch) {
+          newRecord.registration_code = `PKB-${String(remoteMax + 1).padStart(3, '0')}`;
+        }
+      }
+    }
 
-        if (error && error.code === '23505') {
-          // Unique key collision, ambil sequence terbaru dari Supabase dan coba lagi
-          const { data: latest } = await this.supabaseClient
-            .from('registrations')
-            .select('registration_code')
-            .order('id', { ascending: false })
-            .limit(1);
-          let newSeq = 2;
-          if (latest && latest[0] && latest[0].registration_code) {
-            const m = String(latest[0].registration_code).match(/PKB-(\d+)/i);
-            if (m && m[1]) newSeq = parseInt(m[1], 10) + 1;
+    if (this.isSupabaseConnected && this.supabaseClient) {
+      let insertSuccess = false;
+      let lastErr = null;
+
+      // Coba insert hingga 4 kali jika terjadi tabrakan nomor unik akibat submit bersamaan
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          if (attempt > 0) {
+            const latestSeq = await this.getLatestRemoteSequence();
+            const nextNum = Math.max(latestSeq, 1) + 1;
+            newRecord.registration_code = `PKB-${String(nextNum).padStart(3, '0')}`;
+            await new Promise(r => setTimeout(r, 120 * attempt));
           }
-          newRecord.registration_code = `PKB-${String(newSeq).padStart(3, '0')}`;
-          const retryData = this.sanitizeRegistrationPayload(newRecord);
-          delete retryData.id;
-          const { data: retryRes, error: retryErr } = await this.supabaseClient
+
+          newRecord.photo_url = await this.uploadPhotoIfNeeded(newRecord.photo_url, newRecord.registration_code);
+          const insertData = this.sanitizeRegistrationPayload(newRecord);
+          delete insertData.id;
+          const { data, error } = await this.supabaseClient
             .from('registrations')
-            .insert([retryData])
+            .insert([insertData])
             .select();
-          if (!retryErr && retryRes && retryRes[0]) {
-            newRecord.id = retryRes[0].id;
-            newRecord._is_offline_pending = false;
-          } else {
-            throw retryErr || error;
-          }
-        } else if (error) {
-          // Jika Supabase menolak karena kolom belum dibuat di PostgreSQL Supabase
-          if (error.message && (error.message.includes('photo_url') || error.message.includes('column') || error.code === '42703' || error.code === 'PGRST204')) {
-            console.warn('Kolom photo_url belum ada di remote Supabase. Menyimpan data peserta tanpa kolom photo_url...');
-            const fallbackData = { ...insertData };
-            delete fallbackData.photo_url;
-            const { data: fbData, error: fbErr } = await this.supabaseClient
-              .from('registrations')
-              .insert([fallbackData])
-              .select();
-            if (!fbErr && fbData && fbData[0]) {
-              newRecord.id = fbData[0].id;
-              newRecord._is_offline_pending = false;
-            } else {
-              throw fbErr || error;
+
+          if (error) {
+            const isDup = error.code === '23505' || 
+                          (error.message && (error.message.includes('unique') || error.message.includes('duplicate')));
+            if (isDup) {
+              console.warn(`Tabrakan nomor registrasi (${newRecord.registration_code}). Mencoba alokasi nomor baru (percobaan ${attempt + 1})...`);
+              lastErr = error;
+              continue;
             }
-          } else {
-            console.warn('Supabase insert registration error:', error);
+
+            if (error.message && (error.message.includes('photo_url') || error.code === '42703' || error.code === 'PGRST204')) {
+              console.warn('Kolom photo_url belum ada di Supabase. Menyimpan data peserta tanpa photo_url...');
+              const fallbackData = { ...insertData };
+              delete fallbackData.photo_url;
+              const { data: fbData, error: fbErr } = await this.supabaseClient
+                .from('registrations')
+                .insert([fallbackData])
+                .select();
+              if (!fbErr && fbData && fbData[0]) {
+                newRecord.id = fbData[0].id;
+                newRecord._is_offline_pending = false;
+                insertSuccess = true;
+                break;
+              }
+            }
+
             throw error;
           }
-        }
 
-        if (data && data[0]) {
-          newRecord.id = data[0].id;
-          newRecord._is_offline_pending = false;
+          if (data && data[0]) {
+            newRecord.id = data[0].id;
+            newRecord._is_offline_pending = false;
+            insertSuccess = true;
+            break;
+          }
+        } catch (attemptErr) {
+          lastErr = attemptErr;
+          const isDup = attemptErr?.code === '23505' || 
+                        (attemptErr?.message && (attemptErr.message.includes('unique') || attemptErr.message.includes('duplicate')));
+          if (isDup && attempt < 3) {
+            continue;
+          }
+          break;
         }
-      } catch (err) {
-        console.warn('Gagal simpan ke Supabase via SDK, mencoba REST fallback:', err);
+      }
+
+      if (!insertSuccess && !lastErr?.code === '23505') {
+        console.warn('Gagal simpan ke Supabase via SDK, mencoba REST fallback:', lastErr);
         newRecord._is_offline_pending = true;
       }
     } else {
       newRecord._is_offline_pending = true;
     }
 
-    if (!newRecord.id || newRecord._is_offline_pending) {
+    if (!newRecord.id && newRecord._is_offline_pending) {
       try {
         const creds = this.getCredentials();
         if (creds.url && creds.key) {
@@ -754,6 +800,12 @@ class PaskasDataService {
       }
     }
 
+    // Jika Supabase terhubung dan perangkat online tapi ID gagal dibuat dari Cloud, lemparkan error
+    // (JANGAN diam-diam pura-pura sukses ke LocalStorage agar peserta & panitia tahu status sebenarnya)
+    if (!newRecord.id && navigator.onLine && this.isSupabaseConnected) {
+      throw new Error('Gagal menyimpan pendaftaran ke Cloud Supabase. Silakan periksa koneksi atau coba kirim kembali dalam beberapa detik.');
+    }
+
     // Simpan ke LocalStorage sebagai backup instan
     const current = await this.getLocalRegistrations();
     if (!newRecord.id) {
@@ -765,7 +817,7 @@ class PaskasDataService {
   }
 
   /**
-   * Menyimpan banyak peserta sekaligus (Kelompok/Rombongan) ke Supabase
+   * Menyimpan banyak peserta sekaligus (Kelompok/Rombongan) ke Supabase dengan proteksi anti-tabrakan
    */
   async addBatchRegistrations(recordsList) {
     await this.waitForSupabase(6000);
@@ -777,62 +829,116 @@ class PaskasDataService {
       });
     }
     const now = new Date().toISOString();
-    const stampedList = recordsList.map((item, idx) => ({
+    const stampedList = recordsList.map((item) => ({
       ...item,
       created_at: now,
       updated_at: now
     }));
 
+    // Cek sequence remote Supabase secara realtime sebelum penomoran rombongan
     if (this.isSupabaseConnected && this.supabaseClient) {
-      try {
-        for (const item of stampedList) {
-          item.photo_url = await this.uploadPhotoIfNeeded(item.photo_url, item.registration_code);
-        }
-        const cleanList = stampedList.map(item => {
-          const clean = this.sanitizeRegistrationPayload(item);
-          delete clean.id;
-          return clean;
-        });
-        const { data, error } = await this.supabaseClient
-          .from('registrations')
-          .insert(cleanList)
-          .select();
-
-        if (error) {
-          if (error.message && (error.message.includes('photo_url') || error.code === '42703' || error.code === 'PGRST204')) {
-            console.warn('Kolom photo_url belum ada di remote Supabase. Menyimpan batch tanpa photo_url...');
-            const fallbackList = cleanList.map(item => {
-              const fb = { ...item };
-              delete fb.photo_url;
-              return fb;
-            });
-            const { data: fbData, error: fbErr } = await this.supabaseClient
-              .from('registrations')
-              .insert(fallbackList)
-              .select();
-            if (!fbErr && fbData && Array.isArray(fbData)) {
-              fbData.forEach((row, idx) => {
-                if (stampedList[idx]) stampedList[idx].id = row.id;
-              });
-            } else {
-              throw fbErr || error;
-            }
-          } else {
-            console.warn('Supabase batch insert error:', error);
-            throw error;
+      const remoteMax = await this.getLatestRemoteSequence();
+      if (remoteMax > 0) {
+        let currentMaxInBatch = 0;
+        stampedList.forEach(item => {
+          const m = String(item.registration_code || '').match(/PKB-(\d+)/i);
+          if (m && m[1]) {
+            const n = parseInt(m[1], 10);
+            if (n > currentMaxInBatch) currentMaxInBatch = n;
           }
-        }
-
-        if (data && Array.isArray(data)) {
-          data.forEach((row, idx) => {
-            if (stampedList[idx]) {
-              stampedList[idx].id = row.id;
-              stampedList[idx]._is_offline_pending = false;
-            }
+        });
+        // Jika kode rombongan sudah tertinggal dibanding data di Cloud
+        if (currentMaxInBatch <= remoteMax) {
+          stampedList.forEach((item, idx) => {
+            item.registration_code = `PKB-${String(remoteMax + 1 + idx).padStart(3, '0')}`;
           });
         }
-      } catch (err) {
-        console.warn('Gagal batch insert ke Supabase via SDK, mencoba REST fallback:', err);
+      }
+    }
+
+    if (this.isSupabaseConnected && this.supabaseClient) {
+      let batchSuccess = false;
+      let lastErr = null;
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (attempt > 0) {
+            const latestSeq = await this.getLatestRemoteSequence();
+            stampedList.forEach((item, idx) => {
+              item.registration_code = `PKB-${String(latestSeq + 1 + idx).padStart(3, '0')}`;
+            });
+            await new Promise(r => setTimeout(r, 150 * attempt));
+          }
+
+          for (const item of stampedList) {
+            item.photo_url = await this.uploadPhotoIfNeeded(item.photo_url, item.registration_code);
+          }
+          const cleanList = stampedList.map(item => {
+            const clean = this.sanitizeRegistrationPayload(item);
+            delete clean.id;
+            return clean;
+          });
+          const { data, error } = await this.supabaseClient
+            .from('registrations')
+            .insert(cleanList)
+            .select();
+
+          if (error) {
+            const isDup = error.code === '23505' || 
+                          (error.message && (error.message.includes('unique') || error.message.includes('duplicate')));
+            if (isDup) {
+              console.warn(`Tabrakan kode batch rombongan terdeteksi. Mencoba penomoran baru (percobaan ${attempt + 1})...`);
+              lastErr = error;
+              continue;
+            }
+
+            if (error.message && (error.message.includes('photo_url') || error.code === '42703' || error.code === 'PGRST204')) {
+              console.warn('Kolom photo_url belum ada di remote Supabase. Menyimpan batch tanpa photo_url...');
+              const fallbackList = cleanList.map(item => {
+                const fb = { ...item };
+                delete fb.photo_url;
+                return fb;
+              });
+              const { data: fbData, error: fbErr } = await this.supabaseClient
+                .from('registrations')
+                .insert(fallbackList)
+                .select();
+              if (!fbErr && fbData && Array.isArray(fbData)) {
+                fbData.forEach((row, idx) => {
+                  if (stampedList[idx]) {
+                    stampedList[idx].id = row.id;
+                    stampedList[idx]._is_offline_pending = false;
+                  }
+                });
+                batchSuccess = true;
+                break;
+              }
+            }
+
+            throw error;
+          }
+
+          if (data && Array.isArray(data)) {
+            data.forEach((row, idx) => {
+              if (stampedList[idx]) {
+                stampedList[idx].id = row.id;
+                stampedList[idx]._is_offline_pending = false;
+              }
+            });
+            batchSuccess = true;
+            break;
+          }
+        } catch (bErr) {
+          lastErr = bErr;
+          const isDup = bErr?.code === '23505' || 
+                        (bErr?.message && (bErr.message.includes('unique') || bErr.message.includes('duplicate')));
+          if (isDup && attempt < 2) continue;
+          break;
+        }
+      }
+
+      if (!batchSuccess) {
+        console.warn('Gagal batch insert ke Supabase via SDK, mencoba REST fallback:', lastErr);
         stampedList.forEach(item => { item._is_offline_pending = true; });
       }
     } else {
@@ -876,6 +982,10 @@ class PaskasDataService {
       } catch (bErr) {
         console.warn('Direct REST batch insert error:', bErr);
       }
+    }
+
+    if (stampedList.some(item => !item.id) && navigator.onLine && this.isSupabaseConnected) {
+      throw new Error('Gagal menyimpan pendaftaran rombongan ke Cloud Supabase. Silakan periksa koneksi atau coba beberapa saat lagi.');
     }
 
     const current = await this.getLocalRegistrations();
