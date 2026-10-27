@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=114.0">
+  <link rel="stylesheet" href="css/style.css?v=115.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -170,7 +170,7 @@
         </nav>
 
         <!-- Tombol Pengaturan di Pojok Kanan (Khusus Admin Ber-Password) -->
-        <button class="btn-icon" id="btnNavSettingsIcon" data-page="settings" onclick="openSettingsWithAuth('settings')" title="Pengaturan Sistem & Info Acara (Khusus Admin)">
+        <button class="btn-icon" id="btnNavSettingsIcon" data-page="settings" onclick="openSettingsWithAuth('settings')" title="Masuk Panitia & Admin (Keuangan, Presensi, Rekap, Admin)">
           <i class="fa-solid fa-gear"></i>
         </button>
       </div>
@@ -200,6 +200,9 @@
       </button>
       <button class="mobile-link admin-only" data-page="settings" onclick="navigateTo('settings'); toggleMobileNav();">
         <i class="fa-solid fa-gear"></i> Pengaturan
+      </button>
+      <button class="mobile-link not-admin-only" id="btnMobileLoginPanitia" onclick="openSettingsWithAuth('settings'); toggleMobileNav();" style="margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.18); color: #fbbf24; font-weight: 700;">
+        <i class="fa-solid fa-right-to-bracket"></i> Masuk Panitia (Login)
       </button>
     </div>
   </header>
@@ -5617,6 +5620,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=129.0"></script>
-  <script src="js/app.js?v=144.0"></script>
+  <script src="js/app.js?v=145.0"></script>
 </body>
 </html>

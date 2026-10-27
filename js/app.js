@@ -9567,20 +9567,20 @@ function openSettingsWithAuth(targetTab = 'settings') {
   const subEl = modal?.querySelector('.modal-auth-green-sub');
   if (targetTab === 'keuangan') {
     if (titleEl) titleEl.textContent = 'Akses Keuangan';
-    if (subEl) subEl.textContent = 'Silahkan isi password Keuangan (keuangan123) atau Admin:';
-    if (input) input.placeholder = 'Password keuangan...';
+    if (subEl) subEl.textContent = 'Silahkan isi password Keuangan (keuangan123) atau Admin (admin123):';
+    if (input) input.placeholder = 'Password keuangan / admin...';
   } else if (targetTab === 'presensi') {
     if (titleEl) titleEl.textContent = 'Akses Presensi';
-    if (subEl) subEl.textContent = 'Silahkan isi password Presensi (presensi123) atau Admin:';
-    if (input) input.placeholder = 'Password presensi...';
+    if (subEl) subEl.textContent = 'Silahkan isi password Presensi (presensi123) atau Admin (admin123):';
+    if (input) input.placeholder = 'Password presensi / admin...';
   } else if (targetTab === 'rekap') {
     if (titleEl) titleEl.textContent = 'Akses Rekap Data';
     if (subEl) subEl.textContent = 'Silahkan isi password Rekap (rekap123) atau Admin (admin123):';
-    if (input) input.placeholder = 'Password rekap...';
+    if (input) input.placeholder = 'Password rekap / admin...';
   } else {
-    if (titleEl) titleEl.textContent = 'Akses Admin';
-    if (subEl) subEl.textContent = 'Silahkan isi password Admin (admin123):';
-    if (input) input.placeholder = 'Password admin...';
+    if (titleEl) titleEl.textContent = 'Akses Masuk Panitia & Admin';
+    if (subEl) subEl.textContent = 'Silahkan isi password peran Anda (Admin, Keuangan, Presensi, atau Rekap):';
+    if (input) input.placeholder = 'Ketik password (cth: keuangan123)...';
   }
 
   if (card) card.classList.remove('shake-animation');
@@ -9598,6 +9598,10 @@ function openSettingsWithAuth(targetTab = 'settings') {
 function closeAdminAuthModal() {
   const modal = document.getElementById('adminAuthModal');
   if (modal) modal.classList.remove('active');
+  // Sinkronkan kembali URL hash ke dashboard jika pengguna belum login dan membatalkan modal
+  if (!isAdminLoggedIn && ['#keuangan', '#presensi', '#rekap', '#settings'].includes(window.location.hash)) {
+    try { history.replaceState(null, '', '#dashboard'); } catch (e) {}
+  }
 }
 
 async function submitAdminPassword() {
@@ -9648,13 +9652,8 @@ async function submitAdminPassword() {
     matchedRole = 'presensi';
   }
 
-  // Validasi kecocokan role dengan target tab
-  const isAuthorized = matchedRole && (
-    matchedRole === 'admin' ||
-    (matchedRole === 'rekap' && pendingAuthTargetTab === 'rekap') ||
-    (matchedRole === 'keuangan' && pendingAuthTargetTab === 'keuangan') ||
-    (matchedRole === 'presensi' && pendingAuthTargetTab === 'presensi')
-  );
+  // Setiap kata sandi peran yang cocok diizinkan masuk dan langsung diarahkan ke halamannya
+  const isAuthorized = !!matchedRole;
 
   if (isAuthorized) {
     resetAdminFailedAttempts();
@@ -9692,17 +9691,11 @@ async function submitAdminPassword() {
     if (errEl) {
       if (failedCount >= ADMIN_MAX_ATTEMPTS) {
         errEl.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Batas 5x percobaan terlampaui. Akses dikunci selama <strong>60 detik</strong>.`;
-      } else if (matchedRole === 'rekap' && pendingAuthTargetTab !== 'rekap') {
-        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi ini khusus untuk modul <strong>Rekap Data</strong>. Gunakan kata sandi Admin.`;
-      } else if (matchedRole === 'keuangan' && pendingAuthTargetTab !== 'keuangan') {
-        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi ini khusus untuk modul <strong>Keuangan</strong>. Gunakan kata sandi Admin.`;
-      } else if (matchedRole === 'presensi' && pendingAuthTargetTab !== 'presensi') {
-        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi ini khusus untuk modul <strong>Presensi</strong>. Gunakan kata sandi Admin.`;
       } else {
-        let hint = 'admin123';
-        if (pendingAuthTargetTab === 'rekap') hint = 'rekap123 atau admin123';
-        else if (pendingAuthTargetTab === 'keuangan') hint = 'keuangan123 atau admin123';
+        let hint = 'admin123, keuangan123, presensi123, atau rekap123';
+        if (pendingAuthTargetTab === 'keuangan') hint = 'keuangan123 atau admin123';
         else if (pendingAuthTargetTab === 'presensi') hint = 'presensi123 atau admin123';
+        else if (pendingAuthTargetTab === 'rekap') hint = 'rekap123 atau admin123';
         errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>${hint}</code>. Sisa kesempatan: <strong>${remaining} kali</strong>.`;
       }
       errEl.style.display = 'flex';

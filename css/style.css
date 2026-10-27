@@ -322,6 +322,10 @@ body.role-rekap #btnNavSettingsIcon {
   display: none !important;
 }
 
+body.admin-logged-in #btnMobileLoginPanitia {
+  display: none !important;
+}
+
 .nav-link i {
   font-size: 14px;
   color: var(--text-muted);
