@@ -5442,66 +5442,70 @@ function switchGroupTicketMember(indexVal) {
 }
 
 /**
- * Menangkap elemen tiket menjadi canvas secara presisi dan cepat (tanpa delay atau hang)
+ * Menangkap elemen tiket menjadi canvas secara instan dan ringan (mencegah freeze browser)
  */
 async function captureTicketElementAsCanvas(ticketSourceEl) {
   if (!ticketSourceEl || typeof html2canvas !== 'function') {
     throw new Error('Elemen tiket atau library html2canvas belum siap.');
   }
 
-  // Selalu gunakan kontainer off-screen sementara yang terisolasi agar:
-  // 1. Dimensi tata letak tiket pasti tepat dan konsisten (880px)
-  // 2. Tag <img> kosong / tersembunyi dapat disanitasi tanpa merusak DOM asli
-  // 3. Menghindari bug html2canvas yang hang saat memproses tag <img> kosong
-  const offscreenContainer = document.createElement('div');
-  offscreenContainer.setAttribute('data-offscreen-ticket', 'true');
-  offscreenContainer.style.position = 'fixed';
-  offscreenContainer.style.left = '-9999px';
-  offscreenContainer.style.top = '0';
-  offscreenContainer.style.width = '880px';
-  offscreenContainer.style.maxWidth = '880px';
-  offscreenContainer.style.visibility = 'visible';
-  offscreenContainer.style.display = 'block';
-  offscreenContainer.style.zIndex = '-9999';
-  offscreenContainer.style.background = '#ffffff';
-
-  const cloned = ticketSourceEl.cloneNode(true);
-  cloned.style.display = 'block';
-  cloned.style.visibility = 'visible';
-  cloned.style.margin = '0';
-  cloned.style.transform = 'none';
-
-  // Sanitasi semua tag <img> pada elemen klon
-  const allImgs = cloned.querySelectorAll('img');
-  allImgs.forEach(img => {
+  // 1. Sanitasi tag img kosong agar html2canvas tidak mencoba fetch halaman web
+  const imgs = ticketSourceEl.querySelectorAll('img');
+  imgs.forEach(img => {
     const rawSrc = img.getAttribute('src');
-    // Jika src kosong, null, atau elemen disembunyikan: ganti dengan 1x1 transparent gif agar html2canvas tidak hang
-    if (!rawSrc || rawSrc.trim() === '' || img.style.display === 'none' || img.offsetWidth === 0) {
+    if (!rawSrc || rawSrc.trim() === '' || img.style.display === 'none') {
       img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-    } else {
-      img.crossOrigin = 'anonymous';
     }
   });
 
-  offscreenContainer.appendChild(cloned);
-  document.body.appendChild(offscreenContainer);
+  // 2. Cek apakah elemen saat ini sedang tampak langsung di viewport (seperti di modal yang terbuka)
+  const isDirectlyVisible = ticketSourceEl.offsetWidth > 100 && ticketSourceEl.offsetHeight > 50;
 
-  // Jeda mikro agar peramban merender reflow CSS lengkap
-  await new Promise(r => setTimeout(r, 60));
+  let targetToCapture = ticketSourceEl;
+  let tempWrapper = null;
+
+  if (!isDirectlyVisible) {
+    // Jika tiket berada di dalam container display:none (misal in-page success),
+    // tempatkan klon tepat di (top:0, left:0) dengan opacity rendah (JANGAN -9999px agar kanvas tidak bengkak puluhan ribu piksel)
+    tempWrapper = document.createElement('div');
+    tempWrapper.style.position = 'fixed';
+    tempWrapper.style.top = '0';
+    tempWrapper.style.left = '0';
+    tempWrapper.style.width = '860px';
+    tempWrapper.style.height = '278px';
+    tempWrapper.style.zIndex = '-9999';
+    tempWrapper.style.opacity = '0.01';
+    tempWrapper.style.pointerEvents = 'none';
+    tempWrapper.style.overflow = 'hidden';
+
+    const cloned = ticketSourceEl.cloneNode(true);
+    cloned.style.display = 'block';
+    cloned.style.margin = '0';
+    cloned.style.transform = 'none';
+
+    tempWrapper.appendChild(cloned);
+    document.body.appendChild(tempWrapper);
+    targetToCapture = cloned;
+
+    await new Promise(r => setTimeout(r, 40));
+  }
 
   try {
-    const renderPromise = html2canvas(cloned, {
+    const renderPromise = html2canvas(targetToCapture, {
       scale: 2,
+      width: 860,
+      height: 278,
       useCORS: true,
       allowTaint: false,
       backgroundColor: '#ffffff',
       logging: false,
-      imageTimeout: 3500
+      imageTimeout: 2500,
+      scrollX: 0,
+      scrollY: 0
     });
 
-    // Proteksi timeout maksimal 8 detik agar tombol tidak pernah hang / stuck
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Waktu pembuatan gambar tiket melebihi batas (timeout). Silakan coba lagi.')), 8000);
+      setTimeout(() => reject(new Error('Waktu pembuatan gambar tiket melebihi batas (timeout). Silakan coba lagi.')), 6000);
     });
 
     const canvas = await Promise.race([renderPromise, timeoutPromise]);
@@ -5512,8 +5516,8 @@ async function captureTicketElementAsCanvas(ticketSourceEl) {
 
     return canvas;
   } finally {
-    if (offscreenContainer && offscreenContainer.parentNode) {
-      offscreenContainer.parentNode.removeChild(offscreenContainer);
+    if (tempWrapper && tempWrapper.parentNode) {
+      tempWrapper.parentNode.removeChild(tempWrapper);
     }
   }
 }
