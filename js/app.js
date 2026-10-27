@@ -14667,6 +14667,9 @@ function openRecordPaymentModal(id) {
   const notesInput = document.getElementById('payModalNotesInput');
   if (notesInput) notesInput.value = '';
 
+  const methodSelect = document.getElementById('payModalMethodSelect');
+  if (methodSelect) methodSelect.value = 'Transfer';
+
   onPayAmountChanged();
   modal.classList.add('active');
   if (amountInput) {
@@ -14822,8 +14825,8 @@ function quickPayFull(id) {
   const remEl = document.getElementById('quickPayRemainingAmount');
   if (remEl) remEl.textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
 
-  // Reset method radio ke Tunai
-  const defaultRadio = document.querySelector('input[name="quickPayMethodRadio"][value="Tunai"]');
+  // Reset method radio ke Transfer
+  const defaultRadio = document.querySelector('input[name="quickPayMethodRadio"][value="Transfer"]');
   if (defaultRadio) {
     defaultRadio.checked = true;
     updateQuickPayMethodStyle(defaultRadio);
@@ -14865,7 +14868,7 @@ async function submitQuickPayFromModal() {
   const remaining = Math.max(0, fee - paid);
 
   const selectedRadio = document.querySelector('input[name="quickPayMethodRadio"]:checked');
-  const method = selectedRadio ? selectedRadio.value : 'Tunai';
+  const method = selectedRadio ? selectedRadio.value : 'Transfer';
 
   const btn = document.getElementById('btnSubmitQuickPay');
   if (btn) {

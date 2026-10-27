@@ -5947,19 +5947,14 @@ CREATE TABLE IF NOT EXISTS registrations (
           </div>
         </div>
 
-        <!-- Pilihan Metode Pembayaran (Hanya Transfer, QRIS, Tunai) -->
+        <!-- Pilihan Metode Pembayaran (Urutan: Transfer, QRIS, Tunai) -->
         <div style="margin-bottom: 22px;">
           <label style="display: block; font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 8px;">
             Pilih Metode Pembayaran:
           </label>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
             <label style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border: 1.5px solid #10b981; border-radius: 10px; cursor: pointer; text-align: center; background: #f0fdf4; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); transition: all 0.2s;" class="method-option-card">
-              <input type="radio" name="quickPayMethodRadio" value="Tunai" checked style="position: absolute; opacity: 0;" onchange="updateQuickPayMethodStyle(this)">
-              <i class="fa-solid fa-money-bill-wave" style="font-size: 18px; color: #059669;"></i>
-              <span style="font-size: 12px; font-weight: 800; color: #1e293b;">Tunai</span>
-            </label>
-            <label style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border: 1.5px solid #e2e8f0; border-radius: 10px; cursor: pointer; text-align: center; background: #ffffff; transition: all 0.2s;" class="method-option-card">
-              <input type="radio" name="quickPayMethodRadio" value="Transfer" style="position: absolute; opacity: 0;" onchange="updateQuickPayMethodStyle(this)">
+              <input type="radio" name="quickPayMethodRadio" value="Transfer" checked style="position: absolute; opacity: 0;" onchange="updateQuickPayMethodStyle(this)">
               <i class="fa-solid fa-building-columns" style="font-size: 18px; color: #0284c7;"></i>
               <span style="font-size: 12px; font-weight: 800; color: #1e293b;">Transfer</span>
             </label>
@@ -5967,6 +5962,11 @@ CREATE TABLE IF NOT EXISTS registrations (
               <input type="radio" name="quickPayMethodRadio" value="QRIS" style="position: absolute; opacity: 0;" onchange="updateQuickPayMethodStyle(this)">
               <i class="fa-solid fa-qrcode" style="font-size: 18px; color: #7c3aed;"></i>
               <span style="font-size: 12px; font-weight: 800; color: #1e293b;">QRIS</span>
+            </label>
+            <label style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border: 1.5px solid #e2e8f0; border-radius: 10px; cursor: pointer; text-align: center; background: #ffffff; transition: all 0.2s;" class="method-option-card">
+              <input type="radio" name="quickPayMethodRadio" value="Tunai" style="position: absolute; opacity: 0;" onchange="updateQuickPayMethodStyle(this)">
+              <i class="fa-solid fa-money-bill-wave" style="font-size: 18px; color: #059669;"></i>
+              <span style="font-size: 12px; font-weight: 800; color: #1e293b;">Tunai</span>
             </label>
           </div>
         </div>
@@ -6075,9 +6075,9 @@ CREATE TABLE IF NOT EXISTS registrations (
         <div class="form-group" style="margin-bottom: 14px;">
           <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 4px; display: block;">Metode Pembayaran:</label>
           <select id="payModalMethodSelect" class="form-control" style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; min-height: 46px; height: 46px; padding: 10px 14px; font-weight: 600; line-height: normal; box-sizing: border-box;">
-            <option value="Tunai" selected>Tunai</option>
-            <option value="Transfer">Transfer</option>
+            <option value="Transfer" selected>Transfer</option>
             <option value="QRIS">QRIS</option>
+            <option value="Tunai">Tunai</option>
           </select>
         </div>
 
@@ -6103,6 +6103,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=131.0"></script>
-  <script src="js/app.js?v=154.0"></script>
+  <script src="js/app.js?v=155.0"></script>
 </body>
 </html>
