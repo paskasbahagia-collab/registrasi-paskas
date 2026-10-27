@@ -13366,3 +13366,28 @@ input:checked + .slider:before {
   color: #0f172a !important;
   padding: 8px 12px !important;
 }
+
+#modalRecordPayment .btn-secondary,
+#modalQuickPayConfirm .btn-secondary {
+  background: #f1f5f9 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+  padding: 10px 20px !important;
+  border-radius: 10px !important;
+  font-size: 13.5px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+#modalRecordPayment .btn-secondary:hover,
+#modalQuickPayConfirm .btn-secondary:hover {
+  background: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
