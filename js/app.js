@@ -14652,6 +14652,12 @@ function openRecordPaymentModal(id) {
   document.getElementById('payModalPaidAmount').textContent = `Rp ${paid.toLocaleString('id-ID')}`;
   document.getElementById('payModalRemainingAmount').textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
 
+  const ctxPaid = document.getElementById('payModalContextPaid');
+  if (ctxPaid) ctxPaid.textContent = `Rp ${paid.toLocaleString('id-ID')}`;
+
+  const ctxRem = document.getElementById('payModalContextRemaining');
+  if (ctxRem) ctxRem.textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
+
   const qLunas = document.getElementById('payModalQuickLunasText');
   if (qLunas) qLunas.textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
 
@@ -14692,6 +14698,35 @@ function onPayAmountChanged() {
   const badge = document.getElementById('payModalAutoTerminBadge');
   const hint = document.getElementById('payModalHint');
 
+  if (amt <= 0) {
+    if (instList.length === 0) {
+      if (terminSelect) terminSelect.value = '1';
+      if (badge) {
+        badge.textContent = 'Otomatis: Termin 1 (DP)';
+        badge.style.background = '#e0f2fe';
+        badge.style.color = '#0369a1';
+      }
+    } else if (instList.length === 1) {
+      if (terminSelect) terminSelect.value = '2';
+      if (badge) {
+        badge.textContent = 'Otomatis: Termin 2 (Cicilan)';
+        badge.style.background = '#fef3c7';
+        badge.style.color = '#b45309';
+      }
+    } else {
+      if (terminSelect) terminSelect.value = '3';
+      if (badge) {
+        badge.textContent = 'Otomatis: Pelunasan';
+        badge.style.background = '#f3e8ff';
+        badge.style.color = '#7e22ce';
+      }
+    }
+    if (hint) {
+      hint.innerHTML = `Sudah dibayar sebelumnya: <strong style="color: #059669;">Rp ${paid.toLocaleString('id-ID')}</strong> &bull; Sisa belum lunas: <strong style="color: #dc2626;">Rp ${remaining.toLocaleString('id-ID')}</strong>`;
+    }
+    return;
+  }
+
   if (amt >= remaining && remaining > 0) {
     if (terminSelect) terminSelect.value = '3';
     if (badge) {
@@ -14699,7 +14734,8 @@ function onPayAmountChanged() {
       badge.style.background = '#dcfce7';
       badge.style.color = '#15803d';
     }
-    if (hint) hint.innerHTML = 'Nominal mencukupi sisa tagihan, status peserta otomatis menjadi <strong style="color: #16a34a;">LUNAS</strong>.';
+    const totalAfter = paid + amt;
+    if (hint) hint.innerHTML = `Sudah dibayar sebelumnya: <strong style="color: #059669;">Rp ${paid.toLocaleString('id-ID')}</strong> + Bayar sekarang: <strong>Rp ${amt.toLocaleString('id-ID')}</strong> &rarr; Total terbayar: <strong style="color: #059669;">Rp ${totalAfter.toLocaleString('id-ID')} (LUNAS 100%)</strong>`;
   } else if (instList.length === 0) {
     if (terminSelect) terminSelect.value = '1';
     if (badge) {
@@ -14708,7 +14744,8 @@ function onPayAmountChanged() {
       badge.style.color = '#0369a1';
     }
     const sisa = Math.max(0, remaining - amt);
-    if (hint) hint.innerHTML = `Cicilan awal dicatat ke <strong>Termin 1 (DP)</strong>. Sisa tagihan setelah ini: <strong>Rp ${sisa.toLocaleString('id-ID')}</strong>.`;
+    const totalAfter = paid + amt;
+    if (hint) hint.innerHTML = `Sudah dibayar: <strong style="color: #059669;">Rp ${paid.toLocaleString('id-ID')}</strong> &bull; Total setelah bayar ini: <strong>Rp ${totalAfter.toLocaleString('id-ID')}</strong> &bull; Sisa piutang: <strong style="color: #dc2626;">Rp ${sisa.toLocaleString('id-ID')}</strong> (Termin 1 DP)`;
   } else if (instList.length === 1) {
     if (terminSelect) terminSelect.value = '2';
     if (badge) {
@@ -14717,7 +14754,8 @@ function onPayAmountChanged() {
       badge.style.color = '#b45309';
     }
     const sisa = Math.max(0, remaining - amt);
-    if (hint) hint.innerHTML = `Cicilan kedua dicatat ke <strong>Termin 2</strong>. Sisa tagihan setelah ini: <strong>Rp ${sisa.toLocaleString('id-ID')}</strong>.`;
+    const totalAfter = paid + amt;
+    if (hint) hint.innerHTML = `Sudah dibayar: <strong style="color: #059669;">Rp ${paid.toLocaleString('id-ID')}</strong> &bull; Total setelah bayar ini: <strong>Rp ${totalAfter.toLocaleString('id-ID')}</strong> &bull; Sisa piutang: <strong style="color: #dc2626;">Rp ${sisa.toLocaleString('id-ID')}</strong> (Termin 2)`;
   } else {
     if (terminSelect) terminSelect.value = '3';
     if (badge) {
@@ -14726,7 +14764,8 @@ function onPayAmountChanged() {
       badge.style.color = '#7e22ce';
     }
     const sisa = Math.max(0, remaining - amt);
-    if (hint) hint.innerHTML = `Pembayaran dicatat ke <strong>Pelunasan</strong>. Sisa setelah ini: <strong>Rp ${sisa.toLocaleString('id-ID')}</strong>.`;
+    const totalAfter = paid + amt;
+    if (hint) hint.innerHTML = `Sudah dibayar: <strong style="color: #059669;">Rp ${paid.toLocaleString('id-ID')}</strong> &bull; Total setelah bayar ini: <strong>Rp ${totalAfter.toLocaleString('id-ID')}</strong> &bull; Sisa piutang: <strong style="color: #dc2626;">Rp ${sisa.toLocaleString('id-ID')}</strong>`;
   }
 }
 

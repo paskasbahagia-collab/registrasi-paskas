@@ -6037,31 +6037,44 @@ CREATE TABLE IF NOT EXISTS registrations (
       <form id="recordPaymentForm" onsubmit="event.preventDefault(); submitPaymentInstallment();">
         <input type="hidden" id="payModalParticipantId">
 
-        <div class="form-group" style="margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <label class="form-label" style="font-size: 12px; font-weight: 700; color: #1e293b; margin: 0;">Nominal Pembayaran (Rp):</label>
-            <span id="payModalAutoTerminBadge" style="font-size: 11.5px; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 2px 8px; border-radius: 999px;">
+        <!-- Bar Informasi Berapa yang Telah Dibayar & Sisa Piutang -->
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+          <div>
+            <span style="font-size: 11px; font-weight: 700; color: #64748b; display: block; text-transform: uppercase;">Sudah Dibayar:</span>
+            <span id="payModalContextPaid" style="font-size: 15px; font-weight: 900; color: #059669;">Rp 0</span>
+          </div>
+          <div style="height: 28px; width: 1px; background: #cbd5e1;"></div>
+          <div style="text-align: right;">
+            <span style="font-size: 11px; font-weight: 700; color: #64748b; display: block; text-transform: uppercase;">Sisa Piutang Saat Ini:</span>
+            <span id="payModalContextRemaining" style="font-size: 15px; font-weight: 900; color: #dc2626;">Rp 0</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="font-size: 12.5px; font-weight: 800; color: #183f2b; margin: 0;">Nominal Pembayaran (Rp):</label>
+            <span id="payModalAutoTerminBadge" style="font-size: 11.5px; font-weight: 800; color: #0369a1; background: #e0f2fe; border: 1px solid #bae6fd; padding: 2px 10px; border-radius: 999px;">
               Otomatis: Termin 1 (DP)
             </span>
           </div>
-          <input type="number" id="payModalAmountInput" class="form-control" placeholder="Ketik nominal cicilan..." required style="font-size: 14px; font-weight: 700;" oninput="onPayAmountChanged()">
-          <small id="payModalHint" style="font-size: 11.5px; color: #64748b; margin-top: 4px; display: block;">
+          <input type="number" id="payModalAmountInput" class="form-control" placeholder="Ketik nominal cicilan..." required style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 15px; font-weight: 800; height: 42px;" oninput="onPayAmountChanged()">
+          <div id="payModalHint" style="font-size: 12px; color: #475569; margin-top: 6px; padding: 8px 12px; background: #fdfbf7; border-left: 3px solid #10b981; border-radius: 6px; line-height: 1.4;">
             Ketik nominal yang dibayar, sistem otomatis mengalokasikan termin cicilan.
-          </small>
+          </div>
         </div>
 
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label class="form-label" style="font-size: 12px; font-weight: 700; color: #1e293b;">Kategori / Termin Pembayaran:</label>
-          <select id="payModalTerminSelect" class="form-control" style="font-size: 13px;">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 4px; display: block;">Kategori / Termin Pembayaran:</label>
+          <select id="payModalTerminSelect" class="form-control" style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; height: 40px; font-weight: 600;">
             <option value="1">Termin 1 (Uang Muka / DP)</option>
             <option value="2">Termin 2 (Cicilan)</option>
             <option value="3">Pelunasan Penuh</option>
           </select>
         </div>
 
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label class="form-label" style="font-size: 12px; font-weight: 700; color: #1e293b;">Metode Pembayaran:</label>
-          <select id="payModalMethodSelect" class="form-control" style="font-size: 13px;">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 4px; display: block;">Metode Pembayaran:</label>
+          <select id="payModalMethodSelect" class="form-control" style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; height: 40px; font-weight: 600;">
             <option value="Tunai" selected>Tunai</option>
             <option value="Transfer">Transfer</option>
             <option value="QRIS">QRIS</option>
@@ -6069,8 +6082,8 @@ CREATE TABLE IF NOT EXISTS registrations (
         </div>
 
         <div class="form-group" style="margin-bottom: 18px;">
-          <label class="form-label" style="font-size: 12px; font-weight: 700; color: #1e293b;">Catatan / Keterangan (Opsional):</label>
-          <input type="text" id="payModalNotesInput" class="form-control" placeholder="Contoh: Bukti transfer via BCA an. Fulan..." style="font-size: 13px;">
+          <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 4px; display: block;">Catatan / Keterangan (Opsional):</label>
+          <input type="text" id="payModalNotesInput" class="form-control" placeholder="Contoh: Bukti transfer via bank..." style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; height: 40px;">
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 8px;">
@@ -6090,6 +6103,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=131.0"></script>
-  <script src="js/app.js?v=152.0"></script>
+  <script src="js/app.js?v=153.0"></script>
 </body>
 </html>
