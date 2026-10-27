@@ -13295,6 +13295,38 @@ input:checked + .slider:before {
   font-size: 12.5px;
 }
 
+/* Responsive Enhancements for Keuangan Dashboard (iPad & Mobile) */
+.finance-toolbar-wrap {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#financeTable th.sticky-action-col,
+#financeTable td.sticky-action-col {
+  position: sticky;
+  right: 0;
+  background: #ffffff;
+  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.06);
+  z-index: 2;
+}
+#financeTable th.sticky-action-col {
+  background: #183f2b !important;
+  color: #ffffff !important;
+  z-index: 3;
+}
+#financeTable tbody tr:hover td.sticky-action-col {
+  background: #f8fafc !important;
+}
+
 @media (max-width: 1280px) {
   .finance-stat-cards-grid {
     grid-template-columns: repeat(3, 1fr) !important;
@@ -13303,14 +13335,124 @@ input:checked + .slider:before {
     grid-template-columns: 1fr !important;
   }
 }
+
+@media (max-width: 1024px) {
+  .fin-mobile-action-pill {
+    display: block !important;
+  }
+  .fin-swipe-indicator {
+    display: flex !important;
+  }
+  .finance-stat-cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+  .fin-stat-card:last-child {
+    grid-column: span 2;
+  }
+  .finance-middle-deck {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+  .finance-toolbar-wrap {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .finance-toolbar-wrap > div:first-child {
+    grid-column: span 2 !important;
+    width: 100% !important;
+  }
+  .finance-toolbar-wrap select,
+  .finance-toolbar-wrap .fin-select-filter {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
 @media (max-width: 768px) {
+  .editorial-header-card {
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
+    margin-bottom: 16px !important;
+  }
+  .editorial-title-box {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .editorial-top-badge {
+    display: inline-flex !important;
+    flex-wrap: wrap !important;
+    max-width: 100% !important;
+    padding: 6px 10px !important;
+    font-size: 10.5px !important;
+    border-radius: 8px !important;
+    line-height: 1.4 !important;
+    gap: 4px !important;
+  }
+  .editorial-top-badge .editorial-badge-sep {
+    display: none !important;
+  }
+  .editorial-top-badge .editorial-badge-sub {
+    display: block !important;
+    width: 100% !important;
+    font-size: 10px !important;
+    opacity: 0.85;
+  }
+  .editorial-main-title {
+    font-size: 21px !important;
+    line-height: 1.25 !important;
+    margin-top: 8px !important;
+  }
+  .editorial-desc {
+    font-size: 12.5px !important;
+    margin-top: 6px !important;
+  }
   .finance-stat-cards-grid {
     grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .fin-stat-card:last-child {
+    grid-column: span 1 !important;
   }
   .fin-status-donut-layout {
     flex-direction: column !important;
+    gap: 14px !important;
+    align-items: center !important;
+  }
+  .fin-status-donut-layout > div:last-child {
+    width: 100% !important;
+    padding-left: 0 !important;
+  }
+  .finance-toolbar-wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 10px !important;
+    gap: 8px !important;
+  }
+  .finance-toolbar-wrap > div:first-child {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+  .finance-toolbar-wrap select,
+  .finance-toolbar-wrap .fin-select-filter {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  #financeTableSection {
+    padding: 14px 10px !important;
+    border-radius: 12px !important;
+  }
+  .fin-swipe-indicator {
+    display: flex !important;
+    font-size: 11.5px !important;
+    padding: 8px 10px !important;
   }
 }
+
 
 /* Modal Pembayaran & Pelunasan: Input Terang, Elegan & Selaras */
 #modalRecordPayment .form-control,

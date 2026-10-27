@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=118.0">
+  <link rel="stylesheet" href="css/style.css?v=119.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -2529,10 +2529,10 @@
             </div>
 
             <!-- Unified Search & Filter Toolbar (1 Toolbar Terpadu) -->
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <div class="finance-toolbar-wrap">
               <div style="position: relative; flex: 1; min-width: 240px;">
                 <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px;"></i>
-                <input type="text" id="financeSearchInput" class="form-control" style="padding-left: 36px; padding-right: 12px; height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; color: #0f172a !important; font-weight: 600; width: 100%;" placeholder="Cari nama peserta, nomor tiket, rombongan, atau wilayah..." oninput="filterFinanceData()">
+                <input type="text" id="financeSearchInput" class="form-control" style="padding-left: 36px; padding-right: 12px; height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; color: #0f172a !important; font-weight: 600; width: 100%; box-sizing: border-box;" placeholder="Cari nama peserta, nomor tiket, rombongan, atau wilayah..." oninput="filterFinanceData()">
               </div>
               <select id="finFilterRombongan" class="fin-select-filter" onchange="filterFinanceData()" title="Filter Rombongan" style="height: 38px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #334155;">
                 <option value="all">Semua Rombongan</option>
@@ -2558,20 +2558,26 @@
               </select>
             </div>
 
+            <!-- Petunjuk Geser untuk iPad & HP -->
+            <div class="fin-swipe-indicator" style="display: none; align-items: center; justify-content: space-between; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; margin-bottom: 10px;">
+              <span><i class="fa-solid fa-arrows-left-right"></i> Geser tabel untuk melihat rincian lengkap</span>
+              <span style="background: #10b981; color: #ffffff; padding: 2px 8px; border-radius: 6px; font-size: 11px;">Tombol Bayar Tersedia &rarr;</span>
+            </div>
+
             <!-- Finance Table -->
             <div class="table-responsive">
               <table class="data-table" id="financeTable">
                 <thead>
                   <tr>
-                    <th style="width: 50px;">No</th>
-                    <th style="width: 140px;">No Tiket</th>
-                    <th>Nama &amp; Kategori Usia</th>
-                    <th>Rombongan &amp; Wilayah</th>
-                    <th style="width: 140px;">Total Tagihan</th>
-                    <th style="width: 140px;">Total Terbayar</th>
-                    <th style="width: 140px;">Sisa Piutang</th>
-                    <th style="width: 130px;">Status</th>
-                    <th style="min-width: 190px; text-align: center;">Aksi Pembayaran</th>
+                    <th style="width: 45px;">No</th>
+                    <th style="width: 90px;">No Tiket</th>
+                    <th style="min-width: 170px;">Nama &amp; Kategori</th>
+                    <th style="min-width: 130px;">Rombongan</th>
+                    <th style="width: 120px;">Tagihan</th>
+                    <th style="width: 120px;">Terbayar</th>
+                    <th style="width: 120px;">Sisa</th>
+                    <th style="width: 110px;">Status</th>
+                    <th class="sticky-action-col" style="min-width: 165px; text-align: center;">Aksi Pembayaran</th>
                   </tr>
                 </thead>
                 <tbody id="financeTableBody">
@@ -6103,6 +6109,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=131.0"></script>
-  <script src="js/app.js?v=155.0"></script>
+  <script src="js/app.js?v=156.0"></script>
 </body>
 </html>

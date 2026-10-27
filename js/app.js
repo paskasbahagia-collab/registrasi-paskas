@@ -14511,6 +14511,30 @@ function renderFinanceTable() {
         <td>
           <div style="font-weight: 800; color: #0f172a; font-size: 13.5px;">${p.full_name || '-'}</div>
           <div style="font-size: 11px; color: #64748b;">Kategori: ${p.age ? (p.age < 5 ? 'Balita' : (p.age <= 15 ? 'Anak' : 'Dewasa')) : 'Dewasa'} (${p.age || '16+'} thn)</div>
+          
+          <!-- Tombol Bayar Langsung untuk iPad & HP (Tidak perlu geser tabel) -->
+          <div class="fin-mobile-action-pill" style="margin-top: 6px; display: none;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              ${remaining <= 0 ? `
+                <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 3px;">
+                  <i class="fa-solid fa-circle-check"></i> LUNAS
+                </span>
+                <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" style="padding: 3px 8px; font-size: 11px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer;">
+                  <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
+                </button>
+              ` : `
+                <span style="font-size: 11px; font-weight: 800; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; padding: 2px 7px; border-radius: 5px;">
+                  Sisa: Rp ${remaining.toLocaleString('id-ID')}
+                </span>
+                <button type="button" class="btn-quick-lunas" onclick="quickPayFull(${p.id})" title="Bayar Lunas Seketika" style="background: #10b981; color: #ffffff; font-weight: 800; border: none; padding: 4px 9px; border-radius: 5px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 3px rgba(16, 185, 129, 0.25);">
+                  <i class="fa-solid fa-bolt"></i> Lunas
+                </button>
+                <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Catat Cicilan" style="background: #f59e0b; color: #ffffff; font-weight: 700; border: none; padding: 4px 9px; border-radius: 5px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                  <i class="fa-solid fa-receipt"></i> Cicil
+                </button>
+              `}
+            </div>
+          </div>
         </td>
         <td>
           <div style="font-weight: 700; color: #1e293b; font-size: 13px;">${p.group_name || 'Mandiri'}</div>
@@ -14520,7 +14544,7 @@ function renderFinanceTable() {
         <td style="font-weight: 800; color: #059669;">Rp ${paid.toLocaleString('id-ID')}</td>
         <td style="font-weight: 800; color: #dc2626;">Rp ${remaining.toLocaleString('id-ID')}</td>
         <td>${statusBadge}</td>
-        <td style="text-align: center;">
+        <td class="sticky-action-col" style="text-align: center;">
           ${remaining <= 0 ? `
             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
               <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
