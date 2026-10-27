@@ -4360,12 +4360,17 @@ function handleKelompokPreview(e) {
     }).join('');
 
     grpSummaryContainer.innerHTML = `
-      <div class="summary-preview-notice">
-        <i class="fa-solid fa-circle-check"></i>
-        <div>
-          <strong>Pemeriksaan Jawaban Terakhir Rombongan</strong><br>
-          Seluruh data telah divalidasi. Mohon pastikan kebenaran informasi rombongan di bawah ini sebelum mengirimkan pendaftaran untuk penerbitan E-Tiket resmi.
+      <div class="summary-preview-notice" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <i class="fa-solid fa-circle-check" style="margin-top: 3px;"></i>
+          <div>
+            <strong>Pemeriksaan Jawaban Terakhir Rombongan</strong><br>
+            Seluruh data (${batchRecords.length} peserta) telah siap. Klik tombol <strong>Kirim Pendaftaran Rombongan</strong> untuk memproses penerbitan E-Tiket resmi.
+          </div>
         </div>
+        <button type="button" class="btn btn-primary btn-sm btn-glow" onclick="confirmAndSubmitRegistration()" style="background: #047857; border: 1.5px solid #059669; font-weight: 800; padding: 7px 15px; white-space: nowrap;">
+          <i class="fa-solid fa-paper-plane"></i> Kirim Sekarang
+        </button>
       </div>
 
       <!-- Block 1: Identitas Rombongan & Rute -->
@@ -4517,10 +4522,17 @@ async function confirmAndSubmitRegistration() {
     return;
   }
 
-  const confirmBtn = document.getElementById('btnConfirmSubmit');
-  const originalText = confirmBtn.innerHTML;
-  confirmBtn.disabled = true;
-  confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  const confirmBtns = [
+    document.getElementById('btnConfirmSubmit'),
+    document.getElementById('grpFinalSubmitBtn'),
+    document.getElementById('grpTopSubmitBtn')
+  ].filter(Boolean);
+
+  confirmBtns.forEach(btn => {
+    btn.disabled = true;
+    btn.dataset.origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  });
 
   try {
     sessionStorage.setItem(LAST_SUBMIT_KEY, Date.now().toString());
@@ -4566,8 +4578,10 @@ async function confirmAndSubmitRegistration() {
   } catch (err) {
     showToast('Terjadi kendala saat menyimpan pendaftaran: ' + err.message, 'error');
   } finally {
-    confirmBtn.disabled = false;
-    confirmBtn.innerHTML = originalText;
+    confirmBtns.forEach(btn => {
+      btn.disabled = false;
+      if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
+    });
     pendingRegistrationData = null;
   }
 }

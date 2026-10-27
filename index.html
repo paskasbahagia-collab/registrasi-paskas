@@ -1580,14 +1580,25 @@
             <!-- ============================================================== -->
             <div id="grpPreviewPane" class="form-step-pane" style="display: none;">
               <div class="form-grid-section">
-                <div class="section-title-wrap">
-                  <div class="section-title-icon">
-                    <i class="fa-solid fa-clipboard-check"></i>
+                <div class="section-title-wrap" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                  <div style="display: flex; gap: 12px; align-items: flex-start;">
+                    <div class="section-title-icon">
+                      <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                    <div>
+                      <span class="section-kicker">KONFIRMASI FINAL SEBELUM MENGIRIM</span>
+                      <h3 class="form-section-title">Pratinjau Ringkasan Jawaban Rombongan</h3>
+                      <p class="section-subtext">Mohon periksa kembali kelengkapan dan kebenaran data seluruh anggota rombongan sebelum melakukan pengiriman formulir registrasi resmi.</p>
+                    </div>
                   </div>
-                  <div>
-                    <span class="section-kicker">KONFIRMASI FINAL SEBELUM MENGIRIM</span>
-                    <h3 class="form-section-title">Pratinjau Ringkasan Jawaban Rombongan</h3>
-                    <p class="section-subtext">Mohon periksa kembali kelengkapan dan kebenaran data seluruh anggota rombongan sebelum melakukan pengiriman formulir registrasi resmi.</p>
+                  <!-- Tombol Aksi Atas: Agar langsung terlihat tanpa perlu scroll ke bawah -->
+                  <div class="preview-top-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="closeKelompokInPagePreview()" style="font-weight: 700; padding: 7px 14px; font-size: 13px;">
+                      <i class="fa-solid fa-pen-to-square"></i> Ubah / Koreksi Data
+                    </button>
+                    <button type="button" class="btn btn-primary btn-glow btn-sm btn-final-submit" id="grpTopSubmitBtn" onclick="confirmAndSubmitRegistration()" style="font-weight: 800; padding: 8px 18px; font-size: 13.5px;">
+                      <i class="fa-solid fa-paper-plane"></i> Kirim Pendaftaran Rombongan
+                    </button>
                   </div>
                 </div>
 
@@ -5620,6 +5631,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=129.0"></script>
-  <script src="js/app.js?v=145.0"></script>
+  <script src="js/app.js?v=146.0"></script>
 </body>
 </html>
