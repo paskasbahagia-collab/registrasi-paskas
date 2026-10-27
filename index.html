@@ -1193,15 +1193,15 @@
 
                     <div class="form-row col-2">
                       <!-- Subcard 1: Ukuran Baju Seragam -->
-                      <div class="luxury-form-subcard">
+                      <div class="luxury-form-subcard" id="indClothSubcard">
                         <div class="subcard-header">
                           <span class="subcard-pill"><i class="fa-solid fa-shirt"></i> Ukuran Seragam Kaos</span>
-                          <span class="subcard-badge-note">Unisex Regular</span>
+                          <span class="subcard-badge-note" id="indClothBadgeNote">Unisex Regular</span>
                         </div>
                         
                         <div class="form-group">
-                          <label class="form-label">Pilih Ukuran Kaos Anda <span class="required">*</span></label>
-                          <div class="size-radio-grid luxury-size-grid">
+                          <label class="form-label">Pilih Ukuran Kaos Anda <span class="required" id="indClothRequiredStar">*</span></label>
+                          <div class="size-radio-grid luxury-size-grid" id="indSizeRadioGrid">
                             <label class="size-chip"><input type="radio" name="ind_clothSize" value="S"><span>S</span></label>
                             <label class="size-chip"><input type="radio" name="ind_clothSize" value="M"><span>M</span></label>
                             <label class="size-chip"><input type="radio" name="ind_clothSize" value="L" checked><span>L</span></label>
@@ -1210,7 +1210,10 @@
                             <label class="size-chip"><input type="radio" name="ind_clothSize" value="3XL"><span>3XL</span></label>
                             <label class="size-chip"><input type="radio" name="ind_clothSize" value="4XL"><span>4XL</span></label>
                           </div>
-                          <small class="form-hint" style="margin-top: 10px;">
+                          <div id="indChildClothNotice" style="display: none; background: #fef3c7; border: 1.5px solid #fde68a; border-radius: 8px; padding: 10px 12px; margin-top: 10px; color: #92400e; font-size: 12.5px; font-weight: 600;">
+                            <i class="fa-solid fa-circle-info" style="color: #d97706;"></i> Peserta anak usia di bawah 12 tahun tidak mendapatkan seragam kaos (kolom ukuran otomatis dinonaktifkan).
+                          </div>
+                          <small class="form-hint" id="indClothHint" style="margin-top: 10px;">
                             <i class="fa-solid fa-circle-info text-forest"></i> Kaos resmi silaturahmi berbahan katun combed premium nyaman.
                           </small>
                         </div>

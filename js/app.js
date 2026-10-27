@@ -2735,6 +2735,44 @@ function handleIndividuAgeChange() {
     if (alertBox) alertBox.style.display = 'none';
     if (guardianRow) guardianRow.style.display = 'none';
   }
+
+  // Khusus Seragam Kaos: Peserta di bawah usia 12 tahun tidak mendapatkan seragam kaos
+  const isUnder12 = !isNaN(age) && age > 0 && age < 12;
+  const radioGrid = document.getElementById('indSizeRadioGrid');
+  const childClothNotice = document.getElementById('indChildClothNotice');
+  const badgeNote = document.getElementById('indClothBadgeNote');
+  const reqStar = document.getElementById('indClothRequiredStar');
+  const clothRadios = document.querySelectorAll('input[name="ind_clothSize"]');
+
+  if (isUnder12) {
+    clothRadios.forEach(r => {
+      r.disabled = true;
+      r.checked = false;
+    });
+    if (radioGrid) {
+      radioGrid.style.opacity = '0.4';
+      radioGrid.style.pointerEvents = 'none';
+    }
+    if (childClothNotice) childClothNotice.style.display = 'block';
+    if (badgeNote) badgeNote.textContent = 'Khusus Usia ≥ 12 Thn';
+    if (reqStar) reqStar.style.display = 'none';
+  } else {
+    clothRadios.forEach(r => {
+      r.disabled = false;
+    });
+    const checkedRadio = document.querySelector('input[name="ind_clothSize"]:checked');
+    if (!checkedRadio) {
+      const defaultL = document.querySelector('input[name="ind_clothSize"][value="L"]');
+      if (defaultL) defaultL.checked = true;
+    }
+    if (radioGrid) {
+      radioGrid.style.opacity = '1';
+      radioGrid.style.pointerEvents = 'auto';
+    }
+    if (childClothNotice) childClothNotice.style.display = 'none';
+    if (badgeNote) badgeNote.textContent = 'Unisex Regular';
+    if (reqStar) reqStar.style.display = 'inline';
+  }
 }
 
 function populateRegisteredGuardiansDatalist() {
@@ -2989,10 +3027,16 @@ function validateIndividuStep(step) {
   }
 
   if (step === 3) {
-    const clothEl = document.querySelector('input[name="ind_clothSize"]:checked');
-    if (!clothEl) {
-      showToast('Mohon pilih ukuran seragam kaos resmi Anda.', 'error');
-      return false;
+    const rawAge = document.getElementById('ind_age')?.value;
+    const parsedAge = parseInt(rawAge || '0', 10);
+    const isUnder12 = !isNaN(parsedAge) && parsedAge > 0 && parsedAge < 12;
+
+    if (!isUnder12) {
+      const clothEl = document.querySelector('input[name="ind_clothSize"]:checked');
+      if (!clothEl) {
+        showToast('Mohon pilih ukuran seragam kaos resmi Anda.', 'error');
+        return false;
+      }
     }
     if (currentMedicalStatus === 'has_notes') {
       const detail = document.getElementById('ind_medical_detail')?.value.trim();
@@ -3134,8 +3178,8 @@ function renderIndividuStepPreview() {
   const otherDeparture = document.getElementById('ind_transportDepartureOther')?.value.trim();
   const transportDeparture = (rawDeparture === 'Lainnya' && otherDeparture) ? `Lainnya (${otherDeparture})` : rawDeparture;
 
-  const clothEl = document.querySelector('input[name="ind_clothSize"]:checked');
-  const clothSize = clothEl ? clothEl.value : 'L';
+  const rawClothEl = document.querySelector('input[name="ind_clothSize"]:checked');
+  const clothSize = (age > 0 && age < 12) ? '-' : (rawClothEl ? rawClothEl.value : 'L');
   const medical = document.getElementById('ind_medical')?.value.trim() || 'Tidak Ada (Sehat)';
 
   container.innerHTML = `
@@ -3872,8 +3916,8 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
     const otherDeparture = document.getElementById('ind_transportDepartureOther')?.value.trim();
     const transportDeparture = (rawDeparture === 'Lainnya' && otherDeparture) ? `Lainnya: ${otherDeparture}` : rawDeparture;
 
-    const clothEl = document.querySelector('input[name="ind_clothSize"]:checked');
-    const clothSize = clothEl ? clothEl.value : 'L';
+    const rawClothEl = document.querySelector('input[name="ind_clothSize"]:checked');
+    const clothSize = (age > 0 && age < 12) ? '-' : (rawClothEl ? rawClothEl.value : 'L');
     const medical = document.getElementById('ind_medical')?.value.trim() || 'Tidak Ada (Sehat)';
 
     // CEK DATA DUPLIKAT SECARA RAMAH (DAPAT KONFIRMASI DAFTARKAN ORANG LAIN)
@@ -4234,7 +4278,8 @@ function handleKelompokPreview(e) {
     const genderSelect = card.querySelector('.grp-member-gender');
     const genderRadio = card.querySelector('input[type="radio"]:checked');
     const gender = genderSelect ? genderSelect.value : (genderRadio ? genderRadio.value : 'Laki-laki');
-    const cloth = card.querySelector('.grp-member-cloth')?.value || 'L';
+    const rawCloth = card.querySelector('.grp-member-cloth')?.value || 'L';
+    const cloth = (age > 0 && age < 12) ? '-' : (rawCloth === '-' ? 'L' : rawCloth);
     const med = card.querySelector('.grp-member-med')?.value.trim() || '';
     const phone = card.querySelector('.grp-member-phone')?.value.trim() || primaryLeaderPhone;
 
@@ -4856,6 +4901,35 @@ function syncAllGroupGuardians() {
       if (wrap) wrap.style.display = 'none';
       if (select) select.value = '';
     }
+
+    // Kunci ukuran baju jika peserta anak usia di bawah 12 tahun
+    const clothSelect = r.querySelector('.grp-member-cloth');
+    if (clothSelect) {
+      let noneOpt = clothSelect.querySelector('option[value="-"]');
+      if (!noneOpt) {
+        noneOpt = document.createElement('option');
+        noneOpt.value = '-';
+        noneOpt.textContent = '- (Anak <12 th)';
+        clothSelect.insertBefore(noneOpt, clothSelect.firstChild);
+      }
+      if (age > 0 && age < 12) {
+        clothSelect.value = '-';
+        clothSelect.disabled = true;
+        clothSelect.title = 'Peserta anak usia di bawah 12 tahun tidak mendapatkan seragam kaos';
+        clothSelect.style.background = '#334155';
+        clothSelect.style.color = '#94a3b8';
+        clothSelect.style.cursor = 'not-allowed';
+      } else {
+        clothSelect.disabled = false;
+        clothSelect.style.background = '';
+        clothSelect.style.color = '';
+        clothSelect.style.cursor = '';
+        clothSelect.title = 'Pilih ukuran seragam kaos';
+        if (clothSelect.value === '-') {
+          clothSelect.value = 'L';
+        }
+      }
+    }
   });
 }
 
@@ -4936,14 +5010,15 @@ function addGroupMemberCard(opts = {}) {
       </select>
     </td>
     <td>
-      <select class="form-control form-control-sm grp-member-cloth">
-        <option value="S" ${initialCloth === 'S' ? 'selected' : ''}>S</option>
-        <option value="M" ${initialCloth === 'M' ? 'selected' : ''}>M</option>
-        <option value="L" ${initialCloth === 'L' ? 'selected' : ''}>L</option>
-        <option value="XL" ${initialCloth === 'XL' ? 'selected' : ''}>XL</option>
-        <option value="XXL" ${initialCloth === 'XXL' ? 'selected' : ''}>XXL</option>
-        <option value="3XL" ${initialCloth === '3XL' ? 'selected' : ''}>3XL</option>
-        <option value="4XL" ${initialCloth === '4XL' ? 'selected' : ''}>4XL</option>
+      <select class="form-control form-control-sm grp-member-cloth" ${initialAge > 0 && initialAge < 12 ? 'disabled style="background: #334155; color: #94a3b8; cursor: not-allowed;" title="Peserta anak di bawah 12 tahun tidak mendapatkan seragam kaos"' : ''}>
+        <option value="-" ${initialCloth === '-' || (initialAge > 0 && initialAge < 12) ? 'selected' : ''}>- (Anak &lt;12 th)</option>
+        <option value="S" ${initialCloth === 'S' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>S</option>
+        <option value="M" ${initialCloth === 'M' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>M</option>
+        <option value="L" ${initialCloth === 'L' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>L</option>
+        <option value="XL" ${initialCloth === 'XL' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>XL</option>
+        <option value="XXL" ${initialCloth === 'XXL' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>XXL</option>
+        <option value="3XL" ${initialCloth === '3XL' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>3XL</option>
+        <option value="4XL" ${initialCloth === '4XL' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>4XL</option>
       </select>
     </td>
     <td>
