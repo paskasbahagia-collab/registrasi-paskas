@@ -6801,11 +6801,23 @@ function updateSummaryMetrics() {
     }
   }
 
-  // Top Cloth Size
+  // Top Cloth Size & Kebutuhan Kaos Riil (Mengecualikan Anak < 12 Tahun yang tidak dapat kaos)
+  const VALID_CLOTH_SIZES = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
   const clothCounts = {};
+  let totalClothPcs = 0;
+  let childWithoutCloth = 0;
+
   allRegistrations.forEach(r => {
-    if (r.cloth_size) clothCounts[r.cloth_size] = (clothCounts[r.cloth_size] || 0) + 1;
+    const sz = (r.cloth_size || '').trim();
+    const isChild = (r.age && r.age > 0 && r.age < 12) || sz === '-' || !sz;
+    if (isChild || sz === '-') {
+      childWithoutCloth++;
+    } else if (VALID_CLOTH_SIZES.includes(sz)) {
+      clothCounts[sz] = (clothCounts[sz] || 0) + 1;
+      totalClothPcs++;
+    }
   });
+
   let topCloth = '-';
   let maxClothCount = 0;
   for (const [s, count] of Object.entries(clothCounts)) {
@@ -6914,15 +6926,21 @@ function updateSummaryMetrics() {
   const elStatLogistikSub = document.getElementById('statLogistikSub');
   const elTopCloth = document.getElementById('infographicTopCloth');
   const elTotalCloth = document.getElementById('infographicTotalCloth');
+  const elTotalClothDesc = document.getElementById('infographicTotalClothDesc');
 
   if (elStatLogistikLead) {
-    elStatLogistikLead.innerHTML = `${totalOrang} <small class="pillar-unit">Pcs</small>`;
+    elStatLogistikLead.innerHTML = `${totalClothPcs} <small class="pillar-unit">Pcs</small>`;
   }
   if (elStatLogistikSub) {
     elStatLogistikSub.textContent = topCloth !== '-' ? `Terbanyak: ${topCloth}` : 'Total Kebutuhan Seragam';
   }
   if (elTopCloth) elTopCloth.textContent = topCloth;
-  if (elTotalCloth) elTotalCloth.textContent = `${totalOrang} Potong`;
+  if (elTotalCloth) elTotalCloth.textContent = `${totalClothPcs} Potong`;
+  if (elTotalClothDesc) {
+    elTotalClothDesc.textContent = childWithoutCloth > 0 
+      ? `${childWithoutCloth} Anak <12 Thn (Tanpa Kaos)` 
+      : '100% data ukuran lengkap';
+  }
 
   // DOM Elements - Pillar 04 (Armada Transportasi)
   const elStatArmadaLead = document.getElementById('statArmadaLead');
@@ -7501,11 +7519,19 @@ function renderCharts() {
   const clothAkhwatCounts = { 'S': 0, 'M': 0, 'L': 0, 'XL': 0, 'XXL': 0, '3XL': 0, '4XL': 0 };
   let totalIkhwan = 0;
   let totalAkhwat = 0;
+  let totalChildNoCloth = 0;
 
   allRegistrations.forEach(r => {
     const isFemale = (r.gender === 'Perempuan' || (r.gender && r.gender.toLowerCase().includes('perempuan')) || (r.gender && r.gender.toLowerCase().includes('akhwat')));
-    const sz = r.cloth_size;
-    if (clothCounts[sz] !== undefined) {
+    const sz = (r.cloth_size || '').trim();
+    const isChild = (r.age && r.age > 0 && r.age < 12) || sz === '-' || !sz;
+
+    if (isChild || sz === '-') {
+      totalChildNoCloth++;
+      return; // Anak di bawah 12 tahun tidak membutuhkan seragam kaos
+    }
+
+    if (SIZES.includes(sz)) {
       clothCounts[sz]++;
       if (isFemale) {
         clothAkhwatCounts[sz]++;
@@ -7514,11 +7540,10 @@ function renderCharts() {
         clothIkhwanCounts[sz]++;
         totalIkhwan++;
       }
-    } else {
-      if (isFemale) totalAkhwat++;
-      else totalIkhwan++;
     }
   });
+
+  const totalClothAll = totalIkhwan + totalAkhwat;
 
   let topCloth = '-';
   let topClothCount = 0;
@@ -7538,11 +7563,11 @@ function renderCharts() {
     if (c > topAkhwatCount) { topAkhwatCount = c; topAkhwatSize = s; }
   }
 
-  const topClothPct = totalOrang > 0 ? Math.round((topClothCount / totalOrang) * 100) : 0;
+  const topClothPct = totalClothAll > 0 ? Math.round((topClothCount / totalClothAll) * 100) : 0;
   const sumStd = (clothCounts['M'] || 0) + (clothCounts['L'] || 0) + (clothCounts['XL'] || 0);
-  const stdPct = totalOrang > 0 ? Math.round((sumStd / totalOrang) * 100) : 0;
+  const stdPct = totalClothAll > 0 ? Math.round((sumStd / totalClothAll) * 100) : 0;
   const sumBig = (clothCounts['XXL'] || 0) + (clothCounts['3XL'] || 0) + (clothCounts['4XL'] || 0);
-  const bigPct = totalOrang > 0 ? Math.round((sumBig / totalOrang) * 100) : 0;
+  const bigPct = totalClothAll > 0 ? Math.round((sumBig / totalClothAll) * 100) : 0;
 
   // Transport
   const transportCounts = {};
@@ -7677,8 +7702,8 @@ function renderCharts() {
 
   const listCloth = document.getElementById('clothInsightList');
   if (listCloth) {
-    const pctIkhwan = totalOrang > 0 ? Math.round((totalIkhwan / totalOrang) * 100) : 0;
-    const pctAkhwat = totalOrang > 0 ? (100 - pctIkhwan) : 0;
+    const pctIkhwan = totalClothAll > 0 ? Math.round((totalIkhwan / totalClothAll) * 100) : 0;
+    const pctAkhwat = totalClothAll > 0 ? (100 - pctIkhwan) : 0;
 
     const makeSizeListHtml = (countsObj, totalCount, topCount, isFemale) => {
       return Object.entries(countsObj).map(([size, count]) => {
@@ -7725,7 +7750,7 @@ function renderCharts() {
           <span style="font-weight: 800; color: #132a1c; font-size: 13.5px; display: flex; align-items: center; gap: 7px;">
             <i class="fa-solid fa-boxes-stacked text-green"></i> Total Kebutuhan Pakaian
           </span>
-          <span style="font-weight: 800; color: #15803d; font-size: 15px;">${totalOrang} Potong</span>
+          <span style="font-weight: 800; color: #15803d; font-size: 15px;">${totalClothAll} Potong</span>
         </div>
         <div style="display: flex; gap: 8px; font-size: 11.5px; font-weight: 700;">
           <span style="background: #ffffff; border: 1px solid #c2e5d3; color: #1e4620; padding: 4px 8px; border-radius: 6px; flex: 1; text-align: center; display: flex; align-items: center; justify-content: center; gap: 5px;">
@@ -7735,6 +7760,11 @@ function renderCharts() {
             <i class="fa-solid fa-person-dress" style="color: #0d9488;"></i> Akhwat: ${totalAkhwat} Pcs (${pctAkhwat}%)
           </span>
         </div>
+        ${totalChildNoCloth > 0 ? `
+          <div style="margin-top: 8px; font-size: 11.5px; font-weight: 600; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-child" style="color: #d97706;"></i> ${totalChildNoCloth} Peserta Anak (&lt; 12 thn) tidak mendapatkan seragam kaos
+          </div>
+        ` : ''}
       </div>
 
       <!-- KELOMPOK 1: IKHWAN -->
@@ -9756,20 +9786,20 @@ function openSettingsWithAuth(targetTab = 'settings') {
   const subEl = modal?.querySelector('.modal-auth-green-sub');
   if (targetTab === 'keuangan') {
     if (titleEl) titleEl.textContent = 'Akses Keuangan';
-    if (subEl) subEl.textContent = 'Silahkan isi password Keuangan (keuangan123) atau Admin (admin123):';
+    if (subEl) subEl.textContent = 'Silahkan masukkan password Keuangan atau Admin:';
     if (input) input.placeholder = 'Password keuangan / admin...';
   } else if (targetTab === 'presensi') {
     if (titleEl) titleEl.textContent = 'Akses Presensi';
-    if (subEl) subEl.textContent = 'Silahkan isi password Presensi (presensi123) atau Admin (admin123):';
+    if (subEl) subEl.textContent = 'Silahkan masukkan password Presensi atau Admin:';
     if (input) input.placeholder = 'Password presensi / admin...';
   } else if (targetTab === 'rekap') {
     if (titleEl) titleEl.textContent = 'Akses Rekap Data';
-    if (subEl) subEl.textContent = 'Silahkan isi password Rekap (rekap123) atau Admin (admin123):';
+    if (subEl) subEl.textContent = 'Silahkan masukkan password Rekap Data atau Admin:';
     if (input) input.placeholder = 'Password rekap / admin...';
   } else {
     if (titleEl) titleEl.textContent = 'Akses Masuk Panitia & Admin';
-    if (subEl) subEl.textContent = 'Silahkan isi password peran Anda (Admin, Keuangan, Presensi, atau Rekap):';
-    if (input) input.placeholder = 'Ketik password (cth: keuangan123)...';
+    if (subEl) subEl.textContent = 'Silahkan masukkan password peran Anda (Admin, Keuangan, Presensi, atau Rekap):';
+    if (input) input.placeholder = 'Ketik password Anda...';
   }
 
   if (card) card.classList.remove('shake-animation');
@@ -9897,11 +9927,7 @@ async function submitAdminPassword() {
       if (failedCount >= ADMIN_MAX_ATTEMPTS) {
         errEl.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Batas 5x percobaan terlampaui. Akses dikunci selama <strong>60 detik</strong>.`;
       } else {
-        let hint = 'admin123, keuangan123, presensi123, atau rekap123';
-        if (pendingAuthTargetTab === 'keuangan') hint = 'keuangan123 atau admin123';
-        else if (pendingAuthTargetTab === 'presensi') hint = 'presensi123 atau admin123';
-        else if (pendingAuthTargetTab === 'rekap') hint = 'rekap123 atau admin123';
-        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>${hint}</code>. Sisa kesempatan: <strong>${remaining} kali</strong>.`;
+        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Sisa kesempatan: <strong>${remaining} kali</strong>.`;
       }
       errEl.style.display = 'flex';
     }
