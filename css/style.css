@@ -306,6 +306,22 @@ body.role-presensi #btnNavSettingsIcon {
   display: none !important;
 }
 
+/* 4. PETUGAS REKAP: Tampilkan HANYA menu Rekap Data, yang lain tetap hidden */
+body.admin-logged-in.role-rekap .nav-link[data-page="rekap"],
+body.admin-logged-in.role-rekap .mobile-link[data-page="rekap"] {
+  display: flex !important;
+}
+
+body.role-rekap .nav-link[data-page="presensi"],
+body.role-rekap .mobile-link[data-page="presensi"],
+body.role-rekap .nav-link[data-page="keuangan"],
+body.role-rekap .mobile-link[data-page="keuangan"],
+body.role-rekap .nav-link[data-page="settings"],
+body.role-rekap .mobile-link[data-page="settings"],
+body.role-rekap #btnNavSettingsIcon {
+  display: none !important;
+}
+
 .nav-link i {
   font-size: 14px;
   color: var(--text-muted);

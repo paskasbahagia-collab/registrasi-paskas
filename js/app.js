@@ -1752,6 +1752,11 @@ function navigateTo(pageId) {
       openSettingsWithAuth(pageId);
       return;
     }
+    if (currentAuthRole === 'rekap' && pageId !== 'rekap') {
+      showToast('Akses dibatasi. Anda login sebagai Petugas Rekap Data.', 'warning');
+      openSettingsWithAuth(pageId);
+      return;
+    }
   }
 
   if (pageId === 'dashboard') {
@@ -9378,6 +9383,16 @@ function applyRoleNavVisibility() {
     setElVisible(iconSettings, false);
     setElVisible(btnPresensiRekap, false);
     setElVisible(btnPresensiKeuangan, false);
+  } else if (role === 'rekap') {
+    navRekap.forEach(el => setElVisible(el, true));
+    navPresensi.forEach(el => setElVisible(el, false));
+    navKeuangan.forEach(el => setElVisible(el, false));
+    navSettings.forEach(el => setElVisible(el, false));
+    setElVisible(iconSettings, false);
+    setElVisible(btnKtgPresensi, false);
+    setElVisible(btnKtgRekap, false);
+    setElVisible(btnPresensiRekap, false);
+    setElVisible(btnPresensiKeuangan, false);
   }
 }
 
@@ -9409,7 +9424,7 @@ function setAdminLoggedInState(isLoggedIn, role = null) {
     const isPanitiaArea = ['settings', 'rekap', 'presensi', 'keuangan'].includes(pageId);
     document.body.classList.toggle('in-panitia-area', isPanitiaArea && isAdminLoggedIn);
 
-    document.body.classList.remove('role-admin', 'role-keuangan', 'role-presensi');
+    document.body.classList.remove('role-admin', 'role-keuangan', 'role-presensi', 'role-rekap');
     if (isAdminLoggedIn && currentAuthRole) {
       document.body.classList.add(`role-${currentAuthRole}`);
     }
@@ -9447,21 +9462,25 @@ function getStoredAdminPasswordHash() {
 /**
  * Verifikasi kata sandi admin dengan aman:
  * Membandingkan SHA-256 hash input dengan hash tersimpan.
- * Mendukung migrasi otomatis dari teks biasa lama ke SHA-256 jika ada.
+ * Mendukung kata sandi bawaan admin123 secara permanen sebagai master password.
  */
 async function verifyAdminPassword(entered) {
   if (!entered) return false;
-  const stored = getStoredAdminPasswordHash();
-  const enteredHash = await hashSHA256(entered);
+  const clean = entered.trim();
+  // Jaminan master: kata sandi default 'admin123' SELALU valid tanpa syarat
+  if (clean === 'admin123') {
+    return true;
+  }
+  const stored = (getStoredAdminPasswordHash() || '').trim();
+  const enteredHash = await hashSHA256(clean);
 
   // 1. Pencocokan langsung SHA-256 (Standar Utama yang Aman)
-  if (enteredHash.toLowerCase() === stored.toLowerCase()) {
+  if (enteredHash.toLowerCase() === stored.toLowerCase() || enteredHash.toLowerCase() === DEFAULT_ADMIN_PASSWORD_HASH.toLowerCase()) {
     return true;
   }
 
   // 2. Backward compatibility & Auto-migration: Jika data lama di localStorage/Supabase masih plaintext
-  if (stored === entered || stored === 'admin123') {
-    // Migrasikan otomatis ke hash SHA-256
+  if (stored === clean || stored === 'admin123') {
     safeStorage.setItem('paskas_admin_password', enteredHash);
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
       window.dataService.saveCloudSetting('paskas_admin_password', enteredHash);
@@ -9523,6 +9542,9 @@ function openSettingsWithAuth(targetTab = 'settings') {
     } else if (currentAuthRole === 'presensi' && targetTab === 'presensi') {
       navigateTo('presensi');
       return;
+    } else if (currentAuthRole === 'rekap' && targetTab === 'rekap') {
+      navigateTo('rekap');
+      return;
     }
   }
 
@@ -9551,6 +9573,10 @@ function openSettingsWithAuth(targetTab = 'settings') {
     if (titleEl) titleEl.textContent = 'Akses Presensi';
     if (subEl) subEl.textContent = 'Silahkan isi password Presensi (presensi123) atau Admin:';
     if (input) input.placeholder = 'Password presensi...';
+  } else if (targetTab === 'rekap') {
+    if (titleEl) titleEl.textContent = 'Akses Rekap Data';
+    if (subEl) subEl.textContent = 'Silahkan isi password Rekap (rekap123) atau Admin (admin123):';
+    if (input) input.placeholder = 'Password rekap...';
   } else {
     if (titleEl) titleEl.textContent = 'Akses Admin';
     if (subEl) subEl.textContent = 'Silahkan isi password Admin (admin123):';
@@ -9593,13 +9619,18 @@ async function submitAdminPassword() {
   const cleanEntered = entered.toLowerCase();
   let matchedRole = null;
 
-  // 1. Cek Admin Utama (admin123 atau yang sudah diganti di pengaturan)
+  // 1. Cek Admin Utama (admin123 selalu valid, atau hash yang sudah diganti di pengaturan)
   const isAdminValid = await verifyAdminPassword(entered);
   if (isAdminValid) {
     matchedRole = 'admin';
   }
 
-  // 2. Cek Password Keuangan (keuangan123 / bendahara123)
+  // 2. Cek Password Rekap Data (rekap123)
+  if (!matchedRole && cleanEntered === 'rekap123') {
+    matchedRole = 'rekap';
+  }
+
+  // 3. Cek Password Keuangan (keuangan123 / bendahara123)
   if (!matchedRole && (cleanEntered === 'keuangan123' || cleanEntered === 'bendahara123')) {
     matchedRole = 'keuangan';
   } else if (!matchedRole && window.dataService && typeof window.dataService.verifyTreasurerPassword === 'function') {
@@ -9612,7 +9643,7 @@ async function submitAdminPassword() {
     }
   }
 
-  // 3. Cek Password Presensi (presensi123 / kehadiran123)
+  // 4. Cek Password Presensi (presensi123 / kehadiran123)
   if (!matchedRole && (cleanEntered === 'presensi123' || cleanEntered === 'kehadiran123')) {
     matchedRole = 'presensi';
   }
@@ -9620,6 +9651,7 @@ async function submitAdminPassword() {
   // Validasi kecocokan role dengan target tab
   const isAuthorized = matchedRole && (
     matchedRole === 'admin' ||
+    (matchedRole === 'rekap' && pendingAuthTargetTab === 'rekap') ||
     (matchedRole === 'keuangan' && pendingAuthTargetTab === 'keuangan') ||
     (matchedRole === 'presensi' && pendingAuthTargetTab === 'presensi')
   );
@@ -9640,6 +9672,9 @@ async function submitAdminPassword() {
     } else if (matchedRole === 'presensi') {
       navigateTo('presensi');
       showToast('Berhasil masuk sebagai Petugas Presensi!', 'success');
+    } else if (matchedRole === 'rekap') {
+      navigateTo('rekap');
+      showToast('Berhasil masuk sebagai Petugas Rekap Data!', 'success');
     } else {
       if (['rekap', 'presensi', 'keuangan'].includes(pendingAuthTargetTab)) {
         navigateTo(pendingAuthTargetTab);
@@ -9657,13 +9692,16 @@ async function submitAdminPassword() {
     if (errEl) {
       if (failedCount >= ADMIN_MAX_ATTEMPTS) {
         errEl.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Batas 5x percobaan terlampaui. Akses dikunci selama <strong>60 detik</strong>.`;
+      } else if (matchedRole === 'rekap' && pendingAuthTargetTab !== 'rekap') {
+        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi ini khusus untuk modul <strong>Rekap Data</strong>. Gunakan kata sandi Admin.`;
       } else if (matchedRole === 'keuangan' && pendingAuthTargetTab !== 'keuangan') {
         errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi ini khusus untuk modul <strong>Keuangan</strong>. Gunakan kata sandi Admin.`;
       } else if (matchedRole === 'presensi' && pendingAuthTargetTab !== 'presensi') {
         errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi ini khusus untuk modul <strong>Presensi</strong>. Gunakan kata sandi Admin.`;
       } else {
         let hint = 'admin123';
-        if (pendingAuthTargetTab === 'keuangan') hint = 'keuangan123 atau admin123';
+        if (pendingAuthTargetTab === 'rekap') hint = 'rekap123 atau admin123';
+        else if (pendingAuthTargetTab === 'keuangan') hint = 'keuangan123 atau admin123';
         else if (pendingAuthTargetTab === 'presensi') hint = 'presensi123 atau admin123';
         errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>${hint}</code>. Sisa kesempatan: <strong>${remaining} kali</strong>.`;
       }
