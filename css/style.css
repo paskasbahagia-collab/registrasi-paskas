@@ -262,18 +262,48 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Sembunyikan menu operasional panitia secara default untuk umum / saat di Beranda & Registrasi */
+/* Sembunyikan menu operasional panitia secara default untuk umum / saat belum login */
 .nav-link.admin-only,
 .mobile-link.admin-only {
   display: none !important;
 }
 
-/* Tampilkan HANYA saat admin/panitia login DAN sedang berada di area operasional panitia */
-body.in-panitia-area.admin-logged-in .nav-link.admin-only {
+/* 1. ADMIN UTAMA: Tampilkan SEMUA menu operasional panitia */
+body.admin-logged-in.role-admin .nav-link.admin-only,
+body.admin-logged-in.role-admin .mobile-link.admin-only {
   display: flex !important;
 }
 
-body.in-panitia-area.admin-logged-in .mobile-link.admin-only {
+/* 2. PETUGAS KEUANGAN: Tampilkan HANYA menu Keuangan, yang lain tetap hidden */
+body.admin-logged-in.role-keuangan .nav-link[data-page="keuangan"],
+body.admin-logged-in.role-keuangan .mobile-link[data-page="keuangan"] {
   display: flex !important;
+}
+
+body.role-keuangan .nav-link[data-page="rekap"],
+body.role-keuangan .mobile-link[data-page="rekap"],
+body.role-keuangan .nav-link[data-page="presensi"],
+body.role-keuangan .mobile-link[data-page="presensi"],
+body.role-keuangan .nav-link[data-page="settings"],
+body.role-keuangan .mobile-link[data-page="settings"],
+body.role-keuangan #btnNavSettingsIcon {
+  display: none !important;
+}
+
+/* 3. PETUGAS PRESENSI: Tampilkan HANYA menu Presensi, yang lain tetap hidden */
+body.admin-logged-in.role-presensi .nav-link[data-page="presensi"],
+body.admin-logged-in.role-presensi .mobile-link[data-page="presensi"] {
+  display: flex !important;
+}
+
+body.role-presensi .nav-link[data-page="rekap"],
+body.role-presensi .mobile-link[data-page="rekap"],
+body.role-presensi .nav-link[data-page="keuangan"],
+body.role-presensi .mobile-link[data-page="keuangan"],
+body.role-presensi .nav-link[data-page="settings"],
+body.role-presensi .mobile-link[data-page="settings"],
+body.role-presensi #btnNavSettingsIcon {
+  display: none !important;
 }
 
 .nav-link i {

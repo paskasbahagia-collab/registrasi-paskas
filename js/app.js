@@ -1812,6 +1812,12 @@ function navigateTo(pageId) {
   const isPanitiaArea = ['settings', 'rekap', 'presensi', 'keuangan'].includes(pageId);
   document.body.classList.toggle('in-panitia-area', isPanitiaArea && isAdminLoggedIn);
 
+  document.body.classList.remove('role-admin', 'role-keuangan', 'role-presensi');
+  if (isAdminLoggedIn && currentAuthRole) {
+    document.body.classList.add(`role-${currentAuthRole}`);
+  }
+  applyRoleNavVisibility();
+
   // If going to registration page, reset to show start button initially
   if (pageId === 'registration') {
     populateWilayahDropdowns();
@@ -9328,41 +9334,50 @@ function applyRoleNavVisibility() {
   const btnPresensiRekap = document.getElementById('btnPresensiRekapShortcut');
   const btnPresensiKeuangan = document.getElementById('btnPresensiKeuanganShortcut');
 
+  const setElVisible = (el, isVis) => {
+    if (!el) return;
+    if (isVis) {
+      el.style.setProperty('display', 'flex', 'important');
+    } else {
+      el.style.setProperty('display', 'none', 'important');
+    }
+  };
+
   if (!isAdminLoggedIn || !role) {
-    navRekap.forEach(el => el.style.display = '');
-    navPresensi.forEach(el => el.style.display = '');
-    navKeuangan.forEach(el => el.style.display = '');
-    navSettings.forEach(el => el.style.display = '');
-    if (iconSettings) iconSettings.style.display = '';
+    navRekap.forEach(el => setElVisible(el, false));
+    navPresensi.forEach(el => setElVisible(el, false));
+    navKeuangan.forEach(el => setElVisible(el, false));
+    navSettings.forEach(el => setElVisible(el, false));
+    setElVisible(iconSettings, true);
     return;
   }
 
   if (role === 'admin') {
-    navRekap.forEach(el => el.style.display = '');
-    navPresensi.forEach(el => el.style.display = '');
-    navKeuangan.forEach(el => el.style.display = '');
-    navSettings.forEach(el => el.style.display = '');
-    if (iconSettings) iconSettings.style.display = '';
-    if (btnKtgPresensi) btnKtgPresensi.style.display = '';
-    if (btnKtgRekap) btnKtgRekap.style.display = '';
-    if (btnPresensiRekap) btnPresensiRekap.style.display = '';
-    if (btnPresensiKeuangan) btnPresensiKeuangan.style.display = '';
+    navRekap.forEach(el => setElVisible(el, true));
+    navPresensi.forEach(el => setElVisible(el, true));
+    navKeuangan.forEach(el => setElVisible(el, true));
+    navSettings.forEach(el => setElVisible(el, true));
+    setElVisible(iconSettings, true);
+    setElVisible(btnKtgPresensi, true);
+    setElVisible(btnKtgRekap, true);
+    setElVisible(btnPresensiRekap, true);
+    setElVisible(btnPresensiKeuangan, true);
   } else if (role === 'keuangan') {
-    navRekap.forEach(el => el.style.display = 'none');
-    navPresensi.forEach(el => el.style.display = 'none');
-    navKeuangan.forEach(el => el.style.display = '');
-    navSettings.forEach(el => el.style.display = 'none');
-    if (iconSettings) iconSettings.style.display = 'none';
-    if (btnKtgPresensi) btnKtgPresensi.style.display = 'none';
-    if (btnKtgRekap) btnKtgRekap.style.display = 'none';
+    navRekap.forEach(el => setElVisible(el, false));
+    navPresensi.forEach(el => setElVisible(el, false));
+    navKeuangan.forEach(el => setElVisible(el, true));
+    navSettings.forEach(el => setElVisible(el, false));
+    setElVisible(iconSettings, false);
+    setElVisible(btnKtgPresensi, false);
+    setElVisible(btnKtgRekap, false);
   } else if (role === 'presensi') {
-    navRekap.forEach(el => el.style.display = 'none');
-    navPresensi.forEach(el => el.style.display = '');
-    navKeuangan.forEach(el => el.style.display = 'none');
-    navSettings.forEach(el => el.style.display = 'none');
-    if (iconSettings) iconSettings.style.display = 'none';
-    if (btnPresensiRekap) btnPresensiRekap.style.display = 'none';
-    if (btnPresensiKeuangan) btnPresensiKeuangan.style.display = 'none';
+    navRekap.forEach(el => setElVisible(el, false));
+    navPresensi.forEach(el => setElVisible(el, true));
+    navKeuangan.forEach(el => setElVisible(el, false));
+    navSettings.forEach(el => setElVisible(el, false));
+    setElVisible(iconSettings, false);
+    setElVisible(btnPresensiRekap, false);
+    setElVisible(btnPresensiKeuangan, false);
   }
 }
 
@@ -9387,15 +9402,20 @@ function setAdminLoggedInState(isLoggedIn, role = null) {
     }
   } catch (e) {}
 
-  applyRoleNavVisibility();
-
   if (document.body) {
     document.body.classList.toggle('admin-logged-in', isAdminLoggedIn);
     const activeView = document.querySelector('.page-view.active');
     const pageId = activeView ? activeView.id.replace('page-', '') : '';
     const isPanitiaArea = ['settings', 'rekap', 'presensi', 'keuangan'].includes(pageId);
     document.body.classList.toggle('in-panitia-area', isPanitiaArea && isAdminLoggedIn);
+
+    document.body.classList.remove('role-admin', 'role-keuangan', 'role-presensi');
+    if (isAdminLoggedIn && currentAuthRole) {
+      document.body.classList.add(`role-${currentAuthRole}`);
+    }
   }
+
+  applyRoleNavVisibility();
 }
 window.setAdminLoggedInState = setAdminLoggedInState;
 window.applyRoleNavVisibility = applyRoleNavVisibility;
