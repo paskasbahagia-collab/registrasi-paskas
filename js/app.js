@@ -14744,7 +14744,9 @@ function fillPayModalWithRemaining(autoSubmit = false) {
   }
 }
 
-async function quickPayFull(id) {
+let activeQuickPayId = null;
+
+function quickPayFull(id) {
   const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
   if (!p) return;
   const fee = calculateParticipantFee(p);
@@ -14755,8 +14757,82 @@ async function quickPayFull(id) {
     return;
   }
 
-  const ok = confirm(`⚡ KONFIRMASI LUNAS INSTAN\n\nNama Peserta: ${p.full_name} (${p.registration_code})\nTotal Tagihan : Rp ${fee.toLocaleString('id-ID')}\nSudah Dibayar : Rp ${paid.toLocaleString('id-ID')}\nSisa Piutang  : Rp ${remaining.toLocaleString('id-ID')}\n\nApakah Anda ingin langsung melunasi Rp ${remaining.toLocaleString('id-ID')}?`);
-  if (!ok) return;
+  activeQuickPayId = id;
+  const modal = document.getElementById('modalQuickPayConfirm');
+  if (!modal) return;
+
+  const ageText = p.age ? (p.age < 5 ? 'Balita' : (p.age <= 15 ? 'Anak' : 'Dewasa')) : 'Dewasa';
+  const groupText = p.group_name || 'Mandiri';
+  const wilText = p.wilayah ? ` • ${p.wilayah}` : '';
+
+  const nameEl = document.getElementById('quickPayParticipantName');
+  if (nameEl) nameEl.textContent = p.full_name || '-';
+
+  const subEl = document.getElementById('quickPayParticipantSub');
+  if (subEl) subEl.textContent = `Kategori: ${ageText} (${p.age || '16+'} thn) • ${groupText}${wilText}`;
+
+  const codeEl = document.getElementById('quickPayParticipantCode');
+  if (codeEl) codeEl.textContent = p.registration_code || 'PKB';
+
+  const feeEl = document.getElementById('quickPayTotalFee');
+  if (feeEl) feeEl.textContent = `Rp ${fee.toLocaleString('id-ID')}`;
+
+  const paidEl = document.getElementById('quickPayPaidAmount');
+  if (paidEl) paidEl.textContent = `Rp ${paid.toLocaleString('id-ID')}`;
+
+  const remEl = document.getElementById('quickPayRemainingAmount');
+  if (remEl) remEl.textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
+
+  // Reset method radio ke Tunai
+  const defaultRadio = document.querySelector('input[name="quickPayMethodRadio"][value="Tunai"]');
+  if (defaultRadio) {
+    defaultRadio.checked = true;
+    updateQuickPayMethodStyle(defaultRadio);
+  }
+
+  modal.classList.add('active');
+}
+
+function closeQuickPayModal() {
+  const modal = document.getElementById('modalQuickPayConfirm');
+  if (modal) modal.classList.remove('active');
+  activeQuickPayId = null;
+}
+
+function updateQuickPayMethodStyle(radio) {
+  const cards = document.querySelectorAll('.method-option-card');
+  cards.forEach(card => {
+    const input = card.querySelector('input');
+    if (input && input.checked) {
+      card.style.borderColor = '#10b981';
+      card.style.background = '#f0fdf4';
+      card.style.boxShadow = '0 0 0 2px rgba(16, 185, 129, 0.2)';
+    } else {
+      card.style.borderColor = '#e2e8f0';
+      card.style.background = '#ffffff';
+      card.style.boxShadow = 'none';
+    }
+  });
+}
+
+async function submitQuickPayFromModal() {
+  if (!activeQuickPayId) return;
+  const id = activeQuickPayId;
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  if (!p) return;
+
+  const fee = calculateParticipantFee(p);
+  const paid = Number(p.paid_amount || 0);
+  const remaining = Math.max(0, fee - paid);
+
+  const selectedRadio = document.querySelector('input[name="quickPayMethodRadio"]:checked');
+  const method = selectedRadio ? selectedRadio.value : 'Tunai';
+
+  const btn = document.getElementById('btnSubmitQuickPay');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  }
 
   showToast(`Memproses pelunasan ${p.full_name}...`, 'info');
   try {
@@ -14772,20 +14848,26 @@ async function quickPayFull(id) {
       id,
       terminNo,
       remaining,
-      'Tunai di Venue',
-      'Pelunasan Instan (Quick Pay)',
+      method,
+      `Pelunasan Instan (${method})`,
       'Bendahara'
     );
     const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
     if (idx !== -1) {
       allRegistrations[idx] = { ...allRegistrations[idx], ...updated };
     }
+    closeQuickPayModal();
     renderFinanceView();
     if (typeof renderPresensiView === 'function') renderPresensiView();
-    showToast(`Alhamdulillah! ${p.full_name} resmi LUNAS!`, 'success');
+    showToast(`Alhamdulillah! ${p.full_name} resmi LUNAS via ${method}!`, 'success');
   } catch (err) {
     console.error('Quick pay error:', err);
     showToast('Gagal memproses pelunasan: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Ya, Lunaskan Sekarang';
+    }
   }
 }
 
@@ -14976,6 +15058,9 @@ window.closeRecordPaymentModal = closeRecordPaymentModal;
 window.fillPayModalWithRemaining = fillPayModalWithRemaining;
 window.submitPaymentInstallment = submitPaymentInstallment;
 window.quickPayFull = quickPayFull;
+window.closeQuickPayModal = closeQuickPayModal;
+window.updateQuickPayMethodStyle = updateQuickPayMethodStyle;
+window.submitQuickPayFromModal = submitQuickPayFromModal;
 window.onPayAmountChanged = onPayAmountChanged;
 window.saveNewTreasurerPassword = saveNewTreasurerPassword;
 window.resetTreasurerPasswordDefault = resetTreasurerPasswordDefault;
