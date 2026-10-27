@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=115.0">
+  <link rel="stylesheet" href="css/style.css?v=116.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -2235,128 +2235,330 @@
 
           <!-- Header Banner -->
           <div class="editorial-header-card">
-            <div class="editorial-header-top-row">
-              <div class="editorial-title-box">
-                <div class="editorial-top-badge">
-                  <span class="editorial-pulse-dot" style="background: #eab308;"></span>
-                  <span class="editorial-badge-text">BENDAHARA &bull; MANAJEMEN KAS &amp; TERMIN CICILAN</span>
-                  <span class="editorial-badge-sep">|</span>
-                  <span class="editorial-badge-sub">TARIF 3 KATEGORI USIA OTOMATIS</span>
-                </div>
-                <h2 class="editorial-main-title">Keuangan, Termin &amp; Audit Pembayaran</h2>
-              </div>
-              <div class="editorial-header-actions">
-                <button type="button" class="btn btn-editorial-outline" onclick="lockTreasurerSession()" title="Kunci sesi bendahara">
-                  <i class="fa-solid fa-lock"></i> Kunci Sesi
-                </button>
-                <button type="button" class="btn btn-editorial-outline" onclick="forceReloadCloudData(this)" title="Sinkronkan data Supabase">
-                  <i class="fa-solid fa-rotate"></i> Sinkron Cloud
-                </button>
-                <button type="button" class="btn btn-editorial-outline" id="btnKtgPresensiShortcut" onclick="navigateTo('presensi')" title="Buka Meja Presensi">
-                  <i class="fa-solid fa-clipboard-check"></i> Presensi
-                </button>
-                <button type="button" class="btn btn-editorial-outline" id="btnKtgRekapShortcut" onclick="navigateTo('rekap')" title="Buka Rekap Data">
-                  <i class="fa-solid fa-chart-pie"></i> Rekap Data
-                </button>
-                <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('dashboard')" title="Kembali ke Beranda">
-                  <i class="fa-solid fa-arrow-left"></i> Beranda
-                </button>
-              </div>
+            <!-- Tombol Kembali ke Beranda di atas judul -->
+            <div style="margin-bottom: 12px;">
+              <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('dashboard')" title="Kembali ke Beranda" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; padding: 7px 16px; border-radius: 8px; font-size: 13px;">
+                <i class="fa-solid fa-arrow-left"></i> Kembali ke Beranda
+              </button>
             </div>
-            <p class="editorial-desc">
-              Pencatatan termin pembayaran bertahap (DP, Termin 2, Pelunasan). Tagihan dihitung otomatis berdasarkan 3 kategori usia peserta (&lt;5 tahun Rp 50rb, 5-15 tahun Rp 100rb, &gt;15 tahun tarif dewasa).
+
+            <div class="editorial-title-box">
+              <div class="editorial-top-badge">
+                <span class="editorial-pulse-dot" style="background: #eab308;"></span>
+                <span class="editorial-badge-text">BENDAHARA &bull; MANAJEMEN KAS &amp; TERMIN CICILAN</span>
+                <span class="editorial-badge-sep">|</span>
+                <span class="editorial-badge-sub">TARIF 3 KATEGORI USIA OTOMATIS</span>
+              </div>
+              <h2 class="editorial-main-title">Keuangan, Termin &amp; Audit Pembayaran</h2>
+            </div>
+            <p class="editorial-desc" style="margin: 10px 0 0 0; font-size: 13px; color: #475569;">
+              Rekap pembayaran peserta agenda PASKAS. Tagihan dihitung otomatis berdasarkan 3 kategori usia peserta.
             </p>
           </div>
 
-          <!-- 4 Financial Stat Cards -->
-          <div class="finance-metrics-deck" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
-            <div class="infographic-pillar-card" style="padding: 18px 20px;">
-              <div style="font-size: 11.5px; font-weight: 700; color: #64748b; letter-spacing: 0.5px;">ESTIMASI TOTAL TAGIHAN</div>
-              <div style="font-size: 26px; font-weight: 900; color: #1e293b; margin: 6px 0;" id="financeStatTotalTagihan">Rp 0</div>
-              <div style="font-size: 12px; color: #0284c7;"><i class="fa-solid fa-calculator"></i> Dihitung dari formula usia</div>
-            </div>
-
-            <div class="infographic-pillar-card" style="padding: 18px 20px; border-left: 4px solid #10b981;">
-              <div style="font-size: 11.5px; font-weight: 700; color: #059669; letter-spacing: 0.5px;">TOTAL KAS MASUK</div>
-              <div style="font-size: 26px; font-weight: 900; color: #065f46; margin: 6px 0;" id="financeStatTotalMasuk">Rp 0</div>
-              <div style="font-size: 12px; color: #059669;"><i class="fa-solid fa-circle-check"></i> <span id="financePctMasuk">0%</span> dari total tagihan</div>
-            </div>
-
-            <div class="infographic-pillar-card" style="padding: 18px 20px; border-left: 4px solid #ef4444;">
-              <div style="font-size: 11.5px; font-weight: 700; color: #dc2626; letter-spacing: 0.5px;">TOTAL SISA PIUTANG</div>
-              <div style="font-size: 26px; font-weight: 900; color: #991b1b; margin: 6px 0;" id="financeStatTotalPiutang">Rp 0</div>
-              <div style="font-size: 12px; color: #dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Belum lunas / menunggu termin</div>
-            </div>
-
-            <div class="infographic-pillar-card" style="padding: 18px 20px; border-left: 4px solid #eab308;">
-              <div style="font-size: 11.5px; font-weight: 700; color: #b45309; letter-spacing: 0.5px;">ANTREAN REFUND (BATAL)</div>
-              <div style="font-size: 26px; font-weight: 900; color: #78350f; margin: 6px 0;" id="financeStatTotalRefund">Rp 0</div>
-              <div style="font-size: 12px; color: #b45309;"><i class="fa-solid fa-rotate-left"></i> <span id="financeCountRefund">0</span> jemaah batal perlu refund</div>
-            </div>
-          </div>
-
-          <!-- Split Visual Keuangan: Bar/Ratio Chart Kas Masuk vs Piutang & Box Formula Tarif -->
-          <div style="display: grid; grid-template-columns: 360px 1fr; gap: 20px; margin-bottom: 24px; align-items: stretch;" class="finance-split-grid">
-            <div class="infographic-pillar-card" style="padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-              <div style="font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 12px;">STATUS KAS MASUK VS PIUTANG</div>
-              <div style="position: relative; width: 200px; height: 200px;">
-                <canvas id="chartFinanceRatio"></canvas>
-              </div>
-              <div style="display: flex; gap: 12px; font-size: 11px; margin-top: 14px; flex-wrap: wrap; justify-content: center;">
-                <span><span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;margin-right:4px;"></span>Kas Masuk</span>
-                <span><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:4px;"></span>Sisa Piutang</span>
-              </div>
-            </div>
-
-            <div class="infographic-pillar-card" style="padding: 22px 24px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <h4 style="margin: 0; font-size: 15px; font-weight: 800; color: #1e293b;"><i class="fa-solid fa-scale-balanced text-gold"></i> Formula Tarif 3 Kategori Usia</h4>
-                <span class="settings-chip-badge" style="background: #fef3c7; color: #92400e;"><i class="fa-solid fa-calculator"></i> Standar Resmi</span>
-              </div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                  <div style="font-size: 11px; font-weight: 700; color: #64748b;">BALITA (&lt; 5 TAHUN)</div>
-                  <div style="font-size: 18px; font-weight: 900; color: #0284c7; margin-top: 2px;">Rp 50.000</div>
-                  <div style="font-size: 11px; color: #94a3b8;">Konsumsi &amp; seragam anak</div>
+          <!-- 5 Financial Stat Cards (Matching Gambar 2) -->
+          <div class="finance-stat-cards-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px;">
+            <!-- Card 1: Total Peserta -->
+            <div class="fin-stat-card">
+              <div class="fin-stat-card-inner">
+                <div class="fin-stat-icon-wrap" style="background: #ede9fe; color: #7c3aed;">
+                  <i class="fa-solid fa-users"></i>
                 </div>
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                  <div style="font-size: 11px; font-weight: 700; color: #64748b;">ANAK-ANAK (5 - 15 TAHUN)</div>
-                  <div style="font-size: 18px; font-weight: 900; color: #0d9488; margin-top: 2px;">Rp 100.000</div>
-                  <div style="font-size: 11px; color: #94a3b8;">Akomodasi &amp; fasilitas anak</div>
-                </div>
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                  <div style="font-size: 11px; font-weight: 700; color: #64748b;">DEWASA (&gt; 15 TAHUN)</div>
-                  <div style="font-size: 18px; font-weight: 900; color: #16a34a; margin-top: 2px;" id="financeAdultFeeDisplay">Rp 350.000</div>
-                  <div style="font-size: 11px; color: #94a3b8;">Paket akomodasi penuh</div>
+                <div class="fin-stat-info">
+                  <div class="fin-stat-label">Total Peserta</div>
+                  <div class="fin-stat-value">
+                    <span id="finStatTotalPeserta">0</span>
+                    <span class="fin-stat-unit">orang</span>
+                  </div>
+                  <a href="#financeTableSection" class="fin-stat-link" onclick="document.getElementById('financeTableSection').scrollIntoView({behavior:'smooth'}); return false;">
+                    Lihat detail peserta &rarr;
+                  </a>
                 </div>
               </div>
-              <div style="background: #fdfbf7; border: 1px dashed #e2dac9; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #635a4d;">
-                <i class="fa-solid fa-users text-gold"></i> <strong>Rombongan / Kafilah:</strong> Total tagihan dihitung dari akumulasi usia seluruh anggota rombongan. Pembayaran termin dapat dicatat sekaligus untuk rombongan tersebut.
+            </div>
+
+            <!-- Card 2: Total Tagihan -->
+            <div class="fin-stat-card">
+              <div class="fin-stat-card-inner">
+                <div class="fin-stat-icon-wrap" style="background: #f3e8ff; color: #9333ea;">
+                  <i class="fa-solid fa-file-invoice"></i>
+                </div>
+                <div class="fin-stat-info">
+                  <div class="fin-stat-label">Total Tagihan</div>
+                  <div class="fin-stat-value" id="financeStatTotalTagihan">Rp 0</div>
+                  <div class="fin-stat-sub">Kewajiban pembayaran peserta</div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Search & Filter Bar -->
-          <div class="rekap-filter-section" style="margin-bottom: 18px;">
-            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-              <div class="input-with-icon" style="flex: 1; min-width: 280px; position: relative;">
-                <i class="fa-solid fa-magnifying-glass text-gold" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%);"></i>
-                <input type="text" id="financeSearchInput" class="form-control" style="padding-left: 40px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; color: #0f172a !important; font-weight: 600;" placeholder="Cari nomor tiket, nama peserta, rombongan, atau wilayah..." oninput="filterFinanceData()">
+            <!-- Card 3: Pembayaran Diterima -->
+            <div class="fin-stat-card">
+              <div class="fin-stat-card-inner">
+                <div class="fin-stat-icon-wrap" style="background: #d1fae5; color: #059669;">
+                  <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="fin-stat-info">
+                  <div class="fin-stat-label">Pembayaran Diterima</div>
+                  <div class="fin-stat-value" style="color: #065f46;" id="financeStatTotalMasuk">Rp 0</div>
+                  <div class="fin-stat-sub"><span id="financePctMasuk">0%</span> dari total tagihan</div>
+                </div>
               </div>
-              
-              <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="financeFilterTabs">
-                <button type="button" class="btn btn-sm btn-outline-filter active" onclick="setFinanceFilter('all', this)">Semua (<span id="finTabAll">0</span>)</button>
-                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setFinanceFilter('paid', this)">✅ Lunas (<span id="finTabPaid">0</span>)</button>
-                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setFinanceFilter('partial', this)">⚠️ Kurang / Cicil (<span id="finTabPartial">0</span>)</button>
-                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setFinanceFilter('pending', this)">⏳ Belum Bayar (<span id="finTabPending">0</span>)</button>
-                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setFinanceFilter('group', this)">👥 Rombongan (<span id="finTabGroup">0</span>)</button>
-                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setFinanceFilter('refund', this)">🔄 Refund (<span id="finTabRefund">0</span>)</button>
+            </div>
+
+            <!-- Card 4: Sisa Tagihan -->
+            <div class="fin-stat-card">
+              <div class="fin-stat-card-inner">
+                <div class="fin-stat-icon-wrap" style="background: #ffedd5; color: #ea580c;">
+                  <i class="fa-regular fa-clock"></i>
+                </div>
+                <div class="fin-stat-info">
+                  <div class="fin-stat-label">Sisa Tagihan</div>
+                  <div class="fin-stat-value" style="color: #dc2626;" id="financeStatTotalPiutang">Rp 0</div>
+                  <div class="fin-stat-sub"><span id="financePctPiutang">0%</span> belum lunas</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 5: Progres Pembayaran -->
+            <div class="fin-stat-card">
+              <div class="fin-stat-card-inner">
+                <div class="fin-stat-icon-wrap" style="background: #e0f2fe; color: #0284c7;">
+                  <i class="fa-solid fa-chart-simple"></i>
+                </div>
+                <div class="fin-stat-info" style="width: 100%;">
+                  <div class="fin-stat-label">Progres Pembayaran</div>
+                  <div class="fin-stat-value" id="financeProgresPct">0%</div>
+                  <div class="fin-progress-bar-container" style="margin-top: 8px; width: 100%; height: 7px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                    <div id="financeProgressBarFill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #8b5cf6, #6366f1); border-radius: 999px; transition: width 0.4s ease;"></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Finance Table Card -->
-          <div class="rekap-table-card">
+          <!-- Middle 3-Column Section: Status Pembayaran | Rekap Termin | Kategori Usia (Matching Gambar 2) -->
+          <div class="finance-middle-deck" style="display: grid; grid-template-columns: 1.15fr 1.55fr 1.05fr; gap: 16px; margin-bottom: 22px;">
+            
+            <!-- Col 1: Status Pembayaran Peserta (Donut Chart) -->
+            <div class="fin-panel-card">
+              <div class="fin-panel-header">
+                <i class="fa-solid fa-users text-purple"></i>
+                <h4 class="fin-panel-title">Status Pembayaran Peserta</h4>
+              </div>
+              <div class="fin-status-donut-layout" style="display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-top: 8px;">
+                <div style="position: relative; width: 160px; height: 160px; flex-shrink: 0; margin: 0 auto;">
+                  <canvas id="chartFinanceStatusDonut"></canvas>
+                  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; line-height: 1.15;">
+                    <div style="font-size: 11px; font-weight: 600; color: #64748b;">Total Peserta</div>
+                    <div style="font-size: 22px; font-weight: 900; color: #0f172a;" id="chartDonutTotalCount">0</div>
+                    <div style="font-size: 11px; color: #64748b;">orang</div>
+                  </div>
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 13px; padding-left: 6px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+                    <span style="display: flex; align-items: center; gap: 8px; color: #334155; font-weight: 600;">
+                      <span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                      Lunas
+                    </span>
+                    <span style="font-weight: 800; color: #0f172a;"><span id="statCountLunas">0</span> (<span id="statPctLunas">0%</span>)</span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+                    <span style="display: flex; align-items: center; gap: 8px; color: #334155; font-weight: 600;">
+                      <span style="width: 10px; height: 10px; border-radius: 50%; background: #8b5cf6; display: inline-block;"></span>
+                      Cicilan
+                    </span>
+                    <span style="font-weight: 800; color: #0f172a;"><span id="statCountCicilan">0</span> (<span id="statPctCicilan">0%</span>)</span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+                    <span style="display: flex; align-items: center; gap: 8px; color: #334155; font-weight: 600;">
+                      <span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+                      Belum Bayar
+                    </span>
+                    <span style="font-weight: 800; color: #0f172a;"><span id="statCountBelum">0</span> (<span id="statPctBelum">0%</span>)</span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+                    <span style="display: flex; align-items: center; gap: 8px; color: #334155; font-weight: 600;">
+                      <span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+                      Refund/Batal
+                    </span>
+                    <span style="font-weight: 800; color: #0f172a;"><span id="statCountRefund">0</span> (<span id="statPctRefund">0%</span>)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Col 2: Rekap Pembayaran per Termin (Table) -->
+            <div class="fin-panel-card">
+              <div class="fin-panel-header">
+                <i class="fa-solid fa-file-invoice text-purple"></i>
+                <h4 class="fin-panel-title">Rekap Pembayaran per Termin</h4>
+              </div>
+              <div class="table-responsive" style="margin-top: 4px;">
+                <table class="fin-termin-table" style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
+                  <thead>
+                    <tr style="border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 700; text-align: left;">
+                      <th style="padding: 8px 6px;">Termin</th>
+                      <th style="padding: 8px 6px;">Target Tagihan</th>
+                      <th style="padding: 8px 6px;">Sudah Diterima</th>
+                      <th style="padding: 8px 6px;">Belum Diterima</th>
+                      <th style="padding: 8px 6px; width: 105px;">Progres</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 6px; font-weight: 700; color: #1e293b;">Termin 1 (DP)</td>
+                      <td style="padding: 10px 6px; color: #334155;" id="termin1Target">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #059669; font-weight: 700;" id="termin1Sudah">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #64748b;" id="termin1Belum">Rp 0</td>
+                      <td style="padding: 10px 6px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <span style="font-weight: 800; color: #0f172a; min-width: 32px;" id="termin1Pct">0%</span>
+                          <div style="flex: 1; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                            <div id="termin1ProgressFill" style="height: 100%; width: 0%; background: #10b981; border-radius: 999px; transition: width 0.4s ease;"></div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 6px; font-weight: 700; color: #1e293b;">Termin 2</td>
+                      <td style="padding: 10px 6px; color: #334155;" id="termin2Target">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #059669; font-weight: 700;" id="termin2Sudah">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #64748b;" id="termin2Belum">Rp 0</td>
+                      <td style="padding: 10px 6px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <span style="font-weight: 800; color: #0f172a; min-width: 32px;" id="termin2Pct">0%</span>
+                          <div style="flex: 1; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                            <div id="termin2ProgressFill" style="height: 100%; width: 0%; background: #10b981; border-radius: 999px; transition: width 0.4s ease;"></div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 10px 6px; font-weight: 700; color: #1e293b;">Pelunasan</td>
+                      <td style="padding: 10px 6px; color: #334155;" id="termin3Target">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #059669; font-weight: 700;" id="termin3Sudah">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #64748b;" id="termin3Belum">Rp 0</td>
+                      <td style="padding: 10px 6px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <span style="font-weight: 800; color: #0f172a; min-width: 32px;" id="termin3Pct">0%</span>
+                          <div style="flex: 1; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                            <div id="termin3ProgressFill" style="height: 100%; width: 0%; background: #10b981; border-radius: 999px; transition: width 0.4s ease;"></div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr style="background: #f8fafc; font-weight: 900;">
+                      <td style="padding: 10px 6px; color: #0f172a;">Total</td>
+                      <td style="padding: 10px 6px; color: #0f172a;" id="terminTotalTarget">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #0f172a;" id="terminTotalSudah">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #0f172a;" id="terminTotalBelum">Rp 0</td>
+                      <td style="padding: 10px 6px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <span style="font-weight: 900; color: #0f172a; min-width: 32px;" id="terminTotalPct">0%</span>
+                          <div style="flex: 1; height: 6px; background: #cbd5e1; border-radius: 999px; overflow: hidden;">
+                            <div id="terminTotalProgressFill" style="height: 100%; width: 0%; background: #10b981; border-radius: 999px; transition: width 0.4s ease;"></div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Col 3: Kategori Usia Peserta -->
+            <div class="fin-panel-card">
+              <div class="fin-panel-header" style="justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <i class="fa-solid fa-address-card text-purple"></i>
+                  <h4 class="fin-panel-title">Kategori Usia Peserta</h4>
+                </div>
+                <span style="background: #ede9fe; color: #6b21a8; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;">Standar Resmi</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+                <!-- Balita -->
+                <div style="background: #f0f9ff; border: 1px solid #e0f2fe; border-radius: 12px; padding: 9px 12px; display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;">
+                    <i class="fa-solid fa-baby"></i>
+                  </div>
+                  <div>
+                    <div style="font-size: 12px; font-weight: 700; color: #0369a1;">Balita (&lt; 5 Tahun)</div>
+                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; line-height: 1.2;">Rp 50.000</div>
+                    <div style="font-size: 11px; color: #64748b;">Konsumsi &amp; seragam anak</div>
+                  </div>
+                </div>
+
+                <!-- Anak-anak -->
+                <div style="background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 12px; padding: 9px 12px; display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 36px; height: 36px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;">
+                    <i class="fa-solid fa-child"></i>
+                  </div>
+                  <div>
+                    <div style="font-size: 12px; font-weight: 700; color: #15803d;">Anak-anak (5 - 15 Tahun)</div>
+                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; line-height: 1.2;">Rp 100.000</div>
+                    <div style="font-size: 11px; color: #64748b;">Akomodasi &amp; fasilitas anak</div>
+                  </div>
+                </div>
+
+                <!-- Dewasa -->
+                <div style="background: #faf5ff; border: 1px solid #f3e8ff; border-radius: 12px; padding: 9px 12px; display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 36px; height: 36px; border-radius: 50%; background: #f3e8ff; color: #7e22ce; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;">
+                    <i class="fa-solid fa-user"></i>
+                  </div>
+                  <div>
+                    <div style="font-size: 12px; font-weight: 700; color: #7e22ce;">Dewasa (&gt; 15 Tahun)</div>
+                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; line-height: 1.2;" id="financeAdultFeeDisplay">Rp 350.000</div>
+                    <div style="font-size: 11px; color: #64748b;">Paket akomodasi penuh</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Section: Daftar Peserta & Status Pembayaran (Matching Gambar 2) -->
+          <div id="financeTableSection" class="rekap-table-card" style="padding: 20px; border-radius: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fa-regular fa-calendar-check" style="color: #7c3aed; font-size: 18px;"></i>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;">Daftar Peserta &amp; Status Pembayaran</h3>
+              </div>
+              <button type="button" class="btn btn-outline-export" onclick="exportFinanceToCSV()" title="Export data keuangan ke CSV" style="display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 700; color: #334155; cursor: pointer;">
+                <i class="fa-solid fa-download"></i> Export Data
+              </button>
+            </div>
+
+            <!-- Unified Search & Filter Toolbar (1 Toolbar Terpadu) -->
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+              <div style="position: relative; flex: 1; min-width: 240px;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px;"></i>
+                <input type="text" id="financeSearchInput" class="form-control" style="padding-left: 36px; padding-right: 12px; height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; color: #0f172a !important; font-weight: 600; width: 100%;" placeholder="Cari nama peserta, nomor tiket, rombongan, atau wilayah..." oninput="filterFinanceData()">
+              </div>
+              <select id="finFilterRombongan" class="fin-select-filter" onchange="filterFinanceData()" title="Filter Rombongan" style="height: 38px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #334155;">
+                <option value="all">Semua Rombongan</option>
+              </select>
+              <select id="finFilterKategori" class="fin-select-filter" onchange="filterFinanceData()" title="Filter Kategori Usia" style="height: 38px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #334155;">
+                <option value="all">Semua Kategori Usia</option>
+                <option value="balita">Balita (&lt; 5 Tahun)</option>
+                <option value="anak">Anak-anak (5 - 15 Tahun)</option>
+                <option value="dewasa">Dewasa (&gt; 15 Tahun)</option>
+              </select>
+              <select id="finFilterTermin" class="fin-select-filter" onchange="filterFinanceData()" title="Filter Termin" style="height: 38px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #334155;">
+                <option value="all">Semua Termin</option>
+                <option value="1">Termin 1 (DP)</option>
+                <option value="2">Termin 2</option>
+                <option value="3">Pelunasan</option>
+              </select>
+              <select id="finFilterStatus" class="fin-select-filter" onchange="filterFinanceData()" title="Filter Status" style="height: 38px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #334155;">
+                <option value="all">Semua Status</option>
+                <option value="paid">Lunas</option>
+                <option value="partial">Cicilan</option>
+                <option value="pending">Belum Bayar</option>
+                <option value="refund">Refund/Batal</option>
+              </select>
+            </div>
+
+            <!-- Finance Table -->
             <div class="table-responsive">
               <table class="data-table" id="financeTable">
                 <thead>
@@ -5777,6 +5979,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=130.0"></script>
-  <script src="js/app.js?v=149.0"></script>
+  <script src="js/app.js?v=150.0"></script>
 </body>
 </html>

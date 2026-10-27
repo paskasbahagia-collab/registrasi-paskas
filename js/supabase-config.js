@@ -1244,6 +1244,9 @@ class PaskasDataService {
     const stringVal = typeof value === 'string' ? value : JSON.stringify(value);
     try {
       safeStorage.setItem(key, stringVal);
+      const current = this.getSettings();
+      current[key] = stringVal;
+      safeStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(current));
     } catch (e) { }
 
     if (this.isSupabaseConnected && this.supabaseClient) {
@@ -1331,7 +1334,17 @@ class PaskasDataService {
     const item = current.find(p => String(p.id) === String(id));
     if (!item) throw new Error('Data peserta tidak ditemukan');
 
-    const totalFee = Number(item.total_fee || 0);
+    let totalFee = Number(item.total_fee || 0);
+    if (!totalFee || totalFee <= 0) {
+      const settings = this.getSettings();
+      const adultFee = Number(settings.adult_fee || 350000);
+      const childFee = Number(settings.child_fee || 100000);
+      const toddlerFee = Number(settings.toddler_fee || 50000);
+      const age = Number(item.age || 0);
+      if (age > 0 && age < 5) totalFee = toddlerFee;
+      else if (age >= 5 && age <= 15) totalFee = childFee;
+      else totalFee = adultFee;
+    }
     let installments = [];
     if (item.payment_installments) {
       installments = Array.isArray(item.payment_installments) ? item.payment_installments : (typeof item.payment_installments === 'string' ? JSON.parse(item.payment_installments) : []);
