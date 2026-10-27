@@ -14156,21 +14156,33 @@ function renderFinanceView() {
     adultFeeDisplay.textContent = `Rp ${Number(settings.adult_fee || 350000).toLocaleString('id-ID')}`;
   }
 
+  // Populate Rombongan Filter Options
+  populateFinanceRombonganDropdown(list);
+
   let totalTagihan = 0;
   let totalMasuk = 0;
   let totalPiutang = 0;
   let countRefund = 0;
   let totalRefund = 0;
 
+  let countLunas = 0;
+  let countCicilan = 0;
+  let countBelum = 0;
+
+  let sudahT1 = 0;
+  let sudahT2 = 0;
+  let sudahT3 = 0;
+
   list.forEach(p => {
     const fee = calculateParticipantFee(p);
     p.total_fee = fee;
 
     let paid = 0;
+    let instList = [];
     if (p.payment_installments) {
       try {
-        const inst = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments);
-        paid = inst.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments);
+        paid = instList.reduce((sum, item) => sum + Number(item.amount || 0), 0);
       } catch (e) {}
     } else if (p.paid_amount) {
       paid = Number(p.paid_amount);
@@ -14181,77 +14193,212 @@ function renderFinanceView() {
     p.remaining_amount = remaining;
 
     if (p.attendance_status === 'cancelled') {
+      countRefund++;
       if (paid > 0 && p.refund_status !== 'completed') {
-        countRefund++;
         totalRefund += paid;
       }
     } else {
       totalTagihan += fee;
       totalMasuk += paid;
       totalPiutang += remaining;
+
+      if (remaining <= 0 && paid > 0) {
+        countLunas++;
+      } else if (paid > 0 && remaining > 0) {
+        countCicilan++;
+      } else {
+        countBelum++;
+      }
+
+      // Distribute paid to termin 1, 2, 3
+      if (instList.length > 0) {
+        instList.forEach(t => {
+          const tNum = Number(t.termin || 1);
+          const amt = Number(t.amount || 0);
+          if (tNum === 1) sudahT1 += amt;
+          else if (tNum === 2) sudahT2 += amt;
+          else sudahT3 += amt;
+        });
+      } else if (paid > 0) {
+        const pT1 = Math.min(paid, Math.round(fee * 0.32));
+        const remAfterT1 = paid - pT1;
+        const pT2 = Math.min(remAfterT1, Math.round(fee * 0.33));
+        const pT3 = remAfterT1 - pT2;
+        sudahT1 += pT1;
+        sudahT2 += pT2;
+        sudahT3 += pT3;
+      }
     }
   });
 
-  const pctMasuk = totalTagihan > 0 ? Math.round((totalMasuk / totalTagihan) * 100) : 0;
+  const totalPeserta = list.length;
+  const pctMasuk = totalTagihan > 0 ? Math.min(100, Math.round((totalMasuk / totalTagihan) * 100)) : 0;
+  const pctPiutang = totalTagihan > 0 ? (100 - pctMasuk) : 0;
 
-  const elTagihan = document.getElementById('financeStatTotalTagihan');
-  const elMasuk = document.getElementById('financeStatTotalMasuk');
-  const elPiutang = document.getElementById('financeStatTotalPiutang');
-  const elRefund = document.getElementById('financeStatTotalRefund');
-  const elPctMasuk = document.getElementById('financePctMasuk');
-  const elCountRefund = document.getElementById('financeCountRefund');
+  // 1. Update Top 5 Stat Cards (Gambar 2)
+  setElemText('finStatTotalPeserta', totalPeserta.toLocaleString('id-ID'));
+  setElemText('financeStatTotalTagihan', `Rp ${totalTagihan.toLocaleString('id-ID')}`);
+  setElemText('financeStatTotalMasuk', `Rp ${totalMasuk.toLocaleString('id-ID')}`);
+  setElemText('financeStatTotalPiutang', `Rp ${totalPiutang.toLocaleString('id-ID')}`);
+  setElemText('financePctMasuk', `${pctMasuk}%`);
+  setElemText('financePctPiutang', `${pctPiutang}%`);
+  setElemText('financeProgresPct', `${pctMasuk}%`);
+  setElemWidth('financeProgressBarFill', `${pctMasuk}%`);
 
-  if (elTagihan) elTagihan.textContent = `Rp ${totalTagihan.toLocaleString('id-ID')}`;
-  if (elMasuk) elMasuk.textContent = `Rp ${totalMasuk.toLocaleString('id-ID')}`;
-  if (elPiutang) elPiutang.textContent = `Rp ${totalPiutang.toLocaleString('id-ID')}`;
-  if (elRefund) elRefund.textContent = `Rp ${totalRefund.toLocaleString('id-ID')}`;
-  if (elPctMasuk) elPctMasuk.textContent = `${pctMasuk}%`;
-  if (elCountRefund) elCountRefund.textContent = countRefund;
+  // 2. Update Status Pembayaran Donut & Legend
+  const pctLunas = totalPeserta > 0 ? Math.round((countLunas / totalPeserta) * 100) : 0;
+  const pctCicilan = totalPeserta > 0 ? Math.round((countCicilan / totalPeserta) * 100) : 0;
+  const pctBelum = totalPeserta > 0 ? Math.round((countBelum / totalPeserta) * 100) : 0;
+  const pctRefund = totalPeserta > 0 ? Math.round((countRefund / totalPeserta) * 100) : 0;
 
-  // Render Visual Chart Kas Masuk vs Piutang
-  renderFinanceRatioChart(totalMasuk, totalPiutang);
+  setElemText('chartDonutTotalCount', totalPeserta);
+  setElemText('statCountLunas', countLunas);
+  setElemText('statPctLunas', `${pctLunas}%`);
+  setElemText('statCountCicilan', countCicilan);
+  setElemText('statPctCicilan', `${pctCicilan}%`);
+  setElemText('statCountBelum', countBelum);
+  setElemText('statPctBelum', `${pctBelum}%`);
+  setElemText('statCountRefund', countRefund);
+  setElemText('statPctRefund', `${pctRefund}%`);
 
-  // Render Table
+  renderFinanceStatusDonutChart(countLunas, countCicilan, countBelum, countRefund);
+
+  // 3. Update Rekap Pembayaran per Termin (Gambar 2)
+  const targetT1 = Math.round((totalTagihan * 0.32) / 50000) * 50000;
+  const targetT2 = Math.round((totalTagihan * 0.33) / 50000) * 50000;
+  const targetT3 = Math.max(0, totalTagihan - targetT1 - targetT2);
+
+  const belumT1 = Math.max(0, targetT1 - sudahT1);
+  const belumT2 = Math.max(0, targetT2 - sudahT2);
+  const belumT3 = Math.max(0, targetT3 - sudahT3);
+
+  const pctT1 = targetT1 > 0 ? Math.min(100, Math.round((sudahT1 / targetT1) * 100)) : 0;
+  const pctT2 = targetT2 > 0 ? Math.min(100, Math.round((sudahT2 / targetT2) * 100)) : 0;
+  const pctT3 = targetT3 > 0 ? Math.min(100, Math.round((sudahT3 / targetT3) * 100)) : 0;
+
+  // Termin 1
+  setElemText('termin1Target', `Rp ${targetT1.toLocaleString('id-ID')}`);
+  setElemText('termin1Sudah', `Rp ${sudahT1.toLocaleString('id-ID')}`);
+  setElemText('termin1Belum', `Rp ${belumT1.toLocaleString('id-ID')}`);
+  setElemText('termin1Pct', `${pctT1}%`);
+  setElemWidth('termin1ProgressFill', `${pctT1}%`);
+
+  // Termin 2
+  setElemText('termin2Target', `Rp ${targetT2.toLocaleString('id-ID')}`);
+  setElemText('termin2Sudah', `Rp ${sudahT2.toLocaleString('id-ID')}`);
+  setElemText('termin2Belum', `Rp ${belumT2.toLocaleString('id-ID')}`);
+  setElemText('termin2Pct', `${pctT2}%`);
+  setElemWidth('termin2ProgressFill', `${pctT2}%`);
+
+  // Pelunasan
+  setElemText('termin3Target', `Rp ${targetT3.toLocaleString('id-ID')}`);
+  setElemText('termin3Sudah', `Rp ${sudahT3.toLocaleString('id-ID')}`);
+  setElemText('termin3Belum', `Rp ${belumT3.toLocaleString('id-ID')}`);
+  setElemText('termin3Pct', `${pctT3}%`);
+  setElemWidth('termin3ProgressFill', `${pctT3}%`);
+
+  // Total Row
+  setElemText('terminTotalTarget', `Rp ${totalTagihan.toLocaleString('id-ID')}`);
+  setElemText('terminTotalSudah', `Rp ${totalMasuk.toLocaleString('id-ID')}`);
+  setElemText('terminTotalBelum', `Rp ${totalPiutang.toLocaleString('id-ID')}`);
+  setElemText('terminTotalPct', `${pctMasuk}%`);
+  setElemWidth('terminTotalProgressFill', `${pctMasuk}%`);
+
+  // 4. Render Table
   renderFinanceTable();
 }
 
-function renderFinanceRatioChart(totalMasuk, totalPiutang) {
-  const canvas = document.getElementById('chartFinanceRatio');
+function setElemText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+function setElemWidth(id, width) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = width;
+}
+
+function populateFinanceRombonganDropdown(list) {
+  const sel = document.getElementById('finFilterRombongan');
+  if (!sel) return;
+  const currentVal = sel.value || 'all';
+
+  const groups = new Set();
+  list.forEach(p => {
+    if (p.group_name && p.group_name.trim()) {
+      groups.add(p.group_name.trim());
+    }
+  });
+
+  const sortedGroups = Array.from(groups).sort();
+  sel.innerHTML = '<option value="all">Semua Rombongan</option>' + 
+    sortedGroups.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+  
+  if (sortedGroups.includes(currentVal)) {
+    sel.value = currentVal;
+  }
+}
+
+function renderFinanceStatusDonutChart(countLunas, countCicilan, countBelum, countRefund) {
+  const canvas = document.getElementById('chartFinanceStatusDonut') || document.getElementById('chartFinanceRatio');
   if (!canvas || typeof Chart === 'undefined') return;
 
   if (financeRatioChartInstance) {
     try { financeRatioChartInstance.destroy(); } catch (e) {}
   }
 
+  const total = countLunas + countCicilan + countBelum + countRefund;
+  const data = total > 0 ? [countLunas, countCicilan, countBelum, countRefund] : [0, 0, 1, 0];
+  const bgColors = total > 0 ? ['#10b981', '#8b5cf6', '#f59e0b', '#ef4444'] : ['#e2e8f0'];
+
   const ctx = canvas.getContext('2d');
   financeRatioChartInstance = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Kas Masuk', 'Sisa Piutang'],
+      labels: ['Lunas', 'Cicilan', 'Belum Bayar', 'Refund/Batal'],
       datasets: [{
-        data: [totalMasuk, totalPiutang],
-        backgroundColor: ['#10b981', '#ef4444'],
+        data: data,
+        backgroundColor: bgColors,
         borderWidth: 2,
         borderColor: '#ffffff',
-        hoverOffset: 4
+        hoverOffset: 3
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false }
+        legend: { display: false },
+        tooltip: {
+          enabled: total > 0,
+          callbacks: {
+            label: function(context) {
+              const val = context.raw || 0;
+              const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+              return ` ${context.label}: ${val} orang (${pct}%)`;
+            }
+          }
+        }
       },
       cutout: '72%'
     }
   });
 }
 
+function renderFinanceRatioChart(totalMasuk, totalPiutang) {
+  // Backward compatibility fallback
+  renderFinanceStatusDonutChart(1, 0, 1, 0);
+}
+
 function setFinanceFilter(filterKey, btnEl) {
   currentFinanceFilter = filterKey;
-  if (btnEl) {
-    document.querySelectorAll('#financeFilterTabs .btn-outline-filter').forEach(b => b.classList.remove('active'));
-    btnEl.classList.add('active');
+  const statusSel = document.getElementById('finFilterStatus');
+  if (statusSel) {
+    if (filterKey === 'all') statusSel.value = 'all';
+    else if (filterKey === 'paid') statusSel.value = 'paid';
+    else if (filterKey === 'partial') statusSel.value = 'partial';
+    else if (filterKey === 'pending') statusSel.value = 'pending';
+    else if (filterKey === 'refund') statusSel.value = 'refund';
   }
   renderFinanceTable();
 }
@@ -14265,25 +14412,55 @@ function renderFinanceTable() {
   if (!tbody) return;
 
   const query = (document.getElementById('financeSearchInput')?.value || '').toLowerCase().trim();
+  const rombonganVal = document.getElementById('finFilterRombongan')?.value || 'all';
+  const kategoriVal = document.getElementById('finFilterKategori')?.value || 'all';
+  const terminVal = document.getElementById('finFilterTermin')?.value || 'all';
+  const statusVal = document.getElementById('finFilterStatus')?.value || currentFinanceFilter || 'all';
+
   const list = allRegistrations || [];
 
   const filtered = list.filter(p => {
     const fee = calculateParticipantFee(p);
     const paid = Number(p.paid_amount || 0);
     const remaining = Math.max(0, fee - paid);
+    const age = Number(p.age || 0);
 
-    if (currentFinanceFilter === 'paid') {
-      if (remaining > 0 || paid === 0) return false;
-    } else if (currentFinanceFilter === 'partial') {
-      if (paid === 0 || remaining === 0) return false;
-    } else if (currentFinanceFilter === 'pending') {
-      if (paid > 0) return false;
-    } else if (currentFinanceFilter === 'group') {
-      if (!p.group_name || p.group_name === 'Mandiri') return false;
-    } else if (currentFinanceFilter === 'refund') {
-      if (p.attendance_status !== 'cancelled' || paid === 0) return false;
+    // Rombongan Filter
+    if (rombonganVal !== 'all' && (p.group_name || 'Mandiri') !== rombonganVal) {
+      return false;
     }
 
+    // Kategori Usia Filter
+    if (kategoriVal === 'balita') {
+      if (!(age > 0 && age < 5)) return false;
+    } else if (kategoriVal === 'anak') {
+      if (!(age >= 5 && age <= 15)) return false;
+    } else if (kategoriVal === 'dewasa') {
+      if (age > 0 && age <= 15) return false;
+    }
+
+    // Termin Filter
+    if (terminVal !== 'all') {
+      let inst = [];
+      try {
+        inst = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+      } catch (e) {}
+      const hasTermin = inst.some(t => String(t.termin) === String(terminVal));
+      if (!hasTermin && paid === 0) return false;
+    }
+
+    // Status Filter
+    if (statusVal === 'paid') {
+      if (remaining > 0 || paid === 0 || p.attendance_status === 'cancelled') return false;
+    } else if (statusVal === 'partial') {
+      if (paid === 0 || remaining === 0 || p.attendance_status === 'cancelled') return false;
+    } else if (statusVal === 'pending') {
+      if (paid > 0 || p.attendance_status === 'cancelled') return false;
+    } else if (statusVal === 'refund') {
+      if (p.attendance_status !== 'cancelled') return false;
+    }
+
+    // Search Query Filter
     if (query) {
       const matchName = (p.full_name || '').toLowerCase().includes(query);
       const matchCode = (p.registration_code || '').toLowerCase().includes(query);
@@ -14300,7 +14477,7 @@ function renderFinanceTable() {
       <tr>
         <td colspan="9" style="text-align: center; padding: 36px; color: #94a3b8;">
           <i class="fa-solid fa-receipt" style="font-size: 26px; margin-bottom: 8px; display: block; color: #cbd5e1;"></i>
-          Tidak ada data keuangan yang cocok dengan filter.
+          Tidak ada data keuangan yang cocok dengan filter atau kata kunci.
         </td>
       </tr>
     `;
@@ -14344,13 +14521,117 @@ function renderFinanceTable() {
         <td style="font-weight: 800; color: #dc2626;">Rp ${remaining.toLocaleString('id-ID')}</td>
         <td>${statusBadge}</td>
         <td style="text-align: center;">
-          <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})">
-            <i class="fa-solid fa-receipt"></i> Catat Bayar
-          </button>
+          ${remaining <= 0 ? `
+            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+              <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                <i class="fa-solid fa-circle-check"></i> Lunas
+              </span>
+              <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Lihat riwayat pembayaran" style="padding: 4px 8px; font-size: 11px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; cursor: pointer;">
+                <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
+              </button>
+            </div>
+          ` : `
+            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: nowrap;">
+              <button type="button" class="btn-quick-lunas" onclick="quickPayFull(${p.id})" title="Bayar Lunas Seketika Rp ${remaining.toLocaleString('id-ID')}" style="background: #10b981; color: #ffffff; font-weight: 800; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2);">
+                <i class="fa-solid fa-bolt"></i> Lunas
+              </button>
+              <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Catat Cicilan / Custom" style="background: #f59e0b; color: #ffffff; font-weight: 700; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                <i class="fa-solid fa-receipt"></i> Cicil
+              </button>
+            </div>
+          `}
         </td>
       </tr>
     `;
   }).join('');
+}
+
+function exportFinanceToCSV() {
+  const list = allRegistrations || [];
+  const rombonganVal = document.getElementById('finFilterRombongan')?.value || 'all';
+  const kategoriVal = document.getElementById('finFilterKategori')?.value || 'all';
+  const terminVal = document.getElementById('finFilterTermin')?.value || 'all';
+  const statusVal = document.getElementById('finFilterStatus')?.value || 'all';
+  const query = (document.getElementById('financeSearchInput')?.value || '').toLowerCase().trim();
+
+  const filtered = list.filter(p => {
+    const fee = calculateParticipantFee(p);
+    const paid = Number(p.paid_amount || 0);
+    const remaining = Math.max(0, fee - paid);
+    const age = Number(p.age || 0);
+
+    if (rombonganVal !== 'all' && (p.group_name || 'Mandiri') !== rombonganVal) return false;
+
+    if (kategoriVal === 'balita' && !(age > 0 && age < 5)) return false;
+    if (kategoriVal === 'anak' && !(age >= 5 && age <= 15)) return false;
+    if (kategoriVal === 'dewasa' && (age > 0 && age <= 15)) return false;
+
+    if (terminVal !== 'all') {
+      let inst = [];
+      try {
+        inst = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+      } catch (e) {}
+      const hasTermin = inst.some(t => String(t.termin) === String(terminVal));
+      if (!hasTermin && paid === 0) return false;
+    }
+
+    if (statusVal === 'paid' && (remaining > 0 || paid === 0 || p.attendance_status === 'cancelled')) return false;
+    if (statusVal === 'partial' && (paid === 0 || remaining === 0 || p.attendance_status === 'cancelled')) return false;
+    if (statusVal === 'pending' && (paid > 0 || p.attendance_status === 'cancelled')) return false;
+    if (statusVal === 'refund' && p.attendance_status !== 'cancelled') return false;
+
+    if (query) {
+      const matchName = (p.full_name || '').toLowerCase().includes(query);
+      const matchCode = (p.registration_code || '').toLowerCase().includes(query);
+      const matchGroup = (p.group_name || '').toLowerCase().includes(query);
+      const matchWil = (p.wilayah || '').toLowerCase().includes(query);
+      if (!matchName && !matchCode && !matchGroup && !matchWil) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    showToast('Tidak ada data yang dapat diekspor.', 'warning');
+    return;
+  }
+
+  const headers = ['No', 'No Tiket', 'Nama Peserta', 'Kategori Usia', 'Usia', 'Rombongan', 'Wilayah', 'Total Tagihan', 'Total Terbayar', 'Sisa Piutang', 'Status Pembayaran'];
+  const rows = filtered.map((p, idx) => {
+    const fee = calculateParticipantFee(p);
+    const paid = Number(p.paid_amount || 0);
+    const remaining = Math.max(0, fee - paid);
+    const age = Number(p.age || 0);
+    const kategori = age < 5 ? 'Balita' : (age <= 15 ? 'Anak-anak' : 'Dewasa');
+
+    let status = 'Belum Bayar';
+    if (p.attendance_status === 'cancelled') status = 'Batal (Refund)';
+    else if (remaining <= 0 && paid > 0) status = 'Lunas';
+    else if (paid > 0 && remaining > 0) status = 'Cicilan';
+
+    return [
+      idx + 1,
+      `"${(p.registration_code || '').replace(/"/g, '""')}"`,
+      `"${(p.full_name || '').replace(/"/g, '""')}"`,
+      `"${kategori}"`,
+      p.age || '-',
+      `"${(p.group_name || 'Mandiri').replace(/"/g, '""')}"`,
+      `"${(p.wilayah || '-').replace(/"/g, '""')}"`,
+      fee,
+      paid,
+      remaining,
+      `"${status}"`
+    ].join(',');
+  });
+
+  const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', `Rekap_Keuangan_Paskas_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast(`File CSV rekap keuangan (${filtered.length} peserta) berhasil diunduh!`, 'success');
 }
 
 function openRecordPaymentModal(id) {
@@ -14371,13 +14652,20 @@ function openRecordPaymentModal(id) {
   document.getElementById('payModalPaidAmount').textContent = `Rp ${paid.toLocaleString('id-ID')}`;
   document.getElementById('payModalRemainingAmount').textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
 
+  const qLunas = document.getElementById('payModalQuickLunasText');
+  if (qLunas) qLunas.textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
+
   const amountInput = document.getElementById('payModalAmountInput');
-  if (amountInput) amountInput.value = remaining > 0 ? remaining : '';
+  if (amountInput) amountInput.value = '';
 
   const notesInput = document.getElementById('payModalNotesInput');
   if (notesInput) notesInput.value = '';
 
+  onPayAmountChanged();
   modal.classList.add('active');
+  if (amountInput) {
+    setTimeout(() => amountInput.focus(), 80);
+  }
 }
 
 function closeRecordPaymentModal() {
@@ -14385,7 +14673,64 @@ function closeRecordPaymentModal() {
   if (modal) modal.classList.remove('active');
 }
 
-function fillPayModalWithRemaining() {
+function onPayAmountChanged() {
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
+  if (!p) return;
+  const fee = calculateParticipantFee(p);
+  const paid = Number(p.paid_amount || 0);
+  const remaining = Math.max(0, fee - paid);
+  const amt = Number(document.getElementById('payModalAmountInput')?.value || 0);
+
+  let instList = [];
+  if (p.payment_installments) {
+    try {
+      instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+    } catch (e) {}
+  }
+
+  const terminSelect = document.getElementById('payModalTerminSelect');
+  const badge = document.getElementById('payModalAutoTerminBadge');
+  const hint = document.getElementById('payModalHint');
+
+  if (amt >= remaining && remaining > 0) {
+    if (terminSelect) terminSelect.value = '3';
+    if (badge) {
+      badge.textContent = 'Otomatis: ⚡ Pelunasan Penuh (Lunas)';
+      badge.style.background = '#dcfce7';
+      badge.style.color = '#15803d';
+    }
+    if (hint) hint.innerHTML = 'Nominal mencukupi sisa tagihan, status peserta otomatis menjadi <strong style="color: #16a34a;">LUNAS</strong>.';
+  } else if (instList.length === 0) {
+    if (terminSelect) terminSelect.value = '1';
+    if (badge) {
+      badge.textContent = 'Otomatis: Termin 1 (DP)';
+      badge.style.background = '#e0f2fe';
+      badge.style.color = '#0369a1';
+    }
+    const sisa = Math.max(0, remaining - amt);
+    if (hint) hint.innerHTML = `Cicilan awal dicatat ke <strong>Termin 1 (DP)</strong>. Sisa tagihan setelah ini: <strong>Rp ${sisa.toLocaleString('id-ID')}</strong>.`;
+  } else if (instList.length === 1) {
+    if (terminSelect) terminSelect.value = '2';
+    if (badge) {
+      badge.textContent = 'Otomatis: Termin 2 (Cicilan)';
+      badge.style.background = '#fef3c7';
+      badge.style.color = '#b45309';
+    }
+    const sisa = Math.max(0, remaining - amt);
+    if (hint) hint.innerHTML = `Cicilan kedua dicatat ke <strong>Termin 2</strong>. Sisa tagihan setelah ini: <strong>Rp ${sisa.toLocaleString('id-ID')}</strong>.`;
+  } else {
+    if (terminSelect) terminSelect.value = '3';
+    if (badge) {
+      badge.textContent = 'Otomatis: Pelunasan';
+      badge.style.background = '#f3e8ff';
+      badge.style.color = '#7e22ce';
+    }
+    const sisa = Math.max(0, remaining - amt);
+    if (hint) hint.innerHTML = `Pembayaran dicatat ke <strong>Pelunasan</strong>. Sisa setelah ini: <strong>Rp ${sisa.toLocaleString('id-ID')}</strong>.`;
+  }
+}
+
+function fillPayModalWithRemaining(autoSubmit = false) {
   const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
   if (!p) return;
   const fee = calculateParticipantFee(p);
@@ -14393,6 +14738,55 @@ function fillPayModalWithRemaining() {
   const remaining = Math.max(0, fee - paid);
   const amountInput = document.getElementById('payModalAmountInput');
   if (amountInput) amountInput.value = remaining;
+  onPayAmountChanged();
+  if (autoSubmit) {
+    submitPaymentInstallment();
+  }
+}
+
+async function quickPayFull(id) {
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  if (!p) return;
+  const fee = calculateParticipantFee(p);
+  const paid = Number(p.paid_amount || 0);
+  const remaining = Math.max(0, fee - paid);
+  if (remaining <= 0) {
+    showToast(`${p.full_name} sudah berstatus LUNAS!`, 'info');
+    return;
+  }
+
+  const ok = confirm(`⚡ KONFIRMASI LUNAS INSTAN\n\nNama Peserta: ${p.full_name} (${p.registration_code})\nTotal Tagihan : Rp ${fee.toLocaleString('id-ID')}\nSudah Dibayar : Rp ${paid.toLocaleString('id-ID')}\nSisa Piutang  : Rp ${remaining.toLocaleString('id-ID')}\n\nApakah Anda ingin langsung melunasi Rp ${remaining.toLocaleString('id-ID')}?`);
+  if (!ok) return;
+
+  showToast(`Memproses pelunasan ${p.full_name}...`, 'info');
+  try {
+    let instList = [];
+    if (p.payment_installments) {
+      try {
+        instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+      } catch (e) {}
+    }
+    const terminNo = instList.length === 0 ? 3 : (instList.length + 1);
+
+    const updated = await window.dataService.recordPaymentInstallment(
+      id,
+      terminNo,
+      remaining,
+      'Tunai di Venue',
+      'Pelunasan Instan (Quick Pay)',
+      'Bendahara'
+    );
+    const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
+    if (idx !== -1) {
+      allRegistrations[idx] = { ...allRegistrations[idx], ...updated };
+    }
+    renderFinanceView();
+    if (typeof renderPresensiView === 'function') renderPresensiView();
+    showToast(`Alhamdulillah! ${p.full_name} resmi LUNAS!`, 'success');
+  } catch (err) {
+    console.error('Quick pay error:', err);
+    showToast('Gagal memproses pelunasan: ' + err.message, 'error');
+  }
 }
 
 async function submitPaymentInstallment() {
@@ -14581,6 +14975,8 @@ window.openRecordPaymentModal = openRecordPaymentModal;
 window.closeRecordPaymentModal = closeRecordPaymentModal;
 window.fillPayModalWithRemaining = fillPayModalWithRemaining;
 window.submitPaymentInstallment = submitPaymentInstallment;
+window.quickPayFull = quickPayFull;
+window.onPayAmountChanged = onPayAmountChanged;
 window.saveNewTreasurerPassword = saveNewTreasurerPassword;
 window.resetTreasurerPasswordDefault = resetTreasurerPasswordDefault;
 window.saveTariffAndPresensiConfig = saveTariffAndPresensiConfig;
