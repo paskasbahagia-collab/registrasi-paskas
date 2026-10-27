@@ -2484,13 +2484,13 @@
                 </div>
                 <div class="mag-card-body-content">
                   <div class="mag-card-meta-line">
-                    <span class="mag-work-category">7 SUB-MENU OPERASIONAL</span>
+                    <span class="mag-work-category">8 SUB-MENU OPERASIONAL</span>
                     <span class="mag-card-badge-pill gold">VISUAL &amp; DATA</span>
                   </div>
                   <h3 class="mag-work-title">PENGATURAN TAMPILAN</h3>
-                  <p class="mag-work-desc">Mengatur narasi acara, tampilan formulir, batas waktu pendaftaran, denah asrama/kamar, master wilayah, template e-tiket, serta warta pengumuman beranda.</p>
+                  <p class="mag-work-desc">Mengatur narasi acara, tampilan formulir, batas waktu pendaftaran, denah asrama/kamar, master wilayah, template e-tiket, tarif registrasi, serta warta pengumuman beranda.</p>
                   <div class="mag-card-action-cue">
-                    <span id="cueTampilanText">Menampilkan 7 Sub-Menu di Gambar 2</span> <i class="fa-solid fa-arrow-down"></i>
+                    <span id="cueTampilanText">Menampilkan 8 Sub-Menu di Gambar 2</span> <i class="fa-solid fa-arrow-down"></i>
                   </div>
                 </div>
               </div>
@@ -2524,7 +2524,7 @@
           <!-- ============================================================== -->
           <div class="mag-services-process-strip" id="magServicesProcessStrip">
             
-            <!-- Group A: 7 Sub-Menu untuk Pengaturan Tampilan -->
+            <!-- Group A: 8 Sub-Menu untuk Pengaturan Tampilan -->
             <div id="magCategoryItems-tampilan" class="mag-cat-subitems-view">
               <div class="mag-srv-proc-grid">
                 
@@ -2548,7 +2548,7 @@
                       <div class="mag-subitem-arrow"><i class="fa-solid fa-arrow-right"></i></div>
                     </div>
 
-                    <!-- 3. Batas Waktu Registrasi -->
+                    <!-- 2. Batas Waktu Registrasi -->
                     <div class="mag-subitem-card" id="subitem-deadline" onclick="switchSettingsTab('deadline'); document.getElementById('magSettingsSubtabsAnchor').scrollIntoView({ behavior: 'smooth' });">
                       <div class="mag-subitem-icon amber"><i class="fa-regular fa-clock"></i></div>
                       <div class="mag-subitem-body">
@@ -2561,7 +2561,7 @@
                       <div class="mag-subitem-arrow"><i class="fa-solid fa-arrow-right"></i></div>
                     </div>
 
-                    <!-- 4. Lokasi, Narasi & Foto -->
+                    <!-- 3. Lokasi, Narasi & Foto -->
                     <div class="mag-subitem-card" id="subitem-reg-content" onclick="switchSettingsTab('reg-content'); document.getElementById('magSettingsSubtabsAnchor').scrollIntoView({ behavior: 'smooth' });">
                       <div class="mag-subitem-icon amber"><i class="fa-solid fa-map-location-dot"></i></div>
                       <div class="mag-subitem-body">
@@ -2570,6 +2570,19 @@
                         </div>
                         <span class="mag-subitem-subtitle">DENAH VENUE &amp; DOKUMENTASI</span>
                         <p class="mag-subitem-desc">Kustomisasi peta venue acara, foto gedung asrama, rundown kegiatan, &amp; narasi selamat datang.</p>
+                      </div>
+                      <div class="mag-subitem-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                    </div>
+
+                    <!-- 4. Tarif & Keuangan Acara -->
+                    <div class="mag-subitem-card" id="subitem-keuangan" onclick="switchSettingsTab('keuangan'); document.getElementById('magSettingsSubtabsAnchor').scrollIntoView({ behavior: 'smooth' });">
+                      <div class="mag-subitem-icon emerald"><i class="fa-solid fa-coins"></i></div>
+                      <div class="mag-subitem-body">
+                        <div class="mag-subitem-top">
+                          <h5 class="mag-subitem-title">Tarif &amp; Keuangan Acara</h5>
+                        </div>
+                        <span class="mag-subitem-subtitle">TARIF USIA &amp; AMBANG PRESENSI</span>
+                        <p class="mag-subitem-desc">Atur nominal tarif pendaftaran 3 kategori usia (dewasa, anak, balita) serta batas jam presensi tepat waktu.</p>
                       </div>
                       <div class="mag-subitem-arrow"><i class="fa-solid fa-arrow-right"></i></div>
                     </div>
@@ -4134,6 +4147,102 @@ CREATE TABLE IF NOT EXISTS registrations (
               </div>
             </div>
 
+            <!-- Tab: Pengaturan Tarif Registrasi & Parameter Keuangan -->
+            <div class="settings-tab-panel" id="settingsPanel-keuangan">
+              <div class="settings-card-item">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 10px;">
+                  <h4 class="settings-item-title" style="margin: 0;">
+                    <i class="fa-solid fa-coins text-gold"></i> Pengaturan Tarif Registrasi &amp; Jam Hadir Presensi
+                  </h4>
+                  <span class="settings-chip-badge" style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #059669;">
+                    <i class="fa-solid fa-calculator"></i> Kalkulasi Otomatis
+                  </span>
+                </div>
+                <p class="settings-item-desc">
+                  Atur nominal tarif pendaftaran untuk 3 kategori usia peserta guna kalkulasi otomatis total tagihan pada formulir pendaftaran dan tabel modul Keuangan, serta batas jam toleransi kehadiran tepat waktu di Meja Presensi Hari-H.
+                </p>
+
+                <div class="settings-security-grid" style="margin-top: 18px;">
+                  <!-- Kolom Kiri: Form Input Tarif & Jam Hadir -->
+                  <div style="background: #fdfbf7; border: 1.5px solid #e2dac9; border-radius: var(--radius-md); padding: 24px;">
+                    <div style="font-weight: 800; font-size: 15px; color: #1a1815; margin-bottom: 4px;">
+                      <i class="fa-solid fa-sliders text-gold"></i> Parameter Tarif &amp; Presensi
+                    </div>
+                    <span style="font-size: 11.5px; color: #635a4d; display: block; margin-bottom: 16px;">Kalkulasi nominal biaya pendaftaran &amp; ambang batas telat</span>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                      <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">
+                        <i class="fa-solid fa-user text-gold"></i> Tarif Peserta Dewasa (&gt;15 Thn) - Rp
+                      </label>
+                      <input type="number" id="cfg_adultFee" class="form-control" value="350000" placeholder="350000">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                      <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">
+                        <i class="fa-solid fa-child text-gold"></i> Tarif Anak (5 - 15 Thn) - Rp
+                      </label>
+                      <input type="number" id="cfg_childFee" class="form-control" value="100000" placeholder="100000">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                      <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">
+                        <i class="fa-solid fa-baby text-gold"></i> Tarif Balita (&lt;5 Thn) - Rp
+                      </label>
+                      <input type="number" id="cfg_toddlerFee" class="form-control" value="50000" placeholder="50000">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 18px;">
+                      <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">
+                        <i class="fa-regular fa-clock text-gold"></i> Batas Jam Kehadiran Tepat Waktu Hari-H
+                      </label>
+                      <input type="datetime-local" id="cfg_eventLateThreshold" class="form-control">
+                      <small style="font-size: 11.5px; color: #64748b; margin-top: 5px; display: block; line-height: 1.4;">
+                        Jemaah yang check-in presensi setelah jam ini otomatis berstatus <strong>[ ⚠️ Hadir Telat ]</strong>.
+                      </small>
+                    </div>
+
+                    <button type="button" class="btn btn-primary btn-sm" onclick="saveTariffAndPresensiConfig()" style="font-weight: 700; padding: 10px 18px;">
+                      <i class="fa-solid fa-floppy-disk"></i> Simpan Tarif &amp; Jam Hadir
+                    </button>
+                  </div>
+
+                  <!-- Kolom Kanan: Info Rumus & Pintasan Meja Keuangan -->
+                  <div style="background: #fdfbf7; border: 1.5px solid #e2dac9; border-radius: var(--radius-md); padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                      <div style="font-weight: 800; font-size: 15px; color: #1a1815; margin-bottom: 4px;">
+                        <i class="fa-solid fa-scale-balanced text-gold"></i> Panduan &amp; Rumus Kalkulasi Otomatis
+                      </div>
+                      <span style="font-size: 11.5px; color: #635a4d; display: block; margin-bottom: 14px;">Cara kerja tarif di sistem registrasi</span>
+
+                      <div style="background: #ffffff; border: 1px solid #e2dac9; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+                        <div style="font-size: 12px; font-weight: 700; color: #1a1815; margin-bottom: 6px;">
+                          <i class="fa-solid fa-circle-info text-gold"></i> Perhitungan Otomatis Formulir:
+                        </div>
+                        <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #4b5563; line-height: 1.6;">
+                          <li><strong>Dewasa (&gt;15 Thn):</strong> Dihitung tarif penuh peserta utama.</li>
+                          <li><strong>Anak (5 - 15 Thn):</strong> Tarif khusus anak-anak yang terdaftar.</li>
+                          <li><strong>Balita (&lt;5 Thn):</strong> Tarif keringanan / kontribusi balita.</li>
+                        </ul>
+                      </div>
+
+                      <p style="font-size: 12px; color: #635a4d; line-height: 1.5; margin-bottom: 14px;">
+                        Setiap perubahan tarif yang disimpan akan langsung disinkronkan ke <strong>Supabase Cloud</strong> dan otomatis mempengaruhi kalkulasi tagihan baru serta laporan rekap keuangan.
+                      </p>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="navigateTo('keuangan')">
+                        <i class="fa-solid fa-coins"></i> Buka Meja Keuangan
+                      </button>
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="navigateTo('presensi')">
+                        <i class="fa-solid fa-clipboard-check"></i> Buka Presensi Hari-H
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Tab 4: Info Kegiatan & Kelola Kartu -->
             <div class="settings-tab-panel" id="settingsPanel-info">
               <div class="settings-card-item">
@@ -4846,37 +4955,29 @@ CREATE TABLE IF NOT EXISTS registrations (
                       </div>
                     </div>
 
-                    <!-- Kolom Kanan: Pengaturan Tarif Usia & Jam Batas Hadir Telat -->
-                    <div style="background: #fdfbf7; border: 1.5px solid #e2dac9; border-radius: var(--radius-md); padding: 24px;">
-                      <div style="font-weight: 800; font-size: 15px; color: #1a1815; margin-bottom: 4px;">
-                        <i class="fa-solid fa-sliders text-gold"></i> Pengaturan Tarif &amp; Presensi
-                      </div>
-                      <span style="font-size: 11.5px; color: #635a4d; display: block; margin-bottom: 16px;">Parameter kalkulasi keuangan &amp; ambang batas telat</span>
-
-                      <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: #1a1815;">Tarif Peserta Dewasa (&gt;15 Thn) - Rp</label>
-                        <input type="number" id="cfg_adultFee" class="form-control" value="350000" placeholder="350000">
-                      </div>
-
-                      <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: #1a1815;">Tarif Anak (5 - 15 Thn) - Rp</label>
-                        <input type="number" id="cfg_childFee" class="form-control" value="100000" placeholder="100000">
+                    <!-- Kolom Kanan: Panduan Hak Akses Modul Keuangan & Pintasan Tarif -->
+                    <div style="background: #fdfbf7; border: 1.5px solid #e2dac9; border-radius: var(--radius-md); padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
+                      <div>
+                        <div style="font-weight: 800; font-size: 15px; color: #1a1815; margin-bottom: 4px;">
+                          <i class="fa-solid fa-coins text-gold"></i> Hak Akses &amp; Parameter Keuangan
+                        </div>
+                        <span style="font-size: 11.5px; color: #635a4d; display: block; margin-bottom: 14px;">Proteksi data kas &amp; pengaturan tarif pendaftaran</span>
+                        <p style="font-size: 12.5px; color: #4b5563; line-height: 1.6; margin-bottom: 14px;">
+                          Kata sandi ini melindungi modul <code>/#keuangan</code> agar hanya dapat dibuka oleh bendahara panitia untuk mengelola tagihan, termin pembayaran jemaah, dan pencatatan kas masuk.
+                        </p>
+                        <p style="font-size: 12.5px; color: #4b5563; line-height: 1.6; margin-bottom: 16px;">
+                          Untuk mengubah nominal tarif pendaftaran 3 kategori usia (Dewasa, Anak, Balita) serta ambang batas jam presensi tepat waktu, gunakan menu <strong>Pengaturan Tampilan &bull; Tarif &amp; Keuangan Acara</strong>.
+                        </p>
                       </div>
 
-                      <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: #1a1815;">Tarif Balita (&lt;5 Thn) - Rp</label>
-                        <input type="number" id="cfg_toddlerFee" class="form-control" value="50000" placeholder="50000">
+                      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="switchSettingsTab('keuangan'); document.getElementById('magSettingsSubtabsAnchor').scrollIntoView({ behavior: 'smooth' });">
+                          <i class="fa-solid fa-sliders text-gold"></i> Buka Pengaturan Tarif
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="navigateTo('keuangan')">
+                          <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka Meja Keuangan
+                        </button>
                       </div>
-
-                      <div class="form-group" style="margin-bottom: 16px;">
-                        <label class="form-label" style="font-size: 12px; font-weight: 700; color: #1a1815;">Batas Jam Kehadiran Tepat Waktu Hari-H</label>
-                        <input type="datetime-local" id="cfg_eventLateThreshold" class="form-control">
-                        <small style="font-size: 11px; color: #64748b; margin-top: 4px; display: block;">Jemaah yang check-in setelah jam ini otomatis berstatus <strong>[ ⚠️ Hadir Telat ]</strong>.</small>
-                      </div>
-
-                      <button type="button" class="btn btn-primary btn-sm" onclick="saveTariffAndPresensiConfig()">
-                        <i class="fa-solid fa-floppy-disk"></i> Simpan Tarif &amp; Jam Hadir
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -5689,6 +5790,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=130.0"></script>
-  <script src="js/app.js?v=147.0"></script>
+  <script src="js/app.js?v=148.0"></script>
 </body>
 </html>

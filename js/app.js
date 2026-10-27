@@ -9311,6 +9311,17 @@ function initSettingsPage(defaultTab = 'info', skipSwitchTab = false) {
   renderSettingsRoomsAndGroupsManager();
   loadTicketTemplateSettings();
 
+  // Form Pengaturan Tarif Registrasi & Jam Batas Hadir Presensi
+  const adultFeeInput = document.getElementById('cfg_adultFee');
+  const childFeeInput = document.getElementById('cfg_childFee');
+  const toddlerFeeInput = document.getElementById('cfg_toddlerFee');
+  const lateThresholdInput = document.getElementById('cfg_eventLateThreshold');
+
+  if (adultFeeInput) adultFeeInput.value = settings.adult_fee || '350000';
+  if (childFeeInput) childFeeInput.value = settings.child_fee || '100000';
+  if (toddlerFeeInput) toddlerFeeInput.value = settings.toddler_fee || '50000';
+  if (lateThresholdInput) lateThresholdInput.value = settings.event_late_threshold || '2026-11-12T12:00:00';
+
   // Update Magazine Seal Header Pills
   const magTotal = document.getElementById('magPillTotal');
   if (magTotal) magTotal.textContent = allRegistrations.length + ' Jiwa';
@@ -9844,7 +9855,7 @@ function closeSettingsModal() {
 }
 
 const SETTINGS_CATEGORIES = {
-  tampilan: ['info', 'deadline', 'reg-content', 'wilayah', 'ticket-template', 'kamar-kelompok', 'pengumuman'],
+  tampilan: ['info', 'deadline', 'reg-content', 'keuangan', 'wilayah', 'ticket-template', 'kamar-kelompok', 'pengumuman'],
   web: ['supabase', 'security', 'deploy']
 };
 
