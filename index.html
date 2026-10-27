@@ -2235,10 +2235,13 @@
 
           <!-- Header Banner -->
           <div class="editorial-header-card">
-            <!-- Tombol Kembali ke Beranda di atas judul -->
-            <div style="margin-bottom: 12px;">
+            <!-- Tombol Navigasi & Kunci Sesi di atas judul -->
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px;">
               <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('dashboard')" title="Kembali ke Beranda" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; padding: 7px 16px; border-radius: 8px; font-size: 13px;">
                 <i class="fa-solid fa-arrow-left"></i> Kembali ke Beranda
+              </button>
+              <button type="button" class="btn btn-editorial-outline" onclick="lockTreasurerSession()" title="Kunci Sesi Keuangan" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; padding: 7px 16px; border-radius: 8px; font-size: 13px; color: #dc2626; border-color: #fecaca; background: #fef2f2;">
+                <i class="fa-solid fa-lock"></i> Kunci Sesi
               </button>
             </div>
 
