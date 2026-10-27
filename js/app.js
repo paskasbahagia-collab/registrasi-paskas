@@ -9431,6 +9431,18 @@ function openSettingsWithAuth(targetTab = 'settings') {
     if (errEl) errEl.style.display = 'none';
   }
 
+  const titleEl = modal?.querySelector('.modal-auth-green-title');
+  const subEl = modal?.querySelector('.modal-auth-green-sub');
+  if (targetTab === 'keuangan') {
+    if (titleEl) titleEl.textContent = 'Akses Keuangan';
+    if (subEl) subEl.textContent = 'Silahkan isi password admin atau keuangan:';
+    if (input) input.placeholder = 'Password (keuangan123 / admin123)...';
+  } else {
+    if (titleEl) titleEl.textContent = 'Akses Admin';
+    if (subEl) subEl.textContent = 'Silahkan isi passwordnya:';
+    if (input) input.placeholder = 'Password admin...';
+  }
+
   if (card) card.classList.remove('shake-animation');
   if (input) {
     input.value = '';
@@ -9464,11 +9476,30 @@ async function submitAdminPassword() {
   }
 
   const entered = (input?.value || '').trim();
-  const isValid = await verifyAdminPassword(entered);
+  const cleanEntered = entered.toLowerCase();
+  let isValid = await verifyAdminPassword(entered);
+
+  // Jika belum valid, dukung juga kata sandi keuangan/bendahara (keuangan123 / bendahara123)
+  if (!isValid && (pendingAuthTargetTab === 'keuangan' || cleanEntered === 'keuangan123' || cleanEntered === 'bendahara123')) {
+    if (cleanEntered === 'keuangan123' || cleanEntered === 'bendahara123') {
+      isValid = true;
+    } else if (window.dataService && typeof window.dataService.verifyTreasurerPassword === 'function') {
+      try {
+        isValid = await window.dataService.verifyTreasurerPassword(entered);
+      } catch (e) {
+        console.warn('verifyTreasurerPassword error:', e);
+      }
+    }
+  }
 
   if (isValid) {
     resetAdminFailedAttempts();
     setAdminLoggedInState(true);
+    // Jika menuju modul keuangan atau menggunakan password keuangan/bendahara, aktifkan langsung sesi keuangan
+    if (pendingAuthTargetTab === 'keuangan' || cleanEntered === 'keuangan123' || cleanEntered === 'bendahara123') {
+      sessionStorage.setItem('paskas_treasurer_session', 'active');
+      if (typeof isTreasurerLoggedIn !== 'undefined') isTreasurerLoggedIn = true;
+    }
     if (typeof resetAdminInactivityTimer === 'function') resetAdminInactivityTimer();
     closeAdminAuthModal();
     if (['rekap', 'presensi', 'keuangan'].includes(pendingAuthTargetTab)) {
@@ -13675,7 +13706,7 @@ async function submitTreasurerLogin() {
   } else {
     if (errEl) {
       errEl.style.display = 'flex';
-      errEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>bendahara123</code>.';
+      errEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>keuangan123</code> / <code>admin123</code>.';
     }
     if (card) {
       card.classList.remove('shake-animation');
