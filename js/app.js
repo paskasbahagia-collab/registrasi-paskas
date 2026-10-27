@@ -5442,59 +5442,72 @@ function switchGroupTicketMember(indexVal) {
 }
 
 /**
- * Menangkap elemen tiket menjadi canvas secara presisi meskipun elemen berada di dalam modal/collapsible yang tertutup
+ * Menangkap elemen tiket menjadi canvas secara presisi dan cepat (tanpa delay atau hang)
  */
 async function captureTicketElementAsCanvas(ticketSourceEl) {
   if (!ticketSourceEl || typeof html2canvas !== 'function') {
     throw new Error('Elemen tiket atau library html2canvas belum siap.');
   }
 
-  // Cek apakah elemen saat ini sedang ditampilkan dengan dimensi nyata (>50px)
-  const isVisible = ticketSourceEl.offsetWidth > 50 && ticketSourceEl.offsetHeight > 50;
+  // Selalu gunakan kontainer off-screen sementara yang terisolasi agar:
+  // 1. Dimensi tata letak tiket pasti tepat dan konsisten (880px)
+  // 2. Tag <img> kosong / tersembunyi dapat disanitasi tanpa merusak DOM asli
+  // 3. Menghindari bug html2canvas yang hang saat memproses tag <img> kosong
+  const offscreenContainer = document.createElement('div');
+  offscreenContainer.setAttribute('data-offscreen-ticket', 'true');
+  offscreenContainer.style.position = 'fixed';
+  offscreenContainer.style.left = '-9999px';
+  offscreenContainer.style.top = '0';
+  offscreenContainer.style.width = '880px';
+  offscreenContainer.style.maxWidth = '880px';
+  offscreenContainer.style.visibility = 'visible';
+  offscreenContainer.style.display = 'block';
+  offscreenContainer.style.zIndex = '-9999';
+  offscreenContainer.style.background = '#ffffff';
 
-  let targetToCapture = ticketSourceEl;
-  let offscreenContainer = null;
+  const cloned = ticketSourceEl.cloneNode(true);
+  cloned.style.display = 'block';
+  cloned.style.visibility = 'visible';
+  cloned.style.margin = '0';
+  cloned.style.transform = 'none';
 
-  if (!isVisible) {
-    // Klon elemen ke kontainer off-screen sementara yang memiliki layout dimensi nyata (880px)
-    offscreenContainer = document.createElement('div');
-    offscreenContainer.setAttribute('data-offscreen-ticket', 'true');
-    offscreenContainer.style.position = 'fixed';
-    offscreenContainer.style.left = '-9999px';
-    offscreenContainer.style.top = '0';
-    offscreenContainer.style.width = '880px';
-    offscreenContainer.style.maxWidth = '880px';
-    offscreenContainer.style.visibility = 'visible';
-    offscreenContainer.style.display = 'block';
-    offscreenContainer.style.zIndex = '-9999';
-    offscreenContainer.style.background = '#ffffff';
+  // Sanitasi semua tag <img> pada elemen klon
+  const allImgs = cloned.querySelectorAll('img');
+  allImgs.forEach(img => {
+    const rawSrc = img.getAttribute('src');
+    // Jika src kosong, null, atau elemen disembunyikan: ganti dengan 1x1 transparent gif agar html2canvas tidak hang
+    if (!rawSrc || rawSrc.trim() === '' || img.style.display === 'none' || img.offsetWidth === 0) {
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    } else {
+      img.crossOrigin = 'anonymous';
+    }
+  });
 
-    const cloned = ticketSourceEl.cloneNode(true);
-    cloned.style.display = 'block';
-    cloned.style.visibility = 'visible';
-    cloned.style.margin = '0';
-    cloned.style.transform = 'none';
+  offscreenContainer.appendChild(cloned);
+  document.body.appendChild(offscreenContainer);
 
-    offscreenContainer.appendChild(cloned);
-    document.body.appendChild(offscreenContainer);
-    targetToCapture = cloned;
-
-    // Jeda mikro agar peramban merender reflow CSS lengkap
-    await new Promise(r => setTimeout(r, 60));
-  }
+  // Jeda mikro agar peramban merender reflow CSS lengkap
+  await new Promise(r => setTimeout(r, 60));
 
   try {
-    const canvas = await html2canvas(targetToCapture, {
-      scale: 2.2,
+    const renderPromise = html2canvas(cloned, {
+      scale: 2,
       useCORS: true,
-      allowTaint: true,
-      backgroundColor: null,
+      allowTaint: false,
+      backgroundColor: '#ffffff',
       logging: false,
-      imageTimeout: 0
+      imageTimeout: 3500
     });
 
+    // Proteksi timeout maksimal 8 detik agar tombol tidak pernah hang / stuck
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Waktu pembuatan gambar tiket melebihi batas (timeout). Silakan coba lagi.')), 8000);
+    });
+
+    const canvas = await Promise.race([renderPromise, timeoutPromise]);
+
     if (!canvas || canvas.width < 50 || canvas.height < 50) {
-      throw new Error('Gagal merender gambar tiket (dimensi kanvas tidak valid atau 0px).');
+      throw new Error('Gagal merender gambar tiket (dimensi kanvas tidak valid).');
     }
 
     return canvas;
@@ -5509,54 +5522,49 @@ async function captureTicketElementAsCanvas(ticketSourceEl) {
  * Mengunduh canvas sebagai file PNG aman menggunakan Binary Blob (Mencegah file 0 Byte)
  */
 async function downloadCanvasAsPng(canvas, fileName) {
-  return new Promise((resolve, reject) => {
-    try {
-      if (canvas.toBlob) {
-        canvas.toBlob((blob) => {
-          if (!blob || blob.size < 500) {
-            // Fallback ke dataUrl jika blob gagal
-            const uri = canvas.toDataURL('image/png');
-            if (!uri || uri.length < 500) {
-              reject(new Error('File gambar tiket yang dihasilkan kosong (0 byte).'));
-              return;
-            }
-            const a = document.createElement('a');
-            a.href = uri;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => { document.body.removeChild(a); resolve(); }, 400);
-            return;
-          }
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            resolve();
-          }, 800);
-        }, 'image/png');
-      } else {
-        const uri = canvas.toDataURL('image/png');
-        if (!uri || uri.length < 500) {
-          reject(new Error('File gambar tiket kosong (0 byte).'));
-          return;
+  try {
+    let blob = null;
+    if (canvas && typeof canvas.toBlob === 'function') {
+      blob = await new Promise((resolve) => {
+        try {
+          canvas.toBlob(resolve, 'image/png');
+        } catch (e) {
+          resolve(null);
         }
-        const a = document.createElement('a');
-        a.href = uri;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => { document.body.removeChild(a); resolve(); }, 400);
-      }
-    } catch (err) {
-      reject(err);
+      });
     }
-  });
+
+    if (blob && blob.size > 500) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+      return;
+    }
+
+    // Fallback dataURL
+    const uri = canvas.toDataURL('image/png');
+    if (!uri || uri.length < 500) {
+      throw new Error('File gambar tiket kosong (0 byte).');
+    }
+    const a = document.createElement('a');
+    a.href = uri;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (a.parentNode) a.parentNode.removeChild(a);
+    }, 1000);
+  } catch (err) {
+    console.error('Error saat download file tiket:', err);
+    throw err;
+  }
 }
 
 async function downloadTicketImage() {
@@ -5581,7 +5589,7 @@ async function downloadTicketImage() {
 
   btns.forEach(btn => {
     btn.disabled = true;
-    btn.dataset.origHtml = btn.innerHTML;
+    if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh...';
   });
 
@@ -5603,7 +5611,10 @@ async function downloadTicketImage() {
   } finally {
     btns.forEach(btn => {
       btn.disabled = false;
-      if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
+      if (btn.dataset.origHtml) {
+        btn.innerHTML = btn.dataset.origHtml;
+        delete btn.dataset.origHtml;
+      }
     });
   }
 }
@@ -5862,15 +5873,7 @@ async function sendTicketEmail() {
         if (statusBox) {
           statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan gambar E-Tiket & memproses pengiriman...`;
         }
-        await new Promise(r => setTimeout(r, 40));
-        const canvas = await html2canvas(ticketCard, {
-          scale: 2.2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: null,
-          logging: false,
-          imageTimeout: 0
-        });
+        const canvas = await captureTicketElementAsCanvas(ticketCard);
         imageBase64 = canvas.toDataURL('image/png');
       } catch (canvasErr) {
         console.warn('Gagal render gambar tiket untuk email:', canvasErr);
