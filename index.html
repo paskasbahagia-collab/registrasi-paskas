@@ -1786,13 +1786,16 @@
                 <h2 class="editorial-main-title">Presensi &amp; Check-in Kedatangan Jemaah</h2>
               </div>
               <div class="editorial-header-actions">
+                <button type="button" class="btn btn-editorial-outline" onclick="lockAdminSession()" title="Kunci sesi presensi">
+                  <i class="fa-solid fa-lock"></i> Kunci Sesi
+                </button>
                 <button type="button" class="btn btn-editorial-outline" onclick="forceReloadCloudData(this)" title="Sinkronkan data Supabase">
                   <i class="fa-solid fa-rotate"></i> Sinkron Cloud
                 </button>
-                <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('rekap')" title="Buka Rekapitulasi Data">
+                <button type="button" class="btn btn-editorial-outline" id="btnPresensiRekapShortcut" onclick="navigateTo('rekap')" title="Buka Rekapitulasi Data">
                   <i class="fa-solid fa-chart-pie"></i> Rekap Data
                 </button>
-                <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('keuangan')" title="Buka Meja Bendahara">
+                <button type="button" class="btn btn-editorial-outline" id="btnPresensiKeuanganShortcut" onclick="navigateTo('keuangan')" title="Buka Meja Bendahara">
                   <i class="fa-solid fa-coins"></i> Keuangan
                 </button>
                 <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('dashboard')" title="Kembali ke Beranda">
@@ -2232,10 +2235,10 @@
                 <button type="button" class="btn btn-editorial-outline" onclick="forceReloadCloudData(this)" title="Sinkronkan data Supabase">
                   <i class="fa-solid fa-rotate"></i> Sinkron Cloud
                 </button>
-                <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('presensi')" title="Buka Meja Presensi">
+                <button type="button" class="btn btn-editorial-outline" id="btnKtgPresensiShortcut" onclick="navigateTo('presensi')" title="Buka Meja Presensi">
                   <i class="fa-solid fa-clipboard-check"></i> Presensi
                 </button>
-                <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('rekap')" title="Buka Rekap Data">
+                <button type="button" class="btn btn-editorial-outline" id="btnKtgRekapShortcut" onclick="navigateTo('rekap')" title="Buka Rekap Data">
                   <i class="fa-solid fa-chart-pie"></i> Rekap Data
                 </button>
                 <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('dashboard')" title="Kembali ke Beranda">
@@ -5614,6 +5617,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=129.0"></script>
-  <script src="js/app.js?v=141.0"></script>
+  <script src="js/app.js?v=142.0"></script>
 </body>
 </html>

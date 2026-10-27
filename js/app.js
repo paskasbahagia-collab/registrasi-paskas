@@ -1736,9 +1736,22 @@ function navigateTo(pageId) {
   }
 
   // 2. Pengaturan Sistem & Halaman Panitia (Harus Login Admin/Panitia)
-  if (['settings', 'rekap', 'presensi', 'keuangan'].includes(pageId) && !isAdminLoggedIn) {
-    openSettingsWithAuth(pageId);
-    return;
+  if (['settings', 'rekap', 'presensi', 'keuangan'].includes(pageId)) {
+    if (!isAdminLoggedIn) {
+      openSettingsWithAuth(pageId);
+      return;
+    }
+    // Jika login sebagai role spesifik, batasi akses ke halaman lain
+    if (currentAuthRole === 'keuangan' && pageId !== 'keuangan') {
+      showToast('Akses dibatasi. Anda login sebagai Petugas Keuangan.', 'warning');
+      openSettingsWithAuth(pageId);
+      return;
+    }
+    if (currentAuthRole === 'presensi' && pageId !== 'presensi') {
+      showToast('Akses dibatasi. Anda login sebagai Petugas Presensi.', 'warning');
+      openSettingsWithAuth(pageId);
+      return;
+    }
   }
 
   if (pageId === 'dashboard') {
@@ -9293,21 +9306,89 @@ function initSettingsPage(defaultTab = 'info', skipSwitchTab = false) {
 // ADMIN AUTHENTICATION & PASSWORD PROTECTION FOR SETTINGS
 // ===================================================================
 let isAdminLoggedIn = false;
+let currentAuthRole = null; // 'admin' | 'keuangan' | 'presensi' | null
 try {
   isAdminLoggedIn = sessionStorage.getItem('paskas_admin_session') === 'active';
+  currentAuthRole = sessionStorage.getItem('paskas_active_role') || (isAdminLoggedIn ? 'admin' : null);
 } catch (e) {}
 
 let pendingAuthTargetTab = 'settings';
 
-function setAdminLoggedInState(isLoggedIn) {
+function applyRoleNavVisibility() {
+  const role = currentAuthRole;
+
+  const navRekap = document.querySelectorAll('[data-page="rekap"]');
+  const navPresensi = document.querySelectorAll('[data-page="presensi"]');
+  const navKeuangan = document.querySelectorAll('[data-page="keuangan"]');
+  const navSettings = document.querySelectorAll('[data-page="settings"]');
+  const iconSettings = document.getElementById('btnNavSettingsIcon');
+
+  const btnKtgPresensi = document.getElementById('btnKtgPresensiShortcut');
+  const btnKtgRekap = document.getElementById('btnKtgRekapShortcut');
+  const btnPresensiRekap = document.getElementById('btnPresensiRekapShortcut');
+  const btnPresensiKeuangan = document.getElementById('btnPresensiKeuanganShortcut');
+
+  if (!isAdminLoggedIn || !role) {
+    navRekap.forEach(el => el.style.display = '');
+    navPresensi.forEach(el => el.style.display = '');
+    navKeuangan.forEach(el => el.style.display = '');
+    navSettings.forEach(el => el.style.display = '');
+    if (iconSettings) iconSettings.style.display = '';
+    return;
+  }
+
+  if (role === 'admin') {
+    navRekap.forEach(el => el.style.display = '');
+    navPresensi.forEach(el => el.style.display = '');
+    navKeuangan.forEach(el => el.style.display = '');
+    navSettings.forEach(el => el.style.display = '');
+    if (iconSettings) iconSettings.style.display = '';
+    if (btnKtgPresensi) btnKtgPresensi.style.display = '';
+    if (btnKtgRekap) btnKtgRekap.style.display = '';
+    if (btnPresensiRekap) btnPresensiRekap.style.display = '';
+    if (btnPresensiKeuangan) btnPresensiKeuangan.style.display = '';
+  } else if (role === 'keuangan') {
+    navRekap.forEach(el => el.style.display = 'none');
+    navPresensi.forEach(el => el.style.display = 'none');
+    navKeuangan.forEach(el => el.style.display = '');
+    navSettings.forEach(el => el.style.display = 'none');
+    if (iconSettings) iconSettings.style.display = 'none';
+    if (btnKtgPresensi) btnKtgPresensi.style.display = 'none';
+    if (btnKtgRekap) btnKtgRekap.style.display = 'none';
+  } else if (role === 'presensi') {
+    navRekap.forEach(el => el.style.display = 'none');
+    navPresensi.forEach(el => el.style.display = '');
+    navKeuangan.forEach(el => el.style.display = 'none');
+    navSettings.forEach(el => el.style.display = 'none');
+    if (iconSettings) iconSettings.style.display = 'none';
+    if (btnPresensiRekap) btnPresensiRekap.style.display = 'none';
+    if (btnPresensiKeuangan) btnPresensiKeuangan.style.display = 'none';
+  }
+}
+
+function setAdminLoggedInState(isLoggedIn, role = null) {
   isAdminLoggedIn = !!isLoggedIn;
+  if (!isLoggedIn) {
+    currentAuthRole = null;
+  } else if (role) {
+    currentAuthRole = role;
+  } else if (!currentAuthRole) {
+    currentAuthRole = 'admin';
+  }
+
   try {
     if (isAdminLoggedIn) {
       sessionStorage.setItem('paskas_admin_session', 'active');
+      sessionStorage.setItem('paskas_active_role', currentAuthRole);
     } else {
       sessionStorage.removeItem('paskas_admin_session');
+      sessionStorage.removeItem('paskas_active_role');
+      sessionStorage.removeItem('paskas_treasurer_session');
     }
   } catch (e) {}
+
+  applyRoleNavVisibility();
+
   if (document.body) {
     document.body.classList.toggle('admin-logged-in', isAdminLoggedIn);
     const activeView = document.querySelector('.page-view.active');
@@ -9317,6 +9398,7 @@ function setAdminLoggedInState(isLoggedIn) {
   }
 }
 window.setAdminLoggedInState = setAdminLoggedInState;
+window.applyRoleNavVisibility = applyRoleNavVisibility;
 
 // Hash bawaan untuk kata sandi default 'admin123' (SHA-256)
 const DEFAULT_ADMIN_PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
@@ -9406,14 +9488,22 @@ function resetAdminFailedAttempts() {
 function openSettingsWithAuth(targetTab = 'settings') {
   pendingAuthTargetTab = targetTab || 'settings';
   if (isAdminLoggedIn) {
-    if (['rekap', 'presensi', 'keuangan'].includes(targetTab)) {
-      navigateTo(targetTab);
-    } else {
-      navigateTo('settings');
-      const cleanTab = (targetTab === 'settings' ? 'info' : targetTab).replace('tab-', '');
-      if (typeof switchSettingsTab === 'function') switchSettingsTab(cleanTab);
+    if (currentAuthRole === 'admin') {
+      if (['rekap', 'presensi', 'keuangan'].includes(targetTab)) {
+        navigateTo(targetTab);
+      } else {
+        navigateTo('settings');
+        const cleanTab = (targetTab === 'settings' ? 'info' : targetTab).replace('tab-', '');
+        if (typeof switchSettingsTab === 'function') switchSettingsTab(cleanTab);
+      }
+      return;
+    } else if (currentAuthRole === 'keuangan' && targetTab === 'keuangan') {
+      navigateTo('keuangan');
+      return;
+    } else if (currentAuthRole === 'presensi' && targetTab === 'presensi') {
+      navigateTo('presensi');
+      return;
     }
-    return;
   }
 
   const modal = document.getElementById('adminAuthModal');
@@ -9435,11 +9525,15 @@ function openSettingsWithAuth(targetTab = 'settings') {
   const subEl = modal?.querySelector('.modal-auth-green-sub');
   if (targetTab === 'keuangan') {
     if (titleEl) titleEl.textContent = 'Akses Keuangan';
-    if (subEl) subEl.textContent = 'Silahkan isi password admin atau keuangan:';
-    if (input) input.placeholder = 'Password (keuangan123 / admin123)...';
+    if (subEl) subEl.textContent = 'Silahkan isi password Keuangan (keuangan123) atau Admin:';
+    if (input) input.placeholder = 'Password keuangan...';
+  } else if (targetTab === 'presensi') {
+    if (titleEl) titleEl.textContent = 'Akses Presensi';
+    if (subEl) subEl.textContent = 'Silahkan isi password Presensi (presensi123) atau Admin:';
+    if (input) input.placeholder = 'Password presensi...';
   } else {
     if (titleEl) titleEl.textContent = 'Akses Admin';
-    if (subEl) subEl.textContent = 'Silahkan isi passwordnya:';
+    if (subEl) subEl.textContent = 'Silahkan isi password Admin (admin123):';
     if (input) input.placeholder = 'Password admin...';
   }
 
@@ -9477,39 +9571,65 @@ async function submitAdminPassword() {
 
   const entered = (input?.value || '').trim();
   const cleanEntered = entered.toLowerCase();
-  let isValid = await verifyAdminPassword(entered);
+  let matchedRole = null;
 
-  // Jika belum valid, dukung juga kata sandi keuangan/bendahara (keuangan123 / bendahara123)
-  if (!isValid && (pendingAuthTargetTab === 'keuangan' || cleanEntered === 'keuangan123' || cleanEntered === 'bendahara123')) {
-    if (cleanEntered === 'keuangan123' || cleanEntered === 'bendahara123') {
-      isValid = true;
-    } else if (window.dataService && typeof window.dataService.verifyTreasurerPassword === 'function') {
-      try {
-        isValid = await window.dataService.verifyTreasurerPassword(entered);
-      } catch (e) {
-        console.warn('verifyTreasurerPassword error:', e);
+  // 1. Cek Admin Utama (admin123 atau yang sudah diganti di pengaturan)
+  const isAdminValid = await verifyAdminPassword(entered);
+  if (isAdminValid) {
+    matchedRole = 'admin';
+  }
+
+  // 2. Cek Password Keuangan (keuangan123 / bendahara123)
+  if (!matchedRole && (cleanEntered === 'keuangan123' || cleanEntered === 'bendahara123')) {
+    matchedRole = 'keuangan';
+  } else if (!matchedRole && window.dataService && typeof window.dataService.verifyTreasurerPassword === 'function') {
+    try {
+      if (await window.dataService.verifyTreasurerPassword(entered)) {
+        matchedRole = 'keuangan';
       }
+    } catch (e) {
+      console.warn('verifyTreasurerPassword error:', e);
     }
   }
 
-  if (isValid) {
+  // 3. Cek Password Presensi (presensi123 / kehadiran123)
+  if (!matchedRole && (cleanEntered === 'presensi123' || cleanEntered === 'kehadiran123')) {
+    matchedRole = 'presensi';
+  }
+
+  // Validasi kecocokan role dengan target tab
+  const isAuthorized = matchedRole && (
+    matchedRole === 'admin' ||
+    (matchedRole === 'keuangan' && pendingAuthTargetTab === 'keuangan') ||
+    (matchedRole === 'presensi' && pendingAuthTargetTab === 'presensi')
+  );
+
+  if (isAuthorized) {
     resetAdminFailedAttempts();
-    setAdminLoggedInState(true);
-    // Jika menuju modul keuangan atau menggunakan password keuangan/bendahara, aktifkan langsung sesi keuangan
-    if (pendingAuthTargetTab === 'keuangan' || cleanEntered === 'keuangan123' || cleanEntered === 'bendahara123') {
+    setAdminLoggedInState(true, matchedRole);
+    if (matchedRole === 'keuangan' || matchedRole === 'admin') {
       sessionStorage.setItem('paskas_treasurer_session', 'active');
       if (typeof isTreasurerLoggedIn !== 'undefined') isTreasurerLoggedIn = true;
     }
     if (typeof resetAdminInactivityTimer === 'function') resetAdminInactivityTimer();
     closeAdminAuthModal();
-    if (['rekap', 'presensi', 'keuangan'].includes(pendingAuthTargetTab)) {
-      navigateTo(pendingAuthTargetTab);
+
+    if (matchedRole === 'keuangan') {
+      navigateTo('keuangan');
+      showToast('Berhasil masuk sebagai Petugas Keuangan!', 'success');
+    } else if (matchedRole === 'presensi') {
+      navigateTo('presensi');
+      showToast('Berhasil masuk sebagai Petugas Presensi!', 'success');
     } else {
-      navigateTo('settings');
-      const cleanTab = (pendingAuthTargetTab === 'settings' ? 'info' : (pendingAuthTargetTab || 'info')).replace('tab-', '');
-      if (typeof switchSettingsTab === 'function') switchSettingsTab(cleanTab);
+      if (['rekap', 'presensi', 'keuangan'].includes(pendingAuthTargetTab)) {
+        navigateTo(pendingAuthTargetTab);
+      } else {
+        navigateTo('settings');
+        const cleanTab = (pendingAuthTargetTab === 'settings' ? 'info' : (pendingAuthTargetTab || 'info')).replace('tab-', '');
+        if (typeof switchSettingsTab === 'function') switchSettingsTab(cleanTab);
+      }
+      showToast('Berhasil masuk sebagai Administrator Utama!', 'success');
     }
-    showToast('Akses administrator & panitia berhasil diverifikasi!', 'success');
   } else {
     const failedCount = recordAdminFailedAttempt();
     const remaining = ADMIN_MAX_ATTEMPTS - failedCount;
@@ -9517,8 +9637,15 @@ async function submitAdminPassword() {
     if (errEl) {
       if (failedCount >= ADMIN_MAX_ATTEMPTS) {
         errEl.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Batas 5x percobaan terlampaui. Akses dikunci selama <strong>60 detik</strong>.`;
+      } else if (matchedRole === 'keuangan' && pendingAuthTargetTab !== 'keuangan') {
+        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi ini khusus untuk modul <strong>Keuangan</strong>. Gunakan kata sandi Admin.`;
+      } else if (matchedRole === 'presensi' && pendingAuthTargetTab !== 'presensi') {
+        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi ini khusus untuk modul <strong>Presensi</strong>. Gunakan kata sandi Admin.`;
       } else {
-        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Sisa kesempatan: <strong>${remaining} kali</strong>.`;
+        let hint = 'admin123';
+        if (pendingAuthTargetTab === 'keuangan') hint = 'keuangan123 atau admin123';
+        else if (pendingAuthTargetTab === 'presensi') hint = 'presensi123 atau admin123';
+        errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>${hint}</code>. Sisa kesempatan: <strong>${remaining} kali</strong>.`;
       }
       errEl.style.display = 'flex';
     }
@@ -9534,7 +9661,7 @@ async function submitAdminPassword() {
     }
 
     if (failedCount >= ADMIN_MAX_ATTEMPTS) {
-      showToast('Akses admin terkunci selama 60 detik karena 5x kesalahan kata sandi.', 'error');
+      showToast('Akses dikunci selama 60 detik karena 5x kesalahan kata sandi.', 'error');
     }
   }
 }
