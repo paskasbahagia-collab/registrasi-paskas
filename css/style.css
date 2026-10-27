@@ -13324,8 +13324,22 @@ input:checked + .slider:before {
   color: #0f172a !important;
   border-radius: 10px !important;
   font-weight: 600 !important;
-  font-size: 13.5px !important;
+  font-size: 14px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  padding: 10px 14px !important;
+  line-height: normal !important;
+  box-sizing: border-box !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  display: block !important;
+}
+
+#modalRecordPayment select.form-control,
+#modalQuickPayConfirm select.form-control {
+  padding: 10px 36px 10px 14px !important;
+  line-height: normal !important;
+  background-color: #ffffff !important;
+  cursor: pointer !important;
 }
 
 #modalRecordPayment .form-control:focus,
@@ -13350,4 +13364,5 @@ input:checked + .slider:before {
 #modalQuickPayConfirm select.form-control option {
   background: #ffffff !important;
   color: #0f172a !important;
+  padding: 8px 12px !important;
 }

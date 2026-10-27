@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=116.0">
+  <link rel="stylesheet" href="css/style.css?v=117.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -6057,7 +6057,7 @@ CREATE TABLE IF NOT EXISTS registrations (
               Otomatis: Termin 1 (DP)
             </span>
           </div>
-          <input type="number" id="payModalAmountInput" class="form-control" placeholder="Ketik nominal cicilan..." required style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 15px; font-weight: 800; height: 42px;" oninput="onPayAmountChanged()">
+          <input type="number" id="payModalAmountInput" class="form-control" placeholder="Ketik nominal cicilan..." required style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 15px; font-weight: 800; min-height: 46px; height: 46px; padding: 10px 14px; line-height: normal; box-sizing: border-box;" oninput="onPayAmountChanged()">
           <div id="payModalHint" style="font-size: 12px; color: #475569; margin-top: 6px; padding: 8px 12px; background: #fdfbf7; border-left: 3px solid #10b981; border-radius: 6px; line-height: 1.4;">
             Ketik nominal yang dibayar, sistem otomatis mengalokasikan termin cicilan.
           </div>
@@ -6065,7 +6065,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 
         <div class="form-group" style="margin-bottom: 14px;">
           <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 4px; display: block;">Kategori / Termin Pembayaran:</label>
-          <select id="payModalTerminSelect" class="form-control" style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; height: 40px; font-weight: 600;">
+          <select id="payModalTerminSelect" class="form-control" style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; min-height: 46px; height: 46px; padding: 10px 14px; font-weight: 600; line-height: normal; box-sizing: border-box;">
             <option value="1">Termin 1 (Uang Muka / DP)</option>
             <option value="2">Termin 2 (Cicilan)</option>
             <option value="3">Pelunasan Penuh</option>
@@ -6074,7 +6074,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 
         <div class="form-group" style="margin-bottom: 14px;">
           <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 4px; display: block;">Metode Pembayaran:</label>
-          <select id="payModalMethodSelect" class="form-control" style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; height: 40px; font-weight: 600;">
+          <select id="payModalMethodSelect" class="form-control" style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; min-height: 46px; height: 46px; padding: 10px 14px; font-weight: 600; line-height: normal; box-sizing: border-box;">
             <option value="Tunai" selected>Tunai</option>
             <option value="Transfer">Transfer</option>
             <option value="QRIS">QRIS</option>
@@ -6083,7 +6083,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 
         <div class="form-group" style="margin-bottom: 18px;">
           <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 4px; display: block;">Catatan / Keterangan (Opsional):</label>
-          <input type="text" id="payModalNotesInput" class="form-control" placeholder="Contoh: Bukti transfer via bank..." style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; height: 40px;">
+          <input type="text" id="payModalNotesInput" class="form-control" placeholder="Contoh: Bukti transfer via bank..." style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; min-height: 46px; height: 46px; padding: 10px 14px; line-height: normal; box-sizing: border-box;">
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 8px;">
@@ -6103,6 +6103,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=131.0"></script>
-  <script src="js/app.js?v=153.0"></script>
+  <script src="js/app.js?v=154.0"></script>
 </body>
 </html>
