@@ -9675,7 +9675,16 @@ async function hashSHA256(text) {
 }
 
 function getStoredAdminPasswordHash() {
-  return safeStorage.getItem('paskas_admin_password') || DEFAULT_ADMIN_PASSWORD_HASH;
+  const local = safeStorage.getItem('paskas_admin_password');
+  if (local) return local;
+  if (window.dataService && typeof window.dataService.getSettings === 'function') {
+    const cloudPwd = window.dataService.getSettings().paskas_admin_password;
+    if (cloudPwd) {
+      safeStorage.setItem('paskas_admin_password', cloudPwd);
+      return cloudPwd;
+    }
+  }
+  return DEFAULT_ADMIN_PASSWORD_HASH;
 }
 
 /**
@@ -9699,7 +9708,7 @@ async function verifyAdminPassword(entered) {
   }
 
   // 2. Backward compatibility & Auto-migration: Jika data lama di localStorage/Supabase masih plaintext
-  if (stored === clean || stored === 'admin123') {
+  if (stored === clean) {
     safeStorage.setItem('paskas_admin_password', enteredHash);
     if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
       window.dataService.saveCloudSetting('paskas_admin_password', enteredHash);
@@ -14086,36 +14095,46 @@ async function submitTreasurerLogin() {
   }
 
   let isValid = false;
+  let isAdminPass = false;
+
+  // 1. Cek Kata Sandi Admin Utama
   try {
-    if (window.dataService && typeof window.dataService.verifyTreasurerPassword === 'function') {
-      isValid = await window.dataService.verifyTreasurerPassword(entered);
+    if (typeof verifyAdminPassword === 'function' && await verifyAdminPassword(entered)) {
+      isValid = true;
+      isAdminPass = true;
     }
   } catch (e) {
-    console.warn('verifyTreasurerPassword error:', e);
+    console.warn('verifyAdminPassword check error:', e);
   }
 
-  if (!isValid && typeof verifyAdminPassword === 'function') {
+  // 2. Cek Kata Sandi Bendahara / Keuangan
+  if (!isValid && window.dataService && typeof window.dataService.verifyTreasurerPassword === 'function') {
     try {
-      isValid = await verifyAdminPassword(entered);
+      isValid = await window.dataService.verifyTreasurerPassword(entered);
     } catch (e) {
-      console.warn('verifyAdminPassword fallback error:', e);
+      console.warn('verifyTreasurerPassword error:', e);
     }
   }
 
   if (isValid) {
     sessionStorage.setItem('paskas_treasurer_session', 'active');
     isTreasurerLoggedIn = true;
+    if (isAdminPass) {
+      setAdminLoggedInState(true, 'admin');
+    } else {
+      setAdminLoggedInState(true, 'keuangan');
+    }
     if (errEl) errEl.style.display = 'none';
     if (modal) {
       modal.classList.remove('active');
       modal.style.display = 'none';
     }
     checkTreasurerSessionState();
-    showToast('Akses Modul Keuangan Berhasil Dibuka!', 'success');
+    showToast(isAdminPass ? 'Akses Administrator & Keuangan Berhasil Dibuka!' : 'Akses Modul Keuangan Berhasil Dibuka!', 'success');
   } else {
     if (errEl) {
       errEl.style.display = 'flex';
-      errEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>keuangan123</code> / <code>admin123</code>.';
+      errEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>bendahara123</code> / <code>admin123</code>.';
     }
     if (card) {
       card.classList.remove('shake-animation');

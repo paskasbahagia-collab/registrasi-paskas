@@ -1408,9 +1408,49 @@ class PaskasDataService {
    * MANAJEMEN KATA SANDI BENDAHARA
    * ===================================================================
    */
+  getAdminPasswordHash() {
+    return safeStorage.getItem('paskas_admin_password') || 
+           (this.getSettings() && this.getSettings().paskas_admin_password) || 
+           '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'; // Default: admin123
+  }
+
+  async verifyAdminPassword(entered) {
+    if (!entered) return false;
+    const clean = entered.trim();
+    if (clean === 'admin123') return true;
+    const stored = (this.getAdminPasswordHash() || '').trim();
+    let enteredHash = clean;
+    if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
+      enteredHash = await window.hashSHA256(clean);
+    }
+    if (enteredHash.toLowerCase() === stored.toLowerCase() || 
+        enteredHash.toLowerCase() === '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9') {
+      return true;
+    }
+    if (stored === clean) {
+      if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
+        const hash = await window.hashSHA256(clean);
+        safeStorage.setItem('paskas_admin_password', hash);
+        await this.saveCloudSetting('paskas_admin_password', hash);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  async setAdminPassword(newHashOrPlain) {
+    let hash = newHashOrPlain;
+    if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function' && newHashOrPlain.length < 64) {
+      hash = await window.hashSHA256(newHashOrPlain);
+    }
+    safeStorage.setItem('paskas_admin_password', hash);
+    await this.saveCloudSetting('paskas_admin_password', hash);
+    return true;
+  }
+
   getTreasurerPasswordHash() {
     return safeStorage.getItem('paskas_treasurer_password') || 
-           this.getSettings().paskas_treasurer_password || 
+           (this.getSettings() && this.getSettings().paskas_treasurer_password) || 
            'dff9cd137cab8b96431ccd81f8bb433fc71f0329eefb54bd4380b3fc3a9fc5d1'; // Default: bendahara123
   }
 
@@ -1420,17 +1460,17 @@ class PaskasDataService {
     if (clean === 'keuangan123' || clean === 'bendahara123') {
       return true;
     }
-    const stored = this.getTreasurerPasswordHash();
-    let enteredHash = entered;
+    const stored = (this.getTreasurerPasswordHash() || '').trim();
+    let enteredHash = entered.trim();
     if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
-      enteredHash = await window.hashSHA256(entered);
+      enteredHash = await window.hashSHA256(entered.trim());
     }
     if (enteredHash.toLowerCase() === stored.toLowerCase()) {
       return true;
     }
-    if (stored === entered || stored === 'bendahara123' || stored === 'keuangan123') {
+    if (stored === entered.trim()) {
       if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
-        const hash = await window.hashSHA256(entered);
+        const hash = await window.hashSHA256(entered.trim());
         await this.setTreasurerPassword(hash);
       }
       return true;
@@ -1455,7 +1495,7 @@ class PaskasDataService {
    */
   getRekapPasswordHash() {
     return safeStorage.getItem('paskas_rekap_password') || 
-           this.getSettings().paskas_rekap_password || 
+           (this.getSettings() && this.getSettings().paskas_rekap_password) || 
            ''; 
   }
 
@@ -1463,16 +1503,16 @@ class PaskasDataService {
     if (!entered) return false;
     const clean = entered.trim().toLowerCase();
     if (clean === 'rekap123') return true;
-    const stored = this.getRekapPasswordHash();
+    const stored = (this.getRekapPasswordHash() || '').trim();
     if (!stored) return clean === 'rekap123';
-    let enteredHash = entered;
+    let enteredHash = entered.trim();
     if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
-      enteredHash = await window.hashSHA256(entered);
+      enteredHash = await window.hashSHA256(entered.trim());
     }
     if (enteredHash.toLowerCase() === stored.toLowerCase()) return true;
-    if (stored === entered || stored === 'rekap123') {
+    if (stored === entered.trim()) {
       if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
-        const hash = await window.hashSHA256(entered);
+        const hash = await window.hashSHA256(entered.trim());
         await this.setRekapPassword(hash);
       }
       return true;
@@ -1497,7 +1537,7 @@ class PaskasDataService {
    */
   getPresensiPasswordHash() {
     return safeStorage.getItem('paskas_presensi_password') || 
-           this.getSettings().paskas_presensi_password || 
+           (this.getSettings() && this.getSettings().paskas_presensi_password) || 
            ''; 
   }
 
@@ -1505,16 +1545,16 @@ class PaskasDataService {
     if (!entered) return false;
     const clean = entered.trim().toLowerCase();
     if (clean === 'presensi123' || clean === 'kehadiran123') return true;
-    const stored = this.getPresensiPasswordHash();
+    const stored = (this.getPresensiPasswordHash() || '').trim();
     if (!stored) return clean === 'presensi123' || clean === 'kehadiran123';
-    let enteredHash = entered;
+    let enteredHash = entered.trim();
     if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
-      enteredHash = await window.hashSHA256(entered);
+      enteredHash = await window.hashSHA256(entered.trim());
     }
     if (enteredHash.toLowerCase() === stored.toLowerCase()) return true;
-    if (stored === entered || stored === 'presensi123' || stored === 'kehadiran123') {
+    if (stored === entered.trim()) {
       if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
-        const hash = await window.hashSHA256(entered);
+        const hash = await window.hashSHA256(entered.trim());
         await this.setPresensiPassword(hash);
       }
       return true;

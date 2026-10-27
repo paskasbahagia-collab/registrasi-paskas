@@ -2202,20 +2202,20 @@
             </button>
 
             <div class="modal-auth-green-header">
-              <h3 class="modal-auth-green-title">Akses Admin</h3>
-              <p class="modal-auth-green-sub">Silahkan isi passwordnya:</p>
+              <h3 class="modal-auth-green-title">Akses Bendahara &amp; Keuangan</h3>
+              <p class="modal-auth-green-sub">Silahkan masukkan password Bendahara atau Admin:</p>
             </div>
 
             <form id="treasurerAuthForm" onsubmit="event.preventDefault(); submitTreasurerLogin();" style="margin-top: 18px;">
               <div class="modal-auth-green-input-wrap">
-                <input type="password" id="treasurerLoginPasswordInput" class="modal-auth-green-input" placeholder="Password admin..." autocomplete="current-password">
+                <input type="password" id="treasurerLoginPasswordInput" class="modal-auth-green-input" placeholder="Password bendahara / admin..." autocomplete="current-password">
                 <button type="button" class="modal-auth-green-eye" onclick="togglePasswordVisibility('treasurerLoginPasswordInput', this)" title="Lihat/Sembunyikan Kata Sandi">
                   <i class="fa-solid fa-eye"></i>
                 </button>
               </div>
 
               <div id="treasurerLoginError" class="admin-auth-error-msg" style="display: none;">
-                <i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>bendahara123</code>.
+                <i class="fa-solid fa-circle-exclamation"></i> Kata sandi tidak sesuai. Bawaan: <code>bendahara123</code> / <code>admin123</code>.
               </div>
 
               <div class="modal-auth-green-actions">
@@ -6111,7 +6111,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=131.0"></script>
-  <script src="js/app.js?v=156.0"></script>
+  <script src="js/supabase-config.js?v=132.0"></script>
+  <script src="js/app.js?v=157.0"></script>
 </body>
 </html>
