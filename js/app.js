@@ -1761,8 +1761,8 @@ function navigateTo(pageId) {
 
   if (pageId === 'dashboard') {
     closeHeroStory();
-    if (window.location.hash && window.location.hash !== '#dashboard' && !['#rekap', '#presensi', '#keuangan', '#registration'].includes(window.location.hash)) {
-      try { history.replaceState(null, '', '#dashboard'); } catch (e) {}
+    if (window.location.hash && window.location.hash !== '' && window.location.hash !== '#dashboard') {
+      try { history.replaceState(null, '', window.location.pathname + (window.location.search || '')); } catch (e) {}
     }
   }
 
