@@ -364,6 +364,40 @@ class PaskasDataService {
   }
 
   /**
+   * Mengaktifkan listener WebSocket Supabase Realtime untuk sinkronisasi live antar-perangkat
+   */
+  setupRealtimeSubscription(onChange) {
+    this.ensureSupabaseClient();
+    if (!this.isSupabaseConnected || !this.supabaseClient) return null;
+    if (this._realtimeChannel) {
+      try { this.supabaseClient.removeChannel(this._realtimeChannel); } catch (e) {}
+      this._realtimeChannel = null;
+    }
+
+    try {
+      this._realtimeChannel = this.supabaseClient
+        .channel('realtime-registrations-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'registrations' },
+          (payload) => {
+            console.log('[Supabase Realtime Live Event]:', payload.eventType, payload);
+            if (typeof onChange === 'function') {
+              try { onChange(payload); } catch (e) { console.warn('Error handling realtime event:', e); }
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('[Supabase Realtime Channel Status]:', status);
+        });
+      return this._realtimeChannel;
+    } catch (e) {
+      console.warn('[Supabase Realtime] Gagal inisialisasi channel:', e);
+      return null;
+    }
+  }
+
+  /**
    * Kolom resmi yang terdaftar di tabel Supabase registrations
    */
   getValidRegistrationColumns() {

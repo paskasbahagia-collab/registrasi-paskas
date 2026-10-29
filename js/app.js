@@ -987,6 +987,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load Registrations & Metrics
   await loadAndRenderRegistrations();
+
+  // Inisialisasi Realtime Sync antar-perangkat (WebSocket + Background Polling)
+  try {
+    initMultiDeviceRealtimeSync();
+  } catch (errSync) {
+    console.warn('Gagal inisialisasi Realtime Sync:', errSync);
+  }
 });
 
 function setDefaultDates() {
@@ -1872,7 +1879,9 @@ function navigateTo(pageId) {
     if (typeof renderPresensiView === 'function') {
       try { renderPresensiView(); } catch (e) { console.warn('renderPresensiView error:', e); }
     }
-    if ((!allRegistrations || allRegistrations.length === 0) && typeof loadAndRenderRegistrations === 'function') {
+    if (typeof syncRegistrationsSilently === 'function') {
+      syncRegistrationsSilently();
+    } else if ((!allRegistrations || allRegistrations.length === 0) && typeof loadAndRenderRegistrations === 'function') {
       loadAndRenderRegistrations().then(() => {
         if (typeof renderPresensiView === 'function') renderPresensiView();
       }).catch(err => console.warn('Gagal refresh presensi data:', err));
@@ -1883,7 +1892,9 @@ function navigateTo(pageId) {
     if (typeof checkTreasurerSessionState === 'function') {
       try { checkTreasurerSessionState(); } catch (e) { console.warn('checkTreasurerSessionState error:', e); }
     }
-    if ((!allRegistrations || allRegistrations.length === 0) && typeof loadAndRenderRegistrations === 'function') {
+    if (typeof syncRegistrationsSilently === 'function') {
+      syncRegistrationsSilently();
+    } else if ((!allRegistrations || allRegistrations.length === 0) && typeof loadAndRenderRegistrations === 'function') {
       loadAndRenderRegistrations().then(() => {
         if (typeof renderFinanceView === 'function') renderFinanceView();
       }).catch(err => console.warn('Gagal refresh keuangan data:', err));
@@ -1902,12 +1913,14 @@ function navigateTo(pageId) {
 // Auto-refresh saat pengguna kembali membuka / memfokuskan tab browser
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
-    const activePage = document.querySelector('.page-view.active');
-    if (activePage && (activePage.id === 'page-rekap' || activePage.id === 'page-settings')) {
-      if (typeof loadAndRenderRegistrations === 'function') {
-        loadAndRenderRegistrations().catch(() => {});
-      }
+    if (typeof syncRegistrationsSilently === 'function') {
+      syncRegistrationsSilently();
     }
+  }
+});
+window.addEventListener('focus', () => {
+  if (typeof syncRegistrationsSilently === 'function') {
+    syncRegistrationsSilently();
   }
 });
 
@@ -6677,6 +6690,154 @@ async function loadAndRenderRegistrations() {
   if (typeof renderFinanceView === 'function') {
     try { renderFinanceView(); } catch (e) {}
   }
+
+  // Update data fingerprint
+  try {
+    lastDataFingerprint = calculateDataFingerprint(allRegistrations);
+  } catch (e) {}
+}
+
+// ===================================================================
+// MULTI-DEVICE REALTIME SYNC (DUAL ENGINE: WEBSOCKET + BACKGROUND POLL)
+// ===================================================================
+let isSilentlySyncing = false;
+let lastDataFingerprint = '';
+let realtimeSyncInterval = null;
+
+function calculateDataFingerprint(list) {
+  if (!Array.isArray(list)) return '';
+  let fp = `${list.length}:`;
+  for (let i = 0; i < list.length; i++) {
+    const p = list[i];
+    fp += `${p.id || ''}_${p.updated_at || ''}_${p.attendance_status || ''}_${p.paid_amount || 0}_${p.payment_status || ''}_${p.payment_verified ? 1 : 0}_${p.check_in_at || ''}_${p.check_out_at || ''};`;
+  }
+  return fp;
+}
+
+function refreshActiveScreenViews() {
+  const activePage = document.querySelector('.page-view.active');
+  const activePageId = activePage ? activePage.id : '';
+
+  // Selalu perbarui badge counter di navbar / settings / magazine
+  const count = (allRegistrations || []).length;
+  const badge = document.getElementById('rekapBadgeCount');
+  if (badge) badge.textContent = count;
+  const settingsBadge = document.getElementById('settingsRekapBadge');
+  if (settingsBadge) settingsBadge.textContent = count;
+  const magTotal = document.getElementById('magPillTotal');
+  if (magTotal) magTotal.textContent = count + ' Jiwa';
+
+  // Perbarui halaman yang saat ini sedang aktif tanpa refresh/F5
+  if (activePageId === 'page-presensi') {
+    if (typeof renderPresensiView === 'function') {
+      try { renderPresensiView(); } catch (e) { console.warn('renderPresensiView error:', e); }
+    }
+  } else if (activePageId === 'page-keuangan') {
+    if (typeof renderFinanceView === 'function') {
+      try { renderFinanceView(); } catch (e) { console.warn('renderFinanceView error:', e); }
+    }
+  } else if (activePageId === 'page-rekap') {
+    if (typeof renderRekapTable === 'function') {
+      try {
+        filteredRegistrations = [...allRegistrations];
+        populateWilayahFilter();
+        updateSummaryMetrics();
+        renderRekapTable();
+        renderCharts();
+      } catch (e) { console.warn('renderRekapTable error:', e); }
+    }
+  } else if (activePageId === 'page-dashboard' || !activePageId) {
+    if (typeof updateSummaryMetrics === 'function') {
+      try { updateSummaryMetrics(); renderCharts(); } catch (e) {}
+    }
+  }
+}
+
+async function syncRegistrationsSilently() {
+  if (isSilentlySyncing) return;
+  if (!window.dataService || typeof window.dataService.getRegistrations !== 'function') return;
+
+  isSilentlySyncing = true;
+  try {
+    const freshList = await window.dataService.getRegistrations();
+    if (Array.isArray(freshList)) {
+      const freshFp = calculateDataFingerprint(freshList);
+      if (!lastDataFingerprint && Array.isArray(allRegistrations)) {
+        lastDataFingerprint = calculateDataFingerprint(allRegistrations);
+      }
+      if (freshFp !== lastDataFingerprint || (!allRegistrations || allRegistrations.length !== freshList.length)) {
+        allRegistrations = freshList;
+        lastDataFingerprint = freshFp;
+        refreshActiveScreenViews();
+      }
+    }
+  } catch (err) {
+    console.debug('[Realtime Silent Sync] skipped:', err.message);
+  } finally {
+    isSilentlySyncing = false;
+  }
+}
+
+function handleRealtimeRegistrationPayload(payload) {
+  if (!payload || !payload.eventType) return;
+  const evt = payload.eventType;
+  const newRow = payload.new;
+  const oldRow = payload.old;
+
+  if (!Array.isArray(allRegistrations)) allRegistrations = [];
+
+  if (evt === 'UPDATE' && newRow && newRow.id) {
+    const idx = allRegistrations.findIndex(item => Number(item.id) === Number(newRow.id));
+    if (idx !== -1) {
+      allRegistrations[idx] = { ...allRegistrations[idx], ...newRow };
+    } else {
+      allRegistrations.unshift(newRow);
+    }
+    lastDataFingerprint = calculateDataFingerprint(allRegistrations);
+    refreshActiveScreenViews();
+  } else if (evt === 'INSERT' && newRow && newRow.id) {
+    const idx = allRegistrations.findIndex(item => Number(item.id) === Number(newRow.id));
+    if (idx === -1) {
+      allRegistrations.unshift(newRow);
+    } else {
+      allRegistrations[idx] = { ...allRegistrations[idx], ...newRow };
+    }
+    lastDataFingerprint = calculateDataFingerprint(allRegistrations);
+    refreshActiveScreenViews();
+  } else if (evt === 'DELETE' && oldRow && oldRow.id) {
+    allRegistrations = allRegistrations.filter(item => Number(item.id) !== Number(oldRow.id));
+    lastDataFingerprint = calculateDataFingerprint(allRegistrations);
+    refreshActiveScreenViews();
+  } else {
+    syncRegistrationsSilently();
+  }
+}
+
+function initMultiDeviceRealtimeSync() {
+  if (Array.isArray(allRegistrations) && allRegistrations.length > 0) {
+    lastDataFingerprint = calculateDataFingerprint(allRegistrations);
+  }
+
+  // 1. WebSocket Live Stream via Supabase Realtime
+  if (window.dataService && typeof window.dataService.setupRealtimeSubscription === 'function') {
+    try {
+      window.dataService.setupRealtimeSubscription((payload) => {
+        handleRealtimeRegistrationPayload(payload);
+      });
+    } catch (e) {
+      console.warn('Realtime subscription error:', e);
+    }
+  }
+
+  // 2. Background Polling interval setiap 4 detik saat tab aktif (safety net otomatis)
+  if (realtimeSyncInterval) {
+    clearInterval(realtimeSyncInterval);
+  }
+  realtimeSyncInterval = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      syncRegistrationsSilently();
+    }
+  }, 4000);
 }
 
 async function forceReloadCloudData(btn) {
@@ -15747,5 +15908,8 @@ window.saveNewPresensiPassword = saveNewPresensiPassword;
 window.resetPresensiPasswordDefault = resetPresensiPasswordDefault;
 window.saveNewRekapPassword = saveNewRekapPassword;
 window.resetRekapPasswordDefault = resetRekapPasswordDefault;
+window.initMultiDeviceRealtimeSync = initMultiDeviceRealtimeSync;
+window.syncRegistrationsSilently = syncRegistrationsSilently;
+window.refreshActiveScreenViews = refreshActiveScreenViews;
 
 

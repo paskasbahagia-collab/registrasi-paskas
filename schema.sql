@@ -152,4 +152,16 @@ CREATE POLICY "Allow public read paskas bahagia"
 ON storage.objects FOR SELECT TO anon, authenticated
 USING (bucket_id = 'paskas bahagia');
 
+-- 5. Realtime Replication untuk Sinkronisasi Otomatis Antar Perangkat
+-- Menyiarkan perubahan data presensi, pembayaran, dan status secara instan ke seluruh layar tanpa perlu refresh/F5.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'registrations'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE registrations;
+  END IF;
+END $$;
+
 -- Selesai! Skema database siap & aman digunakan oleh frontend PASKAS BAHAGIA.
