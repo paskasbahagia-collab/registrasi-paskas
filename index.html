@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=120.0">
+  <link rel="stylesheet" href="css/style.css?v=121.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -2263,7 +2263,7 @@
           </div>
 
           <!-- 5 Financial Stat Cards (Matching Gambar 2) -->
-          <div class="finance-stat-cards-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px;">
+          <div class="finance-stat-cards-grid" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 20px;">
             <!-- Card 1: Total Peserta -->
             <div class="fin-stat-card">
               <div class="fin-stat-card-inner">
@@ -2325,6 +2325,25 @@
               </div>
             </div>
 
+            <!-- Card: Belum Terverifikasi -->
+            <div class="fin-stat-card">
+              <div class="fin-stat-card-inner">
+                <div class="fin-stat-icon-wrap" style="background: #fef3c7; color: #d97706;">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="fin-stat-info">
+                  <div class="fin-stat-label">Belum Terverifikasi</div>
+                  <div class="fin-stat-value" style="color: #b45309;">
+                    <span id="finStatBelumVerifikasi">0</span>
+                    <span class="fin-stat-unit">orang</span>
+                  </div>
+                  <a href="#financeTableSection" class="fin-stat-link" style="color: #b45309;" onclick="setFinanceFilter('unverified'); document.getElementById('financeTableSection').scrollIntoView({behavior:'smooth'}); return false;">
+                    Lihat belum verifikasi &rarr;
+                  </a>
+                </div>
+              </div>
+            </div>
+
             <!-- Card 5: Progres Pembayaran -->
             <div class="fin-stat-card">
               <div class="fin-stat-card-inner">
@@ -2367,6 +2386,13 @@
                       Lunas
                     </span>
                     <span style="font-weight: 800; color: #0f172a;"><span id="statCountLunas">0</span> (<span id="statPctLunas">0%</span>)</span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+                    <span style="display: flex; align-items: center; gap: 8px; color: #334155; font-weight: 600;">
+                      <span style="width: 10px; height: 10px; border-radius: 50%; background: #d97706; display: inline-block;"></span>
+                      Belum Terverifikasi
+                    </span>
+                    <span style="font-weight: 800; color: #0f172a;"><span id="statCountUnverified">0</span> (<span id="statPctUnverified">0%</span>)</span>
                   </div>
                   <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
                     <span style="display: flex; align-items: center; gap: 8px; color: #334155; font-weight: 600;">
@@ -2563,6 +2589,7 @@
               <select id="finFilterStatus" class="fin-select-filter" onchange="filterFinanceData()" title="Filter Status" style="height: 38px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #334155;">
                 <option value="all">Semua Status</option>
                 <option value="paid">Lunas</option>
+                <option value="unverified">Belum Terverifikasi</option>
                 <option value="partial">Cicilan</option>
                 <option value="pending">Belum Bayar</option>
                 <option value="refund">Refund/Batal</option>
@@ -6217,6 +6244,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=134.0"></script>
-  <script src="js/app.js?v=161.0"></script>
+  <script src="js/app.js?v=162.0"></script>
 </body>
 </html>

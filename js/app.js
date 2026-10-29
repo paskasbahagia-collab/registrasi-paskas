@@ -14257,6 +14257,7 @@ function renderFinanceView() {
   let totalRefund = 0;
 
   let countLunas = 0;
+  let countUnverified = 0;
   let countCicilan = 0;
   let countBelum = 0;
 
@@ -14296,7 +14297,9 @@ function renderFinanceView() {
       const isVerified = p.payment_verified === 'verified';
       if (remaining <= 0 && paid > 0 && isVerified) {
         countLunas++;
-      } else if (paid > 0) {
+      } else if (paid > 0 && !isVerified) {
+        countUnverified++;
+      } else if (paid > 0 && remaining > 0) {
         countCicilan++;
       } else {
         countBelum++;
@@ -14327,8 +14330,9 @@ function renderFinanceView() {
   const pctMasuk = totalTagihan > 0 ? Math.min(100, Math.round((totalMasuk / totalTagihan) * 100)) : 0;
   const pctPiutang = totalTagihan > 0 ? (100 - pctMasuk) : 0;
 
-  // 1. Update Top 5 Stat Cards (Gambar 2)
+  // 1. Update Top Stat Cards
   setElemText('finStatTotalPeserta', totalPeserta.toLocaleString('id-ID'));
+  setElemText('finStatBelumVerifikasi', countUnverified.toLocaleString('id-ID'));
   setElemText('financeStatTotalTagihan', `Rp ${totalTagihan.toLocaleString('id-ID')}`);
   setElemText('financeStatTotalMasuk', `Rp ${totalMasuk.toLocaleString('id-ID')}`);
   setElemText('financeStatTotalPiutang', `Rp ${totalPiutang.toLocaleString('id-ID')}`);
@@ -14339,6 +14343,7 @@ function renderFinanceView() {
 
   // 2. Update Status Pembayaran Donut & Legend
   const pctLunas = totalPeserta > 0 ? Math.round((countLunas / totalPeserta) * 100) : 0;
+  const pctUnverified = totalPeserta > 0 ? Math.round((countUnverified / totalPeserta) * 100) : 0;
   const pctCicilan = totalPeserta > 0 ? Math.round((countCicilan / totalPeserta) * 100) : 0;
   const pctBelum = totalPeserta > 0 ? Math.round((countBelum / totalPeserta) * 100) : 0;
   const pctRefund = totalPeserta > 0 ? Math.round((countRefund / totalPeserta) * 100) : 0;
@@ -14346,6 +14351,8 @@ function renderFinanceView() {
   setElemText('chartDonutTotalCount', totalPeserta);
   setElemText('statCountLunas', countLunas);
   setElemText('statPctLunas', `${pctLunas}%`);
+  setElemText('statCountUnverified', countUnverified);
+  setElemText('statPctUnverified', `${pctUnverified}%`);
   setElemText('statCountCicilan', countCicilan);
   setElemText('statPctCicilan', `${pctCicilan}%`);
   setElemText('statCountBelum', countBelum);
@@ -14353,7 +14360,7 @@ function renderFinanceView() {
   setElemText('statCountRefund', countRefund);
   setElemText('statPctRefund', `${pctRefund}%`);
 
-  renderFinanceStatusDonutChart(countLunas, countCicilan, countBelum, countRefund);
+  renderFinanceStatusDonutChart(countLunas, countUnverified, countCicilan, countBelum, countRefund);
 
   // 3. Update Rekap Pembayaran per Termin (Gambar 2)
   const targetT1 = Math.round((totalTagihan * 0.32) / 50000) * 50000;
@@ -14431,7 +14438,7 @@ function populateFinanceRombonganDropdown(list) {
   }
 }
 
-function renderFinanceStatusDonutChart(countLunas, countCicilan, countBelum, countRefund) {
+function renderFinanceStatusDonutChart(countLunas, countUnverified, countCicilan, countBelum, countRefund) {
   const canvas = document.getElementById('chartFinanceStatusDonut') || document.getElementById('chartFinanceRatio');
   if (!canvas || typeof Chart === 'undefined') return;
 
@@ -14439,15 +14446,15 @@ function renderFinanceStatusDonutChart(countLunas, countCicilan, countBelum, cou
     try { financeRatioChartInstance.destroy(); } catch (e) {}
   }
 
-  const total = countLunas + countCicilan + countBelum + countRefund;
-  const data = total > 0 ? [countLunas, countCicilan, countBelum, countRefund] : [0, 0, 1, 0];
-  const bgColors = total > 0 ? ['#10b981', '#8b5cf6', '#f59e0b', '#ef4444'] : ['#e2e8f0'];
+  const total = countLunas + countUnverified + countCicilan + countBelum + countRefund;
+  const data = total > 0 ? [countLunas, countUnverified, countCicilan, countBelum, countRefund] : [0, 0, 0, 1, 0];
+  const bgColors = total > 0 ? ['#10b981', '#d97706', '#8b5cf6', '#f59e0b', '#ef4444'] : ['#e2e8f0'];
 
   const ctx = canvas.getContext('2d');
   financeRatioChartInstance = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Lunas', 'Cicilan', 'Belum Bayar', 'Refund/Batal'],
+      labels: ['Lunas', 'Belum Terverifikasi', 'Cicilan', 'Belum Bayar', 'Refund/Batal'],
       datasets: [{
         data: data,
         backgroundColor: bgColors,
@@ -14488,6 +14495,7 @@ function setFinanceFilter(filterKey, btnEl) {
   if (statusSel) {
     if (filterKey === 'all') statusSel.value = 'all';
     else if (filterKey === 'paid') statusSel.value = 'paid';
+    else if (filterKey === 'unverified') statusSel.value = 'unverified';
     else if (filterKey === 'partial') statusSel.value = 'partial';
     else if (filterKey === 'pending') statusSel.value = 'pending';
     else if (filterKey === 'refund') statusSel.value = 'refund';
@@ -14545,8 +14553,10 @@ function renderFinanceTable() {
     const isVerified = p.payment_verified === 'verified';
     if (statusVal === 'paid') {
       if (remaining > 0 || paid === 0 || !isVerified || p.attendance_status === 'cancelled') return false;
+    } else if (statusVal === 'unverified') {
+      if (paid === 0 || isVerified || p.attendance_status === 'cancelled') return false;
     } else if (statusVal === 'partial') {
-      if (paid === 0 || (remaining <= 0 && isVerified) || p.attendance_status === 'cancelled') return false;
+      if (paid === 0 || remaining <= 0 || !isVerified || p.attendance_status === 'cancelled') return false;
     } else if (statusVal === 'pending') {
       if (paid > 0 || p.attendance_status === 'cancelled') return false;
     } else if (statusVal === 'refund') {
@@ -14760,7 +14770,8 @@ function exportFinanceToCSV() {
 
     const isVerified = p.payment_verified === 'verified';
     if (statusVal === 'paid' && (remaining > 0 || paid === 0 || !isVerified || p.attendance_status === 'cancelled')) return false;
-    if (statusVal === 'partial' && (paid === 0 || (remaining <= 0 && isVerified) || p.attendance_status === 'cancelled')) return false;
+    if (statusVal === 'unverified' && (paid === 0 || isVerified || p.attendance_status === 'cancelled')) return false;
+    if (statusVal === 'partial' && (paid === 0 || remaining <= 0 || !isVerified || p.attendance_status === 'cancelled')) return false;
     if (statusVal === 'pending' && (paid > 0 || p.attendance_status === 'cancelled')) return false;
     if (statusVal === 'refund' && p.attendance_status !== 'cancelled') return false;
 

@@ -13396,9 +13396,6 @@ input:checked + .slider:before {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 12px !important;
   }
-  .fin-stat-card:last-child {
-    grid-column: span 2;
-  }
   .finance-middle-deck {
     display: flex !important;
     flex-direction: column !important;
