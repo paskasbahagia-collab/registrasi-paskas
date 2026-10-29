@@ -494,14 +494,20 @@ class PaskasDataService {
 
       // Utamakan bucket 'paskas bahagia' yang sudah ada di Supabase
       const bucketName = 'paskas bahagia';
-      let { error } = await this.supabaseClient.storage
-        .from(bucketName)
-        .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
+      
+      // Pasang timeout 3.5 detik agar pendaftaran peserta tidak macet / lambat saat sinyal lemah
+      const uploadWithTimeout = Promise.race([
+        this.supabaseClient.storage.from(bucketName).upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload timeout (3.5s)')), 3500))
+      ]);
+
+      let { error } = await uploadWithTimeout;
 
       if (error && error.message && error.message.includes('Bucket not found')) {
-        const fb = await this.supabaseClient.storage
-          .from('foto-peserta')
-          .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
+        const fb = await Promise.race([
+          this.supabaseClient.storage.from('foto-peserta').upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Fallback storage timeout')), 3000))
+        ]);
         if (!fb.error) {
           const { data } = this.supabaseClient.storage.from('foto-peserta').getPublicUrl(path);
           return (data && data.publicUrl) || photo;
@@ -512,7 +518,7 @@ class PaskasDataService {
       const { data } = this.supabaseClient.storage.from(bucketName).getPublicUrl(path);
       return (data && data.publicUrl) || photo;
     } catch (err) {
-      console.warn('Gagal upload foto ke Supabase Storage, simpan base64 sebagai cadangan:', err);
+      console.warn('Upload foto ke Supabase Storage dilewati (kecepatan diutamakan):', err.message);
       return photo;
     }
   }
@@ -713,11 +719,14 @@ class PaskasDataService {
     let maxSeq = 0;
     if (this.supabaseClient) {
       try {
-        const { data } = await this.supabaseClient
+        const queryPromise = this.supabaseClient
           .from('registrations')
           .select('registration_code')
           .order('id', { ascending: false })
           .limit(60);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Sequence query timeout')), 2500));
+        
+        const { data } = await Promise.race([queryPromise, timeoutPromise]);
         if (data && Array.isArray(data)) {
           data.forEach(r => {
             const m = String(r.registration_code || '').match(/PKB-(\d+)/i);
@@ -728,7 +737,7 @@ class PaskasDataService {
           });
         }
       } catch (e) {
-        console.warn('Gagal membaca sequence remote terbaru dari Supabase:', e);
+        console.warn('Gagal membaca sequence remote terbaru dari Supabase (timeout/network):', e.message);
       }
     }
     return maxSeq;

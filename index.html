@@ -1732,6 +1732,26 @@
                     <!-- Status Pengiriman Email (Muncul saat tombol kirim ditekan) -->
                     <div id="successEmailStatusAlert" class="success-email-status-box" style="display: none;"></div>
 
+                    <!-- KARTU GABUNG GRUP WHATSAPP RESMI -->
+                    <div class="reg-success-wa-card" style="background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border: 1.5px solid #10b981; border-radius: 14px; padding: 18px 22px; margin: 22px 0 16px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; box-shadow: 0 8px 24px rgba(6, 78, 59, 0.35);">
+                      <div style="display: flex; align-items: center; gap: 14px;">
+                        <div style="width: 48px; height: 48px; border-radius: 50%; background: #25d366; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 26px; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.45); flex-shrink: 0;">
+                          <i class="fa-brands fa-whatsapp"></i>
+                        </div>
+                        <div>
+                          <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                            Grup WhatsApp Resmi Acara <span style="background: rgba(37, 211, 102, 0.25); color: #34d399; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600; border: 1px solid rgba(52, 211, 153, 0.4);">Paskas Bahagia</span>
+                          </h4>
+                          <p style="margin: 4px 0 0 0; font-size: 13px; color: #d1fae5; line-height: 1.4;">
+                            Silakan langsung bergabung ke grup WhatsApp untuk koordinasi kedatangan, info akomodasi, dan kabar terkini.
+                          </p>
+                        </div>
+                      </div>
+                      <a href="https://chat.whatsapp.com/D0PK0ouycVOCAnmTg68FF8" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 8px; background: #25d366; color: #ffffff; font-weight: 700; font-size: 14px; padding: 12px 22px; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4); white-space: nowrap; transition: transform 0.2s ease;">
+                        <i class="fa-brands fa-whatsapp" style="font-size: 20px;"></i> Gabung Grup WA
+                      </a>
+                    </div>
+
                     <!-- KONTROL TOMBOL AKSI DI BAWAH (SESUAI PERMINTAAN USER) -->
                     <div class="reg-success-actions-toolbar">
                       <button type="button" class="btn-success-action btn-preview-ticket" onclick="toggleSuccessTicketPreview()" id="btnSuccessTogglePreview">
@@ -5686,7 +5706,7 @@ CREATE TABLE IF NOT EXISTS registrations (
           <button class="btn btn-secondary" onclick="closeAttendeeModal()">
             Tutup
           </button>
-          <button class="btn btn-primary" id="btnAttendeePrintTicket" onclick="printFromAttendeeDetail()">
+          <button type="button" class="btn" id="btnAttendeeEdit" onclick="openEditAttendeeFromDetail()" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-weight: 700; border-radius: 8px; padding: 9px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: none; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);"><i class="fa-solid fa-user-pen"></i> Edit Data</button><button class="btn btn-primary" id="btnAttendeePrintTicket" onclick="printFromAttendeeDetail()">
             <i class="fa-solid fa-ticket"></i> Cetak E-Tiket
           </button>
         </div>
@@ -5695,6 +5715,250 @@ CREATE TABLE IF NOT EXISTS registrations (
   </div>
 
   <!-- ======================================================= -->
+  <!-- ======================================================= -->
+  <!-- MODAL: EDIT DATA PESERTA PASKAS (LANGSUNG KE SUPABASE)  -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop" id="modalEditAttendee" style="z-index: 100005;">
+    <div class="modal-card modal-card-wide" style="max-width: 780px;">
+      <div class="modal-header">
+        <div class="modal-title-with-icon">
+          <i class="fa-solid fa-user-pen" style="color: #38bdf8;"></i>
+          <div>
+            <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #ffffff;">Edit Data Peserta Paskas</h3>
+            <span id="editAttCodeBadge" class="badge-table-code" style="margin-top: 4px; display: inline-block;">PKB-XXX</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal-sm" onclick="closeEditAttendeeModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="formEditAttendee" onsubmit="submitEditAttendee(event)">
+        <div class="modal-body modal-body-scrollable" style="padding: 20px 24px;">
+          <input type="hidden" id="editAttId">
+
+          <!-- SECTION 1: IDENTITAS DIRI -->
+          <div style="margin-bottom: 20px;">
+            <h4 style="font-size: 14px; font-weight: 700; color: #38bdf8; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-id-card"></i> 1. Identitas & Profil Peserta
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Nama Lengkap <span style="color: #ef4444;">*</span>
+                </label>
+                <input type="text" id="editAttFullName" class="form-input" required placeholder="Nama lengkap peserta..." style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Jenis Kelamin <span style="color: #ef4444;">*</span>
+                </label>
+                <select id="editAttGender" class="form-input" required style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+                  <option value="Ikhwan">Ikhwan (Laki-laki)</option>
+                  <option value="Akhwat">Akhwat (Perempuan)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Usia (Tahun)
+                </label>
+                <input type="number" id="editAttAge" class="form-input" min="0" max="120" placeholder="Contoh: 35" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Tipe Pendaftaran
+                </label>
+                <select id="editAttRegType" class="form-input" onchange="toggleEditGroupFields()" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+                  <option value="individu">Individu / Mandiri</option>
+                  <option value="rombongan">Rombongan / Kafilah</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="editGroupWrap" style="display: none;">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Nama Rombongan
+                </label>
+                <input type="text" id="editAttGroupName" class="form-input" placeholder="Contoh: Kafilah Khadijah" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+              </div>
+
+              <div class="form-group" id="editGroupLeaderWrap" style="display: none;">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Koordinator Rombongan
+                </label>
+                <input type="text" id="editAttGroupLeaderName" class="form-input" placeholder="Nama koordinator..." style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+              </div>
+
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Orang Tua / Wali Pendamping (Khusus Anak-anak)
+                </label>
+                <input type="text" id="editAttGuardianName" class="form-input" placeholder="Nama orang tua/wali pendamping (opsional)..." style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 2: DOMISILI & KONTAK -->
+          <div style="margin-bottom: 20px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);">
+            <h4 style="font-size: 14px; font-weight: 700; color: #f59e0b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-map-location-dot"></i> 2. Asal Wilayah & Kontak
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Wilayah <span style="color: #ef4444;">*</span>
+                </label>
+                <input type="text" id="editAttWilayah" class="form-input" list="editWilayahList" required placeholder="Pilih atau ketik wilayah..." style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+                <datalist id="editWilayahList"></datalist>
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Kota / Kabupaten (Daerah)
+                </label>
+                <input type="text" id="editAttDaerah" class="form-input" placeholder="Contoh: Samarinda, Balikpapan..." style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Nomor WhatsApp
+                </label>
+                <input type="tel" id="editAttPhone" class="form-input" placeholder="Contoh: 08123456789" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  HP Darurat (Keluarga)
+                </label>
+                <input type="tel" id="editAttEmergencyPhone" class="form-input" placeholder="Nomor kontak darurat..." style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+              </div>
+
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Alamat Email
+                </label>
+                <input type="email" id="editAttEmail" class="form-input" placeholder="email@contoh.com" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 3: SERAGAM & LOGISTIK TRANSPORTASI -->
+          <div style="margin-bottom: 20px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);">
+            <h4 style="font-size: 14px; font-weight: 700; color: #10b981; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-shirt"></i> 3. Seragam & Transportasi
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Ukuran Baju Seragam
+                </label>
+                <select id="editAttClothSize" class="form-input" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+                  <option value="XS">XS</option>
+                  <option value="S">S</option>
+                  <option value="M">M</option>
+                  <option value="L">L</option>
+                  <option value="XL">XL</option>
+                  <option value="XXL">XXL</option>
+                  <option value="3XL">3XL</option>
+                  <option value="4XL">4XL</option>
+                  <option value="5XL">5XL</option>
+                  <option value="Anak S">Anak S</option>
+                  <option value="Anak M">Anak M</option>
+                  <option value="Anak L">Anak L</option>
+                  <option value="Anak XL">Anak XL</option>
+                  <option value="-">-</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Transportasi Berangkat
+                </label>
+                <select id="editAttTransportArrival" class="form-input" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+                  <option value="Pesawat">Pesawat</option>
+                  <option value="Kapal Laut">Kapal Laut</option>
+                  <option value="Kereta Api">Kereta Api</option>
+                  <option value="Bus / Travel">Bus / Travel</option>
+                  <option value="Mobil Pribadi">Mobil Pribadi</option>
+                  <option value="Motor">Motor</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Jadwal Kedatangan
+                </label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="date" id="editAttArrivalDate" class="form-input" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15); flex: 1.5;">
+                  <input type="time" id="editAttArrivalTime" class="form-input" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15); flex: 1;">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Transportasi Pulang
+                </label>
+                <select id="editAttTransportDeparture" class="form-input" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+                  <option value="Pesawat">Pesawat</option>
+                  <option value="Kapal Laut">Kapal Laut</option>
+                  <option value="Kereta Api">Kereta Api</option>
+                  <option value="Bus / Travel">Bus / Travel</option>
+                  <option value="Mobil Pribadi">Mobil Pribadi</option>
+                  <option value="Motor">Motor</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Jadwal Kepulangan
+                </label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="date" id="editAttDepartureDate" class="form-input" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15); flex: 1.5;">
+                  <input type="time" id="editAttDepartureTime" class="form-input" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15); flex: 1;">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 4: KESEHATAN & CATATAN -->
+          <div style="padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);">
+            <h4 style="font-size: 14px; font-weight: 700; color: #f43f5e; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-notes-medical"></i> 4. Kesehatan & Catatan Khusus
+            </h4>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 14px;">
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Riwayat Kesehatan / Penyakit Kambuhan
+                </label>
+                <textarea id="editAttMedicalHistory" class="form-input" rows="2" placeholder="Contoh: Asma, Alergi makanan dingin, atau kosongkan jika sehat..." style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15); resize: vertical;"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Catatan Khusus (Opsional)
+                </label>
+                <textarea id="editAttNotes" class="form-input" rows="2" placeholder="Catatan tambahan untuk panitia..." style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15); resize: vertical;"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2);">
+          <button type="button" class="btn btn-secondary" onclick="closeEditAttendeeModal()">
+            Batal
+          </button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitEditAttendee" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; font-weight: 700; border: none; padding: 10px 20px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4); cursor: pointer;">
+            <i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan Data
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: POP-UP KONFIRMASI HAPUS WILAYAH (ELEGAN)         -->
   <!-- ======================================================= -->
   <div class="modal-backdrop" id="deleteWilayahConfirmModal">
@@ -6251,7 +6515,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=136.0"></script>
-  <script src="js/app.js?v=164.0"></script>
+  <script src="js/supabase-config.js?v=137.0"></script>
+  <script src="js/app.js?v=165.0"></script>
 </body>
 </html>

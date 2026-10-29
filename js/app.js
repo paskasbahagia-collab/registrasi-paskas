@@ -2398,7 +2398,7 @@ function escapeHtml(str) {
 // ===================================================================
 let ind_selectedPhotoData = null;
 
-function compressParticipantPhoto(file, maxWidth = 800, maxHeight = 1000, quality = 0.82) {
+function compressParticipantPhoto(file, maxWidth = 500, maxHeight = 650, quality = 0.76) {
   return new Promise((resolve, reject) => {
     if (!file || !file.type || !file.type.startsWith('image/')) {
       reject(new Error('File yang dipilih bukan gambar valid.'));
@@ -2469,7 +2469,7 @@ async function handleIndividuPhotoSelected(e) {
 
   try {
     showToast('Memproses dan mengoptimalkan pas foto (kapasitas s/d 100MB)...', 'info');
-    const compressed = await compressParticipantPhoto(file, 800, 1000, 0.82);
+    const compressed = await compressParticipantPhoto(file, 500, 650, 0.76);
     const photoDataUrl = (typeof compressed === 'object' && compressed.dataUrl) ? compressed.dataUrl : compressed;
     ind_selectedPhotoData = photoDataUrl;
 
@@ -4012,8 +4012,8 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
     // Tampilkan Halaman Mahabbah & Sukses Langsung di Halaman (Bukan popup gambar tiket)
     showSuccessRegistrationView(saved, 'individu');
 
-    // Refresh data rekap
-    await loadAndRenderRegistrations();
+    // Refresh data rekap secara hening di latar belakang tanpa menunda respons sukses
+    loadAndRenderRegistrations().catch(err => console.warn('Background refresh error:', err));
   } catch (err) {
     showToast('Terjadi kendala saat menyimpan pendaftaran: ' + err.message, 'error');
   } finally {
@@ -4609,7 +4609,7 @@ async function confirmAndSubmitRegistration() {
       showSuccessRegistrationView(saved, 'individu');
 
       // Refresh data rekap
-      await loadAndRenderRegistrations();
+      loadAndRenderRegistrations().catch(err => console.warn('Background batch refresh error:', err));
     } else if (pendingRegistrationData.type === 'kelompok') {
       const savedBatch = await window.dataService.addBatchRegistrations(pendingRegistrationData.data);
 
@@ -4631,7 +4631,7 @@ async function confirmAndSubmitRegistration() {
         showSuccessRegistrationView(savedBatch, 'kelompok');
       }
 
-      await loadAndRenderRegistrations();
+      loadAndRenderRegistrations().catch(err => console.warn('Background batch refresh error:', err));
     }
   } catch (err) {
     showToast('Terjadi kendala saat menyimpan pendaftaran: ' + err.message, 'error');
@@ -7293,6 +7293,9 @@ function renderRekapTable() {
             <button class="btn-table-action" onclick="viewAttendeeDetail('${item.id}')" title="Lihat Profil Lengkap">
               <i class="fa-regular fa-eye"></i>
             </button>
+            <button class="btn-table-action" onclick="openEditAttendeeModal('${item.id}')" title="Edit Data Peserta (Langsung Tersimpan)" style="color: #0284c7;">
+              <i class="fa-solid fa-user-pen"></i>
+            </button>
             <button class="btn-table-action" onclick="showSingleTicketFromTable('${item.id}')" title="Lihat & Unduh E-Tiket (Boarding Pass)" style="color: #38bdf8;">
               <i class="fa-solid fa-ticket"></i>
             </button>
@@ -7316,23 +7319,70 @@ function renderRekapTable() {
 
   // Update Pagination Buttons
   if (paginationButtons) {
+    paginationButtons.style.overflowX = 'auto';
+    paginationButtons.style.maxWidth = '100%';
+    paginationButtons.style.flexWrap = 'nowrap';
+    paginationButtons.style.padding = '4px 0';
+
     let btnsHtml = `
-      <button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+      <button class="page-btn" onclick="changePage(1)" ${currentPage === 1 ? 'disabled' : ''} title="Halaman Pertama">
+        <i class="fa-solid fa-angles-left"></i>
+      </button>
+      <button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} title="Halaman Sebelumnya">
         <i class="fa-solid fa-chevron-left"></i>
       </button>
     `;
 
-    for (let p = 1; p <= totalPages; p++) {
-      btnsHtml += `
-        <button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="changePage(${p})">
-          ${p}
-        </button>
-      `;
+    // Smart Pagination Range (Mencegah luapan tombol saat data ratusan)
+    let pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      let startWindow = Math.max(2, currentPage - 1);
+      let endWindow = Math.min(totalPages - 1, currentPage + 1);
+
+      if (currentPage <= 3) {
+        startWindow = 2;
+        endWindow = 4;
+      } else if (currentPage >= totalPages - 2) {
+        startWindow = totalPages - 3;
+        endWindow = totalPages - 1;
+      }
+
+      if (startWindow > 2) {
+        pages.push('...');
+      }
+
+      for (let i = startWindow; i <= endWindow; i++) {
+        pages.push(i);
+      }
+
+      if (endWindow < totalPages - 1) {
+        pages.push('...');
+      }
+
+      pages.push(totalPages);
     }
 
+    pages.forEach(p => {
+      if (p === '...') {
+        btnsHtml += `<span class="page-ellipsis" style="padding: 0 4px; color: #64748b; font-weight: 700; display: inline-flex; align-items: center;">...</span>`;
+      } else {
+        btnsHtml += `
+          <button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="changePage(${p})">
+            ${p}
+          </button>
+        `;
+      }
+    });
+
     btnsHtml += `
-      <button class="page-btn" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+      <button class="page-btn" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} title="Halaman Berikutnya">
         <i class="fa-solid fa-chevron-right"></i>
+      </button>
+      <button class="page-btn" onclick="changePage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''} title="Halaman Terakhir">
+        <i class="fa-solid fa-angles-right"></i>
       </button>
     `;
 
@@ -7582,6 +7632,193 @@ function viewAttendeeDetail(id) {
 function closeAttendeeModal() {
   const modal = document.getElementById('attendeeDetailModal');
   if (modal) modal.classList.remove('active');
+}
+
+// ===================================================================
+// EDIT DATA PESERTA (LANGSUNG TERSIMPAN KE CLOUD SUPABASE & SISTEM)
+// ===================================================================
+function openEditAttendeeFromDetail() {
+  if (currentViewingAttendee && currentViewingAttendee.id) {
+    openEditAttendeeModal(currentViewingAttendee.id);
+  }
+}
+
+function toggleEditGroupFields() {
+  const regType = document.getElementById('editAttRegType')?.value || 'individu';
+  const groupWrap = document.getElementById('editGroupWrap');
+  const groupLeaderWrap = document.getElementById('editGroupLeaderWrap');
+  if (groupWrap) groupWrap.style.display = (regType === 'rombongan') ? 'block' : 'none';
+  if (groupLeaderWrap) groupLeaderWrap.style.display = (regType === 'rombongan') ? 'block' : 'none';
+}
+
+function openEditAttendeeModal(id) {
+  const attendee = (allRegistrations || []).find(a => String(a.id) === String(id));
+  if (!attendee) {
+    showToast('Data peserta tidak ditemukan.', 'error');
+    return;
+  }
+
+  // Populate form fields
+  document.getElementById('editAttId').value = attendee.id;
+  const badgeCode = document.getElementById('editAttCodeBadge');
+  if (badgeCode) badgeCode.textContent = attendee.registration_code || 'PKB-XXX';
+
+  document.getElementById('editAttFullName').value = attendee.full_name || '';
+  document.getElementById('editAttGender').value = attendee.gender || 'Ikhwan';
+  document.getElementById('editAttAge').value = attendee.age || '';
+
+  const regType = attendee.registration_type || 'individu';
+  document.getElementById('editAttRegType').value = regType;
+  document.getElementById('editAttGroupName').value = attendee.group_name || '';
+  document.getElementById('editAttGroupLeaderName').value = attendee.group_leader_name || '';
+  document.getElementById('editAttGuardianName').value = attendee.guardian_name || '';
+
+  toggleEditGroupFields();
+
+  // Populate datalist wilayah
+  const wilayahDatalist = document.getElementById('editWilayahList');
+  if (wilayahDatalist) {
+    const wList = typeof getMasterWilayahList === 'function' ? getMasterWilayahList() : [];
+    wilayahDatalist.innerHTML = wList.map(w => `<option value="${escapeAttr(w)}">`).join('');
+  }
+  document.getElementById('editAttWilayah').value = attendee.wilayah || '';
+  document.getElementById('editAttDaerah').value = attendee.daerah || '';
+
+  document.getElementById('editAttPhone').value = attendee.phone_number || '';
+  document.getElementById('editAttEmergencyPhone').value = attendee.emergency_phone || '';
+  document.getElementById('editAttEmail').value = attendee.email || '';
+
+  // Seragam & Transportasi
+  const clothSelect = document.getElementById('editAttClothSize');
+  if (clothSelect) {
+    clothSelect.value = attendee.cloth_size || 'L';
+  }
+  document.getElementById('editAttArrivalDate').value = attendee.arrival_date || '';
+  document.getElementById('editAttArrivalTime').value = attendee.arrival_time || '10:00';
+  document.getElementById('editAttTransportArrival').value = attendee.transport_arrival || 'Pesawat';
+
+  document.getElementById('editAttDepartureDate').value = attendee.departure_date || '';
+  document.getElementById('editAttDepartureTime').value = attendee.departure_time || '16:00';
+  document.getElementById('editAttTransportDeparture').value = attendee.transport_departure || 'Pesawat';
+
+  // Kesehatan & Catatan
+  document.getElementById('editAttMedicalHistory').value = (attendee.medical_history === 'Tidak Ada (Sehat)') ? '' : (attendee.medical_history || '');
+  document.getElementById('editAttNotes').value = attendee.notes || '';
+
+  const modal = document.getElementById('modalEditAttendee');
+  if (modal) modal.classList.add('active');
+}
+
+function closeEditAttendeeModal() {
+  const modal = document.getElementById('modalEditAttendee');
+  if (modal) modal.classList.remove('active');
+}
+
+async function submitEditAttendee(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const id = document.getElementById('editAttId')?.value;
+  if (!id) return;
+
+  const btnSubmit = document.getElementById('btnSubmitEditAttendee');
+  const origHtml = btnSubmit ? btnSubmit.innerHTML : '';
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan ke Supabase...';
+  }
+
+  try {
+    const fullName = (document.getElementById('editAttFullName')?.value || '').trim();
+    if (!fullName) {
+      showToast('Nama lengkap wajib diisi!', 'error');
+      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = origHtml; }
+      return;
+    }
+
+    const gender = document.getElementById('editAttGender')?.value || 'Ikhwan';
+    const ageRaw = document.getElementById('editAttAge')?.value;
+    const ageNum = parseInt(ageRaw, 10);
+    const age = isNaN(ageNum) ? null : ageNum;
+    const isChild = (age !== null && age > 0 && age < 15);
+
+    const regType = document.getElementById('editAttRegType')?.value || 'individu';
+    const groupName = (document.getElementById('editAttGroupName')?.value || '').trim();
+    const groupLeaderName = (document.getElementById('editAttGroupLeaderName')?.value || '').trim();
+    const guardianName = (document.getElementById('editAttGuardianName')?.value || '').trim();
+
+    const wilayah = (document.getElementById('editAttWilayah')?.value || '').trim();
+    const daerah = (document.getElementById('editAttDaerah')?.value || '').trim();
+    const email = (document.getElementById('editAttEmail')?.value || '').trim();
+    const phone = (document.getElementById('editAttPhone')?.value || '').trim();
+    const emergencyPhone = (document.getElementById('editAttEmergencyPhone')?.value || '').trim();
+
+    const clothSize = document.getElementById('editAttClothSize')?.value || 'L';
+    const arrivalDate = document.getElementById('editAttArrivalDate')?.value || '';
+    const arrivalTime = document.getElementById('editAttArrivalTime')?.value || '10:00';
+    const transportArrival = document.getElementById('editAttTransportArrival')?.value || 'Pesawat';
+
+    const departureDate = document.getElementById('editAttDepartureDate')?.value || '';
+    const departureTime = document.getElementById('editAttDepartureTime')?.value || '16:00';
+    const transportDeparture = document.getElementById('editAttTransportDeparture')?.value || 'Pesawat';
+
+    const rawMed = (document.getElementById('editAttMedicalHistory')?.value || '').trim();
+    const medicalHistory = rawMed ? rawMed : 'Tidak Ada (Sehat)';
+    const notes = (document.getElementById('editAttNotes')?.value || '').trim();
+
+    const updates = {
+      full_name: fullName,
+      gender: gender,
+      age: age,
+      is_child: isChild,
+      registration_type: regType,
+      group_name: groupName,
+      group_leader_name: groupLeaderName,
+      guardian_name: guardianName,
+      wilayah: wilayah,
+      daerah: daerah,
+      email: email,
+      phone_number: phone,
+      emergency_phone: emergencyPhone,
+      cloth_size: clothSize,
+      arrival_date: arrivalDate,
+      arrival_time: arrivalTime,
+      transport_arrival: transportArrival,
+      departure_date: departureDate,
+      departure_time: departureTime,
+      transport_departure: transportDeparture,
+      medical_history: medicalHistory,
+      notes: notes
+    };
+
+    // 1. Simpan ke Supabase & LocalStorage via PaskasDataService
+    const updated = await window.dataService.updateRegistration(id, updates);
+
+    // 2. Perbarui array lokal di memori secara instan
+    const idx = (allRegistrations || []).findIndex(p => String(p.id) === String(id));
+    if (idx !== -1) {
+      allRegistrations[idx] = { ...allRegistrations[idx], ...updates, ...(updated || {}) };
+    }
+
+    // 3. Render ulang tampilan aktif tanpa refresh
+    refreshActiveScreenViews();
+
+    // 4. Jika modal Detail Peserta sedang terbuka, refresh isinya dengan data baru
+    const attendeeModal = document.getElementById('attendeeDetailModal');
+    if (attendeeModal && attendeeModal.classList.contains('active')) {
+      viewAttendeeDetail(id);
+    }
+
+    closeEditAttendeeModal();
+    showToast(`Alhamdulillah! Data "${fullName}" berhasil disimpan ke Cloud Supabase & sistem.`, 'success');
+
+  } catch (err) {
+    console.error('Gagal update data peserta:', err);
+    showToast('Gagal menyimpan perubahan: ' + err.message, 'error');
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = origHtml;
+    }
+  }
 }
 
 function printFromAttendeeDetail() {
@@ -15911,5 +16148,10 @@ window.resetRekapPasswordDefault = resetRekapPasswordDefault;
 window.initMultiDeviceRealtimeSync = initMultiDeviceRealtimeSync;
 window.syncRegistrationsSilently = syncRegistrationsSilently;
 window.refreshActiveScreenViews = refreshActiveScreenViews;
+window.openEditAttendeeModal = openEditAttendeeModal;
+window.openEditAttendeeFromDetail = openEditAttendeeFromDetail;
+window.closeEditAttendeeModal = closeEditAttendeeModal;
+window.toggleEditGroupFields = toggleEditGroupFields;
+window.submitEditAttendee = submitEditAttendee;
 
 
