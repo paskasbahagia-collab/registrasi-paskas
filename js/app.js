@@ -7244,6 +7244,7 @@ function renderRekapTable() {
 
     const ageVal = item.age ? parseInt(item.age, 10) : null;
     const isChild = ageVal !== null && ageVal < 15;
+    const isChildUnder12 = (ageVal !== null && !isNaN(ageVal) && ageVal > 0 && ageVal < 12);
     const ageDisplay = ageVal !== null 
       ? (isChild 
           ? `<span class="badge-age-child" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #b45309; border-radius: 999px; font-size: 11px; font-weight: 800;"><i class="fa-solid fa-child"></i> ${ageVal} th</span>`
@@ -7296,9 +7297,14 @@ function renderRekapTable() {
             <button class="btn-table-action" onclick="openEditAttendeeModal('${item.id}')" title="Edit Data Peserta (Langsung Tersimpan)" style="color: #0284c7;">
               <i class="fa-solid fa-user-pen"></i>
             </button>
-            <button class="btn-table-action" onclick="sendWhatsAppInvite('${item.id}')" title="Kirim Undangan WhatsApp ke ${(item.full_name || '').replace(/'/g, "\\'")}" style="color: #10b981;">
-              <i class="fa-brands fa-whatsapp"></i>
-            </button>
+            ${isChildUnder12
+              ? `<button class="btn-table-action" disabled title="Peserta anak di bawah 12 tahun (tidak dikirimi WA agar tidak dobel ke nomor orang tua)" style="color: #94a3b8; opacity: 0.35; cursor: not-allowed;">
+                  <i class="fa-brands fa-whatsapp"></i>
+                </button>`
+              : `<button class="btn-table-action" onclick="sendWhatsAppInvite('${item.id}')" title="Kirim Undangan WhatsApp ke ${(item.full_name || '').replace(/'/g, "\\'")}" style="color: #10b981;">
+                  <i class="fa-brands fa-whatsapp"></i>
+                </button>`
+            }
             <button class="btn-table-action" onclick="showSingleTicketFromTable('${item.id}')" title="Lihat & Unduh E-Tiket (Boarding Pass)" style="color: #38bdf8;">
               <i class="fa-solid fa-ticket"></i>
             </button>
@@ -7894,6 +7900,13 @@ function sendWhatsAppInvite(id, isFromBroadcastModal = false) {
     return;
   }
 
+  // Pencegahan untuk anak di bawah 12 tahun agar pesan tidak dobel terkirim ke orang tua
+  const ageNum = parseInt(attendee.age, 10);
+  if (!isNaN(ageNum) && ageNum > 0 && ageNum < 12) {
+    showToast(`Peserta anak di bawah 12 tahun (${attendee.full_name}) tidak dikirimi WhatsApp tersendiri agar tidak dobel ke nomor orang tua.`, 'info');
+    return;
+  }
+
   const rawPhone = attendee.phone_number || attendee.emergency_phone || '';
   const cleanDigits = rawPhone.replace(/[^0-9]/g, '');
   if (!cleanDigits || cleanDigits.length < 8) {
@@ -7975,26 +7988,46 @@ function renderWhatsAppBroadcastList() {
   const wilayahFilter = document.getElementById('waFilterWilayah')?.value || 'ALL';
   const statusFilter = document.getElementById('waFilterStatus')?.value || 'ALL';
 
-  let totalCount = list.length;
+  let totalTargets = 0;
   let sentCount = 0;
   let pendingCount = 0;
+  let childCount = 0;
 
   list.forEach(p => {
-    if (sentMap[String(p.id)]) sentCount++;
-    else pendingCount++;
+    const ageNum = parseInt(p.age, 10);
+    const isChildUnder12 = (!isNaN(ageNum) && ageNum > 0 && ageNum < 12);
+    if (isChildUnder12) {
+      childCount++;
+    } else {
+      totalTargets++;
+      if (sentMap[String(p.id)]) sentCount++;
+      else pendingCount++;
+    }
   });
 
   const statTotal = document.getElementById('waStatTotal');
   const statSent = document.getElementById('waStatSent');
   const statPending = document.getElementById('waStatPending');
-  if (statTotal) statTotal.textContent = totalCount;
+  const statChild = document.getElementById('waStatChild');
+  if (statTotal) statTotal.textContent = totalTargets;
   if (statSent) statSent.textContent = sentCount;
   if (statPending) statPending.textContent = pendingCount;
+  if (statChild) statChild.textContent = childCount;
 
   const filtered = list.filter(p => {
+    const ageNum = parseInt(p.age, 10);
+    const isChildUnder12 = (!isNaN(ageNum) && ageNum > 0 && ageNum < 12);
     const isSent = !!sentMap[String(p.id)];
-    if (statusFilter === 'sent' && !isSent) return false;
-    if (statusFilter === 'pending' && isSent) return false;
+
+    if (statusFilter === 'pending') {
+      if (isChildUnder12 || isSent) return false;
+    } else if (statusFilter === 'sent') {
+      if (isChildUnder12 || !isSent) return false;
+    } else if (statusFilter === 'target_all') {
+      if (isChildUnder12) return false;
+    } else if (statusFilter === 'child_under12') {
+      if (!isChildUnder12) return false;
+    }
 
     if (wilayahFilter !== 'ALL') {
       const pWilayah = normalizeWilayahName(p.wilayah || '');
@@ -8017,16 +8050,35 @@ function renderWhatsAppBroadcastList() {
   }
 
   tbody.innerHTML = filtered.map((p, idx) => {
+    const ageNum = parseInt(p.age, 10);
+    const isChildUnder12 = (!isNaN(ageNum) && ageNum > 0 && ageNum < 12);
     const isSent = !!sentMap[String(p.id)];
     const sentTime = isSent ? new Date(sentMap[String(p.id)]).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
     const cleanPhone = (p.phone_number || '').replace(/[^0-9]/g, '');
 
+    let statusBadge = '';
+    let actionBtn = '';
+
+    if (isChildUnder12) {
+      statusBadge = `<span style="background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; white-space: nowrap;"><i class="fa-solid fa-child"></i> Anak &lt; 12 Th (Dilewati)</span>`;
+      actionBtn = `<button type="button" disabled title="Peserta anak di bawah 12 tahun dilewati agar pesan tidak terkirim dua kali ke nomor orang tua" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(51, 65, 85, 0.5); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: not-allowed; opacity: 0.6;">
+        <i class="fa-solid fa-child"></i> Dilewati
+      </button>`;
+    } else {
+      statusBadge = isSent 
+        ? `<span style="background: rgba(37, 211, 102, 0.2); color: #34d399; border: 1px solid rgba(37, 211, 102, 0.4); padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap;"><i class="fa-solid fa-check-double"></i> Terkirim ${sentTime ? '(' + sentTime + ')' : ''}</span>`
+        : `<span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; white-space: nowrap;"><i class="fa-regular fa-clock"></i> Belum Dikirim</span>`;
+      actionBtn = `<button type="button" onclick="sendWhatsAppInvite('${p.id}', true)" ${!cleanPhone ? 'disabled' : ''} style="display: inline-flex; align-items: center; gap: 6px; background: ${isSent ? '#059669' : '#25d366'}; color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: ${cleanPhone ? 'pointer' : 'not-allowed'}; opacity: ${cleanPhone ? '1' : '0.4'};">
+        <i class="fa-brands fa-whatsapp"></i> ${isSent ? 'Kirim Ulang' : 'Kirim WA'}
+      </button>`;
+    }
+
     return `
-      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); ${isSent ? 'background: rgba(37, 211, 102, 0.03);' : ''}">
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); ${isChildUnder12 ? 'background: rgba(15, 23, 42, 0.3); opacity: 0.85;' : (isSent ? 'background: rgba(37, 211, 102, 0.03);' : '')}">
         <td style="padding: 10px 14px; text-align: center; color: #64748b;">${idx + 1}</td>
         <td style="padding: 10px 14px;">
           <strong style="color: #ffffff; display: block; font-size: 13.5px;">${escapeHtml(p.full_name || '-')}</strong>
-          <span style="font-size: 11.5px; color: #38bdf8;">${escapeHtml(p.registration_code || '')} &bull; ${p.gender || '-'} (${p.age || '-'} th)</span>
+          <span style="font-size: 11.5px; color: #38bdf8;">${escapeHtml(p.registration_code || '')} &bull; ${p.gender || '-'} (${p.age || '-'} th)${isChildUnder12 ? ' &bull; <span style="color: #fbbf24; font-weight: 700;">[Anak &lt;12 Th]</span>' : ''}</span>
         </td>
         <td style="padding: 10px 14px;">
           <span style="color: #cbd5e1; font-size: 12.5px;">${escapeHtml(p.group_name || 'Mandiri')}</span>
@@ -8036,15 +8088,10 @@ function renderWhatsAppBroadcastList() {
           ${cleanPhone ? p.phone_number : '<span style="color: #ef4444; font-size: 11.5px;">(Belum ada nomor)</span>'}
         </td>
         <td style="padding: 10px 14px; text-align: center;">
-          ${isSent 
-            ? `<span style="background: rgba(37, 211, 102, 0.2); color: #34d399; border: 1px solid rgba(37, 211, 102, 0.4); padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap;"><i class="fa-solid fa-check-double"></i> Terkirim ${sentTime ? '(' + sentTime + ')' : ''}</span>`
-            : `<span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; white-space: nowrap;"><i class="fa-regular fa-clock"></i> Belum Dikirim</span>`
-          }
+          ${statusBadge}
         </td>
         <td style="padding: 10px 14px; text-align: right; white-space: nowrap;">
-          <button type="button" onclick="sendWhatsAppInvite('${p.id}', true)" ${!cleanPhone ? 'disabled' : ''} style="display: inline-flex; align-items: center; gap: 6px; background: ${isSent ? '#059669' : '#25d366'}; color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: ${cleanPhone ? 'pointer' : 'not-allowed'}; opacity: ${cleanPhone ? '1' : '0.4'};">
-            <i class="fa-brands fa-whatsapp"></i> ${isSent ? 'Kirim Ulang' : 'Kirim WA'}
-          </button>
+          ${actionBtn}
         </td>
       </tr>
     `;

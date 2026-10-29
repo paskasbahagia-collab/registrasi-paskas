@@ -5970,7 +5970,7 @@ CREATE TABLE IF NOT EXISTS registrations (
         <!-- COUNTER METRICS -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px;">
           <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 16px;">
-            <span style="font-size: 12px; color: #94a3b8; display: block;">Total Peserta</span>
+            <span style="font-size: 12px; color: #94a3b8; display: block;">Target Broadcast (&ge; 12 Th)</span>
             <strong id="waStatTotal" style="font-size: 20px; color: #ffffff;">0</strong>
           </div>
           <div style="background: rgba(37, 211, 102, 0.08); border: 1px solid rgba(37, 211, 102, 0.3); border-radius: 10px; padding: 12px 16px;">
@@ -5980,6 +5980,10 @@ CREATE TABLE IF NOT EXISTS registrations (
           <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 12px 16px;">
             <span style="font-size: 12px; color: #fbbf24; display: block;"><i class="fa-solid fa-clock"></i> Belum Dikirim</span>
             <strong id="waStatPending" style="font-size: 20px; color: #fbbf24;">0</strong>
+          </div>
+          <div style="background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 10px; padding: 12px 16px;">
+            <span style="font-size: 12px; color: #94a3b8; display: block;"><i class="fa-solid fa-child"></i> Anak &lt; 12 Th (Dilewati)</span>
+            <strong id="waStatChild" style="font-size: 20px; color: #cbd5e1;">0</strong>
           </div>
         </div>
 
@@ -6006,9 +6010,11 @@ CREATE TABLE IF NOT EXISTS registrations (
             <option value="ALL">Semua Wilayah</option>
           </select>
           <select id="waFilterStatus" onchange="renderWhatsAppBroadcastList()" class="form-input" style="flex: 1; min-width: 140px; background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15); font-size: 13px;">
-            <option value="ALL">Semua Status</option>
-            <option value="pending">Belum Dikirim</option>
+            <option value="ALL">Semua Status (Seluruh Peserta)</option>
+            <option value="pending">Belum Dikirim (Target &ge; 12 Th)</option>
             <option value="sent">Sudah Terkirim</option>
+            <option value="target_all">Semua Target Broadcast (&ge; 12 Th)</option>
+            <option value="child_under12">Anak &lt; 12 Th (Dilewati)</option>
           </select>
         </div>
 
@@ -6602,6 +6608,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=137.0"></script>
-  <script src="js/app.js?v=168.0"></script>
+  <script src="js/app.js?v=169.0"></script>
 </body>
 </html>
