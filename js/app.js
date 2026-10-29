@@ -7296,6 +7296,9 @@ function renderRekapTable() {
             <button class="btn-table-action" onclick="openEditAttendeeModal('${item.id}')" title="Edit Data Peserta (Langsung Tersimpan)" style="color: #0284c7;">
               <i class="fa-solid fa-user-pen"></i>
             </button>
+            <button class="btn-table-action" onclick="sendWhatsAppInvite('${item.id}')" title="Kirim Undangan WhatsApp ke ${(item.full_name || '').replace(/'/g, "\\'")}" style="color: #10b981;">
+              <i class="fa-brands fa-whatsapp"></i>
+            </button>
             <button class="btn-table-action" onclick="showSingleTicketFromTable('${item.id}')" title="Lihat & Unduh E-Tiket (Boarding Pass)" style="color: #38bdf8;">
               <i class="fa-solid fa-ticket"></i>
             </button>
@@ -7819,6 +7822,233 @@ async function submitEditAttendee(e) {
       btnSubmit.innerHTML = origHtml;
     }
   }
+}
+
+// ===================================================================
+// PUSAT BROADCAST WHATSAPP & PENGIRIMAN UNDANGAN GRUP WA
+// ===================================================================
+const DEFAULT_WA_GROUP_LINK = 'https://chat.whatsapp.com/D0PK0ouycVOCAnmTg68FF8';
+
+const DEFAULT_WA_BROADCAST_TEMPLATE = 
+`Assalamu'alaikum Warahmatullahi Wabarakatuh,
+
+Bapak/Ibu/Sahabat Fillah *{nama}*{rombongan},
+
+Alhamdulillah, pendaftaran antum/antunna di *Silaturahmi Akbar PASKAS BAHAGIA* (No. Tiket: *{kode}*) telah resmi tercatat di sistem panitia.
+
+Agar koordinasi penjemputan, pembagian kamar, seragam, dan jadwal kegiatan berjalan lancar, kami mengundang antum/antunna untuk langsung bergabung ke Grup WhatsApp Resmi Peserta melalui tautan berikut:
+👉 {link_grup}
+
+Sampai jumpa di PASKAS Bahagia. Semoga Allah SWT memudahkan setiap langkah perjalanan kita dan mempertemukan kita dalam keberkahan.
+
+Jazakumullahu Khairan Katsiran,
+*Panitia Paskas Bahagia*`;
+
+function getWhatsAppSentMap() {
+  try {
+    const raw = safeStorage.getItem('paskas_wa_broadcast_sent');
+    return raw ? (JSON.parse(raw) || {}) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function markWhatsAppSent(id) {
+  try {
+    const sentMap = getWhatsAppSentMap();
+    sentMap[String(id)] = new Date().toISOString();
+    safeStorage.setItem('paskas_wa_broadcast_sent', JSON.stringify(sentMap));
+  } catch (e) {}
+}
+
+function resetWhatsAppSentHistory() {
+  if (!confirm('Apakah Anda yakin ingin mereset seluruh riwayat status pengiriman WhatsApp? Semua peserta akan kembali bertanda "Belum Dikirim".')) return;
+  try {
+    safeStorage.removeItem('paskas_wa_broadcast_sent');
+    renderWhatsAppBroadcastList();
+    showToast('Riwayat status broadcast WhatsApp berhasil direset.', 'info');
+  } catch (e) {}
+}
+
+function formatWhatsAppInviteMessage(attendee, customTemplate = null) {
+  const name = attendee.full_name || 'Sahabat Paskas';
+  const code = attendee.registration_code || '';
+  const group = attendee.group_name ? ` (Kafilah ${attendee.group_name})` : '';
+  const waGroupLink = DEFAULT_WA_GROUP_LINK;
+
+  const template = (typeof customTemplate === 'string' && customTemplate.trim()) 
+    ? customTemplate 
+    : DEFAULT_WA_BROADCAST_TEMPLATE;
+
+  return template
+    .replace(/{nama}/g, name)
+    .replace(/{kode}/g, code)
+    .replace(/{rombongan}/g, group)
+    .replace(/{link_grup}/g, waGroupLink);
+}
+
+function sendWhatsAppInvite(id, isFromBroadcastModal = false) {
+  const attendee = (allRegistrations || []).find(a => String(a.id) === String(id));
+  if (!attendee) {
+    showToast('Data peserta tidak ditemukan.', 'error');
+    return;
+  }
+
+  const rawPhone = attendee.phone_number || attendee.emergency_phone || '';
+  const cleanDigits = rawPhone.replace(/[^0-9]/g, '');
+  if (!cleanDigits || cleanDigits.length < 8) {
+    showToast(`Nomor WhatsApp untuk "${attendee.full_name}" tidak valid / belum diisi.`, 'error');
+    return;
+  }
+
+  const formattedPhone = cleanDigits.startsWith('0') ? '62' + cleanDigits.slice(1) : (cleanDigits.startsWith('62') ? cleanDigits : '62' + cleanDigits);
+
+  const customTemplate = document.getElementById('waBroadcastTemplateText')?.value;
+  const message = formatWhatsAppInviteMessage(attendee, customTemplate);
+  const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+
+  // Tandai sudah terkirim
+  markWhatsAppSent(id);
+
+  // Buka WhatsApp
+  window.open(waUrl, '_blank');
+
+  // Jika dipanggil dari broadcast modal, update baris dan metrik
+  if (isFromBroadcastModal) {
+    renderWhatsAppBroadcastList();
+  }
+}
+
+function openWhatsAppBroadcastModal() {
+  const modal = document.getElementById('modalWhatsAppBroadcast');
+  if (!modal) return;
+
+  // Inisialisasi teks template jika kosong
+  const txtArea = document.getElementById('waBroadcastTemplateText');
+  if (txtArea && !txtArea.value.trim()) {
+    txtArea.value = DEFAULT_WA_BROADCAST_TEMPLATE;
+  }
+
+  // Populate filter wilayah
+  const wilayahSelect = document.getElementById('waFilterWilayah');
+  if (wilayahSelect) {
+    const list = allRegistrations || [];
+    const wilayahMap = {};
+    list.forEach(r => {
+      if (r.wilayah) {
+        const clean = normalizeWilayahName(r.wilayah);
+        wilayahMap[clean] = (wilayahMap[clean] || 0) + 1;
+      }
+    });
+    const uniqueWilayah = Object.keys(wilayahMap).sort((a, b) => a.localeCompare('id'));
+    const curVal = wilayahSelect.value || 'ALL';
+    wilayahSelect.innerHTML = '<option value="ALL">Semua Wilayah</option>' +
+      uniqueWilayah.map(w => `<option value="${w}">${w} (${wilayahMap[w]} Peserta)</option>`).join('');
+    if (uniqueWilayah.includes(curVal)) wilayahSelect.value = curVal;
+  }
+
+  renderWhatsAppBroadcastList();
+  modal.classList.add('active');
+}
+
+function closeWhatsAppBroadcastModal() {
+  const modal = document.getElementById('modalWhatsAppBroadcast');
+  if (modal) modal.classList.remove('active');
+}
+
+function resetDefaultWhatsAppTemplate() {
+  const txtArea = document.getElementById('waBroadcastTemplateText');
+  if (txtArea) {
+    txtArea.value = DEFAULT_WA_BROADCAST_TEMPLATE;
+    showToast('Template teks WhatsApp dikembalikan ke bawaan.', 'info');
+  }
+}
+
+function renderWhatsAppBroadcastList() {
+  const tbody = document.getElementById('waBroadcastTableBody');
+  if (!tbody) return;
+
+  const list = allRegistrations || [];
+  const sentMap = getWhatsAppSentMap();
+
+  const query = (document.getElementById('waFilterSearch')?.value || '').toLowerCase().trim();
+  const wilayahFilter = document.getElementById('waFilterWilayah')?.value || 'ALL';
+  const statusFilter = document.getElementById('waFilterStatus')?.value || 'ALL';
+
+  let totalCount = list.length;
+  let sentCount = 0;
+  let pendingCount = 0;
+
+  list.forEach(p => {
+    if (sentMap[String(p.id)]) sentCount++;
+    else pendingCount++;
+  });
+
+  const statTotal = document.getElementById('waStatTotal');
+  const statSent = document.getElementById('waStatSent');
+  const statPending = document.getElementById('waStatPending');
+  if (statTotal) statTotal.textContent = totalCount;
+  if (statSent) statSent.textContent = sentCount;
+  if (statPending) statPending.textContent = pendingCount;
+
+  const filtered = list.filter(p => {
+    const isSent = !!sentMap[String(p.id)];
+    if (statusFilter === 'sent' && !isSent) return false;
+    if (statusFilter === 'pending' && isSent) return false;
+
+    if (wilayahFilter !== 'ALL') {
+      const pWilayah = normalizeWilayahName(p.wilayah || '');
+      if (pWilayah !== wilayahFilter) return false;
+    }
+
+    if (query) {
+      const matchName = (p.full_name || '').toLowerCase().includes(query);
+      const matchPhone = (p.phone_number || '').includes(query);
+      const matchCode = (p.registration_code || '').toLowerCase().includes(query);
+      const matchGroup = (p.group_name || '').toLowerCase().includes(query);
+      if (!matchName && !matchPhone && !matchCode && !matchGroup) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: #94a3b8;">Tidak ada data peserta yang cocok dengan filter broadcast.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((p, idx) => {
+    const isSent = !!sentMap[String(p.id)];
+    const sentTime = isSent ? new Date(sentMap[String(p.id)]).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+    const cleanPhone = (p.phone_number || '').replace(/[^0-9]/g, '');
+
+    return `
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); ${isSent ? 'background: rgba(37, 211, 102, 0.03);' : ''}">
+        <td style="padding: 10px 14px; text-align: center; color: #64748b;">${idx + 1}</td>
+        <td style="padding: 10px 14px;">
+          <strong style="color: #ffffff; display: block; font-size: 13.5px;">${escapeHtml(p.full_name || '-')}</strong>
+          <span style="font-size: 11.5px; color: #38bdf8;">${escapeHtml(p.registration_code || '')} &bull; ${p.gender || '-'} (${p.age || '-'} th)</span>
+        </td>
+        <td style="padding: 10px 14px;">
+          <span style="color: #cbd5e1; font-size: 12.5px;">${escapeHtml(p.group_name || 'Mandiri')}</span>
+          <span style="display: block; font-size: 11px; color: #94a3b8;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(p.wilayah || '-')}</span>
+        </td>
+        <td style="padding: 10px 14px; font-family: monospace; font-size: 13px; color: ${cleanPhone ? '#34d399' : '#f87171'};">
+          ${cleanPhone ? p.phone_number : '<span style="color: #ef4444; font-size: 11.5px;">(Belum ada nomor)</span>'}
+        </td>
+        <td style="padding: 10px 14px; text-align: center;">
+          ${isSent 
+            ? `<span style="background: rgba(37, 211, 102, 0.2); color: #34d399; border: 1px solid rgba(37, 211, 102, 0.4); padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap;"><i class="fa-solid fa-check-double"></i> Terkirim ${sentTime ? '(' + sentTime + ')' : ''}</span>`
+            : `<span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; white-space: nowrap;"><i class="fa-regular fa-clock"></i> Belum Dikirim</span>`
+          }
+        </td>
+        <td style="padding: 10px 14px; text-align: right; white-space: nowrap;">
+          <button type="button" onclick="sendWhatsAppInvite('${p.id}', true)" ${!cleanPhone ? 'disabled' : ''} style="display: inline-flex; align-items: center; gap: 6px; background: ${isSent ? '#059669' : '#25d366'}; color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: ${cleanPhone ? 'pointer' : 'not-allowed'}; opacity: ${cleanPhone ? '1' : '0.4'};">
+            <i class="fa-brands fa-whatsapp"></i> ${isSent ? 'Kirim Ulang' : 'Kirim WA'}
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function printFromAttendeeDetail() {
@@ -16153,5 +16383,12 @@ window.openEditAttendeeFromDetail = openEditAttendeeFromDetail;
 window.closeEditAttendeeModal = closeEditAttendeeModal;
 window.toggleEditGroupFields = toggleEditGroupFields;
 window.submitEditAttendee = submitEditAttendee;
+window.formatWhatsAppInviteMessage = formatWhatsAppInviteMessage;
+window.sendWhatsAppInvite = sendWhatsAppInvite;
+window.openWhatsAppBroadcastModal = openWhatsAppBroadcastModal;
+window.closeWhatsAppBroadcastModal = closeWhatsAppBroadcastModal;
+window.resetDefaultWhatsAppTemplate = resetDefaultWhatsAppTemplate;
+window.renderWhatsAppBroadcastList = renderWhatsAppBroadcastList;
+window.resetWhatsAppSentHistory = resetWhatsAppSentHistory;
 
 

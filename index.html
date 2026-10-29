@@ -3022,7 +3022,7 @@
                 <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('keuangan')" title="Buka Meja Keuangan &amp; Termin">
                   <i class="fa-solid fa-coins"></i> Keuangan
                 </button>
-                <button type="button" class="btn btn-editorial-excel" onclick="exportToExcel()" title="Export data ke Microsoft Excel">
+                <button type="button" class="btn btn-editorial-outline" onclick="openWhatsAppBroadcastModal()" title="Buka Pusat Broadcast WhatsApp Grup" style="background: #ecfdf5; border-color: #a7f3d0; color: #059669; font-weight: 700;"><i class="fa-brands fa-whatsapp" style="font-size: 15px; color: #10b981;"></i> Broadcast WA</button><button type="button" class="btn btn-editorial-excel" onclick="exportToExcel()" title="Export data ke Microsoft Excel">
                   <i class="fa-solid fa-file-excel"></i> Export Excel
                 </button>
                 <button type="button" class="btn btn-editorial-outline" onclick="exportToCSV()" title="Export data ke CSV">
@@ -5944,7 +5944,109 @@ CREATE TABLE IF NOT EXISTS registrations (
   </div>
 
   <!-- MODAL: POP-UP KONFIRMASI HAPUS WILAYAH (ELEGAN)         -->
+  
   <!-- ======================================================= -->
+  <!-- MODAL: PUSAT BROADCAST WHATSAPP GRUP RESMI             -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop" id="modalWhatsAppBroadcast" style="z-index: 100010;">
+    <div class="modal-card modal-card-wide" style="max-width: 860px; background: #0d1527; color: #f8fafc;">
+      <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding: 18px 24px;">
+        <div class="modal-title-with-icon" style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 42px; height: 42px; border-radius: 50%; background: #25d366; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 22px; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.4); flex-shrink: 0;">
+            <i class="fa-brands fa-whatsapp"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #ffffff;">Pusat Broadcast WhatsApp Peserta</h3>
+            <span style="font-size: 12.5px; color: #94a3b8;">Kirim Undangan Grup WhatsApp Resmi & Informasi Acara ke Seluruh Jamaah</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal-sm" onclick="closeWhatsAppBroadcastModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body modal-body-scrollable" style="padding: 20px 24px; max-height: calc(88vh - 120px); overflow-y: auto;">
+        
+        <!-- COUNTER METRICS -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px;">
+          <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 16px;">
+            <span style="font-size: 12px; color: #94a3b8; display: block;">Total Peserta</span>
+            <strong id="waStatTotal" style="font-size: 20px; color: #ffffff;">0</strong>
+          </div>
+          <div style="background: rgba(37, 211, 102, 0.08); border: 1px solid rgba(37, 211, 102, 0.3); border-radius: 10px; padding: 12px 16px;">
+            <span style="font-size: 12px; color: #34d399; display: block;"><i class="fa-solid fa-circle-check"></i> Sudah Terkirim</span>
+            <strong id="waStatSent" style="font-size: 20px; color: #34d399;">0</strong>
+          </div>
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 12px 16px;">
+            <span style="font-size: 12px; color: #fbbf24; display: block;"><i class="fa-solid fa-clock"></i> Belum Dikirim</span>
+            <strong id="waStatPending" style="font-size: 20px; color: #fbbf24;">0</strong>
+          </div>
+        </div>
+
+        <!-- TEMPLATE PESAN (COLLAPSIBLE / EDITABLE) -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 18px; margin-bottom: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="font-size: 13px; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-pen-to-square"></i> Draft Pesan WhatsApp (Otomatis menyesuaikan nama peserta):
+            </label>
+            <button type="button" onclick="resetDefaultWhatsAppTemplate()" style="background: none; border: none; color: #f59e0b; font-size: 12px; cursor: pointer; text-decoration: underline;">
+              Kembalikan Teks Bawaan
+            </button>
+          </div>
+          <textarea id="waBroadcastTemplateText" class="form-input" rows="4" style="background: #090f1d; color: #f8fafc; border-color: rgba(255,255,255,0.15); font-size: 12.5px; line-height: 1.5; resize: vertical;"></textarea>
+          <div style="font-size: 11.5px; color: #64748b; margin-top: 6px;">
+            Tag otomatis: <code style="color: #38bdf8;">{nama}</code> = Nama Peserta, <code style="color: #38bdf8;">{kode}</code> = No. Tiket, <code style="color: #38bdf8;">{rombongan}</code> = Rombongan, <code style="color: #38bdf8;">{link_grup}</code> = Link Grup WA.
+          </div>
+        </div>
+
+        <!-- FILTER & SEARCH BAR -->
+        <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+          <input type="text" id="waFilterSearch" oninput="renderWhatsAppBroadcastList()" placeholder="Cari nama peserta atau nomor WA..." class="form-input" style="flex: 2; min-width: 200px; background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15); font-size: 13px;">
+          <select id="waFilterWilayah" onchange="renderWhatsAppBroadcastList()" class="form-input" style="flex: 1.2; min-width: 160px; background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15); font-size: 13px;">
+            <option value="ALL">Semua Wilayah</option>
+          </select>
+          <select id="waFilterStatus" onchange="renderWhatsAppBroadcastList()" class="form-input" style="flex: 1; min-width: 140px; background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15); font-size: 13px;">
+            <option value="ALL">Semua Status</option>
+            <option value="pending">Belum Dikirim</option>
+            <option value="sent">Sudah Terkirim</option>
+          </select>
+        </div>
+
+        <!-- DAFTAR PESERTA TABLE -->
+        <div style="border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.2);">
+          <div style="max-height: 380px; overflow-y: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+              <thead>
+                <tr style="background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 12px; text-transform: uppercase;">
+                  <th style="padding: 10px 14px; width: 40px; text-align: center;">No</th>
+                  <th style="padding: 10px 14px;">Nama & Profil</th>
+                  <th style="padding: 10px 14px;">Rombongan / Wilayah</th>
+                  <th style="padding: 10px 14px;">No WhatsApp</th>
+                  <th style="padding: 10px 14px; text-align: center;">Status</th>
+                  <th style="padding: 10px 14px; text-align: right;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="waBroadcastTableBody">
+                <!-- Rendered dynamically via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.25);">
+        <button type="button" onclick="resetWhatsAppSentHistory()" style="background: none; border: none; color: #94a3b8; font-size: 12px; cursor: pointer;">
+          <i class="fa-solid fa-rotate-left"></i> Reset Riwayat Kirim
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="closeWhatsAppBroadcastModal()">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+<!-- ======================================================= -->
   <div class="modal-backdrop" id="deleteWilayahConfirmModal">
     <div class="modal-card modal-delete-confirm-card">
       <div class="modal-delete-icon-wrap">
@@ -6500,6 +6602,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=137.0"></script>
-  <script src="js/app.js?v=166.0"></script>
+  <script src="js/app.js?v=167.0"></script>
 </body>
 </html>
