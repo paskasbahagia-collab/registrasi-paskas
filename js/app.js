@@ -13768,13 +13768,17 @@ function renderPresensiTable() {
       statusBadge = `<span class="badge-cancelled"><i class="fa-solid fa-ban"></i> Batal</span>`;
     }
 
-    // Payment badge
-    const payStatus = p.payment_status || 'pending';
-    const remaining = Number(p.remaining_amount !== undefined ? p.remaining_amount : (p.total_fee || 0));
+    // Payment badge (Selama belum diverifikasi maka belum lunas)
+    const fee = calculateParticipantFee(p);
+    const paid = Number(p.paid_amount || 0);
+    const remaining = Math.max(0, fee - paid);
+    const isVerified = p.payment_verified === 'verified';
     let payBadge = '<span class="badge-debt">KURANG</span>';
-    if (payStatus === 'paid' || remaining <= 0) {
+    if (paid > 0 && remaining <= 0 && isVerified) {
       payBadge = '<span class="badge-paid">LUNAS</span>';
-    } else if (payStatus === 'partial') {
+    } else if (paid > 0 && !isVerified) {
+      payBadge = '<span class="badge-partial">BELUM LUNAS (VERIFIKASI)</span>';
+    } else if (paid > 0 && remaining > 0) {
       payBadge = `<span class="badge-partial">KURANG: Rp ${remaining.toLocaleString('id-ID')}</span>`;
     }
 
@@ -13920,10 +13924,19 @@ function openPresensiDetailModal(id) {
   document.getElementById('detModalPhone').textContent = p.phone_number || '-';
   document.getElementById('detModalMedical').textContent = p.medical_history || 'Tidak Ada';
 
-  const remaining = Number(p.remaining_amount !== undefined ? p.remaining_amount : (p.total_fee || 0));
-  document.getElementById('detModalPayment').innerHTML = remaining <= 0 
-    ? '<span class="badge-paid">LUNAS</span>' 
-    : `<span class="badge-partial">KURANG: Rp ${remaining.toLocaleString('id-ID')}</span>`;
+  const fee = calculateParticipantFee(p);
+  const paid = Number(p.paid_amount || 0);
+  const remaining = Math.max(0, fee - paid);
+  const isVerified = p.payment_verified === 'verified';
+  if (paid > 0 && remaining <= 0 && isVerified) {
+    document.getElementById('detModalPayment').innerHTML = '<span class="badge-paid">LUNAS</span>';
+  } else if (paid > 0 && !isVerified) {
+    document.getElementById('detModalPayment').innerHTML = '<span class="badge-partial">BELUM LUNAS (MENUNGGU VERIFIKASI)</span>';
+  } else if (paid > 0 && remaining > 0) {
+    document.getElementById('detModalPayment').innerHTML = `<span class="badge-partial">KURANG: Rp ${remaining.toLocaleString('id-ID')}</span>`;
+  } else {
+    document.getElementById('detModalPayment').innerHTML = `<span class="badge-debt">KURANG: Rp ${remaining.toLocaleString('id-ID')}</span>`;
+  }
 
   const reasonInput = document.getElementById('detCancelReasonInput');
   if (reasonInput) reasonInput.value = '';
@@ -14280,9 +14293,10 @@ function renderFinanceView() {
       totalMasuk += paid;
       totalPiutang += remaining;
 
-      if (remaining <= 0 && paid > 0) {
+      const isVerified = p.payment_verified === 'verified';
+      if (remaining <= 0 && paid > 0 && isVerified) {
         countLunas++;
-      } else if (paid > 0 && remaining > 0) {
+      } else if (paid > 0) {
         countCicilan++;
       } else {
         countBelum++;
@@ -14527,11 +14541,12 @@ function renderFinanceTable() {
       if (!hasTermin && paid === 0) return false;
     }
 
-    // Status Filter
+    // Status Filter (Lunas hanya jika sudah diverifikasi)
+    const isVerified = p.payment_verified === 'verified';
     if (statusVal === 'paid') {
-      if (remaining > 0 || paid === 0 || p.attendance_status === 'cancelled') return false;
+      if (remaining > 0 || paid === 0 || !isVerified || p.attendance_status === 'cancelled') return false;
     } else if (statusVal === 'partial') {
-      if (paid === 0 || remaining === 0 || p.attendance_status === 'cancelled') return false;
+      if (paid === 0 || (remaining <= 0 && isVerified) || p.attendance_status === 'cancelled') return false;
     } else if (statusVal === 'pending') {
       if (paid > 0 || p.attendance_status === 'cancelled') return false;
     } else if (statusVal === 'refund') {
@@ -14578,8 +14593,10 @@ function renderFinanceTable() {
     const isVerified = p.payment_verified === 'verified';
 
     let statusBadge = '<span class="badge-debt">BELUM BAYAR</span>';
-    if (remaining <= 0 && paid > 0) {
+    if (remaining <= 0 && paid > 0 && isVerified) {
       statusBadge = '<span class="badge-paid">LUNAS</span>';
+    } else if (paid > 0 && !isVerified) {
+      statusBadge = '<span class="badge-partial">BELUM LUNAS</span>';
     } else if (paid > 0 && remaining > 0) {
       statusBadge = '<span class="badge-partial">CICILAN</span>';
     }
@@ -14651,9 +14668,15 @@ function renderFinanceTable() {
           <div class="fin-mobile-action-pill" style="margin-top: 6px; display: none;">
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
               ${remaining <= 0 ? `
-                <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 3px;">
-                  <i class="fa-solid fa-circle-check"></i> LUNAS
-                </span>
+                ${isVerified ? `
+                  <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 3px;">
+                    <i class="fa-solid fa-circle-check"></i> LUNAS
+                  </span>
+                ` : `
+                  <span style="font-size: 11px; font-weight: 800; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 3px;">
+                    <i class="fa-solid fa-hourglass-half"></i> BELUM LUNAS
+                  </span>
+                `}
                 <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" style="padding: 3px 8px; font-size: 11px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer;">
                   <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
                 </button>
@@ -14689,9 +14712,15 @@ function renderFinanceTable() {
         <td class="sticky-action-col" style="text-align: center;">
           ${remaining <= 0 ? `
             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap;">
-              <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                <i class="fa-solid fa-circle-check"></i> Lunas
-              </span>
+              ${isVerified ? `
+                <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                  <i class="fa-solid fa-circle-check"></i> Lunas
+                </span>
+              ` : `
+                <span style="font-size: 11px; font-weight: 800; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                  <i class="fa-solid fa-hourglass-half"></i> Belum Lunas
+                </span>
+              `}
               <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Lihat riwayat pembayaran" style="padding: 4px 8px; font-size: 11px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">
                 <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
               </button>
@@ -14743,8 +14772,9 @@ function exportFinanceToCSV() {
       if (!hasTermin && paid === 0) return false;
     }
 
-    if (statusVal === 'paid' && (remaining > 0 || paid === 0 || p.attendance_status === 'cancelled')) return false;
-    if (statusVal === 'partial' && (paid === 0 || remaining === 0 || p.attendance_status === 'cancelled')) return false;
+    const isVerified = p.payment_verified === 'verified';
+    if (statusVal === 'paid' && (remaining > 0 || paid === 0 || !isVerified || p.attendance_status === 'cancelled')) return false;
+    if (statusVal === 'partial' && (paid === 0 || (remaining <= 0 && isVerified) || p.attendance_status === 'cancelled')) return false;
     if (statusVal === 'pending' && (paid > 0 || p.attendance_status === 'cancelled')) return false;
     if (statusVal === 'refund' && p.attendance_status !== 'cancelled') return false;
 
@@ -14771,9 +14801,11 @@ function exportFinanceToCSV() {
     const age = Number(p.age || 0);
     const kategori = age < 5 ? 'Balita' : (age <= 15 ? 'Anak-anak' : 'Dewasa');
 
+    const isVerified = p.payment_verified === 'verified';
     let status = 'Belum Bayar';
     if (p.attendance_status === 'cancelled') status = 'Batal (Refund)';
-    else if (remaining <= 0 && paid > 0) status = 'Lunas';
+    else if (remaining <= 0 && paid > 0 && isVerified) status = 'Lunas';
+    else if (paid > 0 && !isVerified) status = 'Belum Lunas (Menunggu Verifikasi)';
     else if (paid > 0 && remaining > 0) status = 'Cicilan';
 
     return [
@@ -15248,7 +15280,7 @@ async function submitQuickPayFromModal() {
     closeQuickPayModal();
     renderFinanceView();
     if (typeof renderPresensiView === 'function') renderPresensiView();
-    showToast(`Alhamdulillah! ${p.full_name} resmi LUNAS via ${method}!`, 'success');
+    showToast(`Pembayaran ${p.full_name} via ${method} berhasil dicatat. Silakan verifikasi di kolom Verifikasi agar berstatus LUNAS.`, 'success');
   } catch (err) {
     console.error('Quick pay error:', err);
     showToast('Gagal memproses pelunasan: ' + err.message, 'error');
@@ -15481,6 +15513,7 @@ async function verifyParticipantPaymentAction(id, isVerified) {
     }
     closePaymentProofViewer();
     renderFinanceView();
+    if (typeof renderPresensiView === 'function') renderPresensiView();
     showToast(`Alhamdulillah! Pembayaran ${p.full_name} telah TERVERIFIKASI SESUAI.`, 'success');
   } catch (err) {
     console.error('Verify payment error:', err);

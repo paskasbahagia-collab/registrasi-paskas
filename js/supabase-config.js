@@ -1448,7 +1448,8 @@ class PaskasDataService {
 
     const paidAmount = installments.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const remaining = Math.max(0, totalFee - paidAmount);
-    const paymentStatus = remaining <= 0 ? 'paid' : (paidAmount > 0 ? 'partial' : 'pending');
+    const isVer = verificationStatus === 'verified';
+    const paymentStatus = !isVer ? 'pending_verification' : (remaining <= 0 ? 'paid' : (paidAmount > 0 ? 'partial' : 'pending'));
 
     const latestProofUrl = uploadedProofUrl || item.payment_proof_url || (installments.slice().reverse().find(x => x.proof_url)?.proof_url || '');
 
@@ -1459,7 +1460,7 @@ class PaskasDataService {
       payment_status: paymentStatus,
       payment_installments: installments,
       payment_proof_url: latestProofUrl,
-      payment_verified: verificationStatus || 'verified'
+      payment_verified: verificationStatus || 'pending'
     };
 
     const updated = await this.updateRegistration(id, updates);
@@ -1475,6 +1476,18 @@ class PaskasDataService {
     const item = current.find(p => String(p.id) === String(id));
     if (!item) throw new Error('Data peserta tidak ditemukan');
 
+    let totalFee = Number(item.total_fee || 0);
+    if (!totalFee || totalFee <= 0) {
+      const settings = this.getSettings();
+      const adultFee = Number(settings.adult_fee || 350000);
+      const childFee = Number(settings.child_fee || 100000);
+      const toddlerFee = Number(settings.toddler_fee || 50000);
+      const age = Number(item.age || 0);
+      if (age > 0 && age < 5) totalFee = toddlerFee;
+      else if (age >= 5 && age <= 15) totalFee = childFee;
+      else totalFee = adultFee;
+    }
+
     let installments = [];
     if (item.payment_installments) {
       try {
@@ -1482,8 +1495,17 @@ class PaskasDataService {
       } catch (e) {}
     }
     installments = installments.map(inst => ({ ...inst, verification_status: 'verified' }));
+    const paidAmount = installments.length > 0
+      ? installments.reduce((sum, t) => sum + Number(t.amount || 0), 0)
+      : Number(item.paid_amount || 0);
+    const remaining = Math.max(0, totalFee - paidAmount);
+    const paymentStatus = remaining <= 0 && paidAmount > 0 ? 'paid' : (paidAmount > 0 ? 'partial' : 'pending');
 
     const updates = {
+      total_fee: totalFee,
+      paid_amount: paidAmount,
+      remaining_amount: remaining,
+      payment_status: paymentStatus,
       payment_verified: 'verified',
       payment_installments: installments
     };
