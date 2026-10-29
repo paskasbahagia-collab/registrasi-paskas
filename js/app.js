@@ -14869,7 +14869,7 @@ function handlePaymentProofSelected(event, mode = 'record') {
       const img = new Image();
       img.onload = function() {
         const canvas = document.createElement('canvas');
-        const maxDim = 1280;
+        const maxDim = 900;
         let w = img.width;
         let h = img.height;
         if (w > maxDim || h > maxDim) {
@@ -14885,7 +14885,7 @@ function handlePaymentProofSelected(event, mode = 'record') {
         canvas.height = h;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
-        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+        const compressed = canvas.toDataURL('image/jpeg', 0.70);
         applySelectedPaymentProof(mode, compressed, file.name);
       };
       img.src = rawDataUrl;
@@ -15204,6 +15204,8 @@ function quickPayFull(id) {
     defaultRadio.checked = true;
     updateQuickPayMethodStyle(defaultRadio);
   }
+  const notesEl = document.getElementById('quickPayNotesInput');
+  if (notesEl) notesEl.value = '';
   clearSelectedPaymentProof('quick');
 
   modal.classList.add('active');
@@ -15243,56 +15245,79 @@ async function submitQuickPayFromModal() {
 
   const selectedRadio = document.querySelector('input[name="quickPayMethodRadio"]:checked');
   const method = selectedRadio ? selectedRadio.value : 'Transfer';
+  const notesInput = document.getElementById('quickPayNotesInput');
+  const customNotes = notesInput ? notesInput.value.trim() : '';
+  const notes = customNotes || `Pelunasan Instan (${method})`;
 
-  const btn = document.getElementById('btnSubmitQuickPay');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  let instList = [];
+  if (p.payment_installments) {
+    try {
+      instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+    } catch (e) {}
+  }
+  const terminNo = instList.length === 0 ? 3 : (instList.length + 1);
+
+  // 1. UPDATE INSTAN / CEPAT (Optimistic Update): Tutup modal dan perbarui tabel seketika
+  const newInstList = [...instList, {
+    id: 'TRM-' + Date.now(),
+    termin: Number(terminNo),
+    amount: remaining,
+    method: method,
+    notes: notes,
+    admin: 'Bendahara',
+    proof_url: selectedQuickProofDataUrl || '',
+    verification_status: 'pending',
+    paid_at: new Date().toISOString()
+  }];
+
+  const newPaid = paid + remaining;
+  const newRemaining = Math.max(0, fee - newPaid);
+  const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
+  if (idx !== -1) {
+    allRegistrations[idx] = {
+      ...allRegistrations[idx],
+      paid_amount: newPaid,
+      remaining_amount: newRemaining,
+      payment_status: 'pending_verification',
+      payment_verified: 'pending',
+      payment_proof_url: selectedQuickProofDataUrl || allRegistrations[idx].payment_proof_url || '',
+      payment_installments: newInstList
+    };
   }
 
-  showToast(`Memproses pelunasan ${p.full_name}...`, 'info');
-  try {
-    let instList = [];
-    if (p.payment_installments) {
-      try {
-        instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
-      } catch (e) {}
-    }
-    const terminNo = instList.length === 0 ? 3 : (instList.length + 1);
+  closeQuickPayModal();
+  renderFinanceView();
+  if (typeof renderPresensiView === 'function') renderPresensiView();
+  showToast(`Alhamdulillah! Pembayaran ${p.full_name} Rp ${remaining.toLocaleString('id-ID')} berhasil dicatat. Silakan verifikasi di kolom Verifikasi.`, 'success');
 
-    const updated = await window.dataService.recordPaymentInstallment(
-      id,
-      terminNo,
-      remaining,
-      method,
-      `Pelunasan Instan (${method})`,
-      'Bendahara',
-      selectedQuickProofDataUrl,
-      'pending'
-    );
-    const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
-    if (idx !== -1) {
+  // 2. Sinkronisasi Asinkron ke Supabase di Latar Belakang (Tidak membuat UI menunggu/hang)
+  window.dataService.recordPaymentInstallment(
+    id,
+    terminNo,
+    remaining,
+    method,
+    notes,
+    'Bendahara',
+    selectedQuickProofDataUrl,
+    'pending'
+  ).then(updated => {
+    if (idx !== -1 && updated) {
       allRegistrations[idx] = { ...allRegistrations[idx], ...updated };
+      renderFinanceView();
     }
-    closeQuickPayModal();
-    renderFinanceView();
-    if (typeof renderPresensiView === 'function') renderPresensiView();
-    showToast(`Pembayaran ${p.full_name} via ${method} berhasil dicatat. Silakan verifikasi di kolom Verifikasi agar berstatus LUNAS.`, 'success');
-  } catch (err) {
-    console.error('Quick pay error:', err);
-    showToast('Gagal memproses pelunasan: ' + err.message, 'error');
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-check"></i> Ya, Lunaskan Sekarang';
-    }
-  }
+  }).catch(err => {
+    console.error('Quick pay cloud sync error:', err);
+    showToast('Catatan tersimpan lokal. Gagal sinkron ke Cloud: ' + err.message, 'warning');
+  });
 }
 
 async function submitPaymentInstallment() {
   if (!activePayParticipantId) return;
   const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
   if (!p) return;
+
+  const fee = calculateParticipantFee(p);
+  const paid = Number(p.paid_amount || 0);
 
   const terminSelect = document.getElementById('payModalTerminSelect');
   const amountInput = document.getElementById('payModalAmountInput');
@@ -15310,31 +15335,65 @@ async function submitPaymentInstallment() {
     return;
   }
 
-  showToast('Menyimpan pembayaran ke Cloud Supabase...', 'info');
-
-  try {
-    const updated = await window.dataService.recordPaymentInstallment(
-      activePayParticipantId,
-      terminNo,
-      amount,
-      method,
-      notes,
-      'Bendahara',
-      selectedRecordProofDataUrl,
-      'pending'
-    );
-    const idx = allRegistrations.findIndex(x => Number(x.id) === Number(activePayParticipantId));
-    if (idx !== -1) {
-      allRegistrations[idx] = { ...allRegistrations[idx], ...updated };
-    }
-    closeRecordPaymentModal();
-    renderFinanceView();
-    if (typeof renderPresensiView === 'function') renderPresensiView();
-    showToast(`Alhamdulillah! Pembayaran Rp ${amount.toLocaleString('id-ID')} berhasil dicatat. Silakan verifikasi di kolom Verifikasi.`, 'success');
-  } catch (err) {
-    console.error('Payment error:', err);
-    showToast('Gagal menyimpan pembayaran: ' + err.message, 'error');
+  let instList = [];
+  if (p.payment_installments) {
+    try {
+      instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+    } catch (e) {}
   }
+
+  // 1. UPDATE INSTAN / CEPAT (Optimistic Update): Tutup modal dan perbarui tabel seketika
+  const newInstList = [...instList, {
+    id: 'TRM-' + Date.now(),
+    termin: Number(terminNo),
+    amount: amount,
+    method: method,
+    notes: notes,
+    admin: 'Bendahara',
+    proof_url: selectedRecordProofDataUrl || '',
+    verification_status: 'pending',
+    paid_at: new Date().toISOString()
+  }];
+
+  const newPaid = paid + amount;
+  const newRemaining = Math.max(0, fee - newPaid);
+  const idx = allRegistrations.findIndex(x => Number(x.id) === Number(activePayParticipantId));
+  if (idx !== -1) {
+    allRegistrations[idx] = {
+      ...allRegistrations[idx],
+      paid_amount: newPaid,
+      remaining_amount: newRemaining,
+      payment_status: 'pending_verification',
+      payment_verified: 'pending',
+      payment_proof_url: selectedRecordProofDataUrl || allRegistrations[idx].payment_proof_url || '',
+      payment_installments: newInstList
+    };
+  }
+
+  closeRecordPaymentModal();
+  renderFinanceView();
+  if (typeof renderPresensiView === 'function') renderPresensiView();
+  showToast(`Alhamdulillah! Pembayaran Rp ${amount.toLocaleString('id-ID')} berhasil dicatat. Silakan verifikasi di kolom Verifikasi.`, 'success');
+
+  // 2. Sinkronisasi Asinkron ke Supabase di Latar Belakang (Cepat & Tanpa Delay UI)
+  window.dataService.recordPaymentInstallment(
+    activePayParticipantId,
+    terminNo,
+    amount,
+    method,
+    notes,
+    'Bendahara',
+    selectedRecordProofDataUrl,
+    'pending'
+  ).then(updated => {
+    if (idx !== -1 && updated) {
+      allRegistrations[idx] = { ...allRegistrations[idx], ...updated };
+      renderFinanceView();
+    }
+  }).catch(err => {
+    console.error('Payment cloud sync error:', err);
+    showToast('Catatan tersimpan lokal. Gagal sinkron ke Cloud: ' + err.message, 'warning');
+  });
 }
 
 async function resetSingleFinancePayment(id, fromModal = false, skipConfirm = false) {

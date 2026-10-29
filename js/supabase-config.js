@@ -513,12 +513,22 @@ class PaskasDataService {
       const safePrefix = String(prefix || 'asset').replace(/[^a-zA-Z0-9-]/g, '_');
       const path = `${folder}/${safePrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
       const bucketName = 'paskas bahagia';
-      const { error } = await this.supabaseClient.storage
-        .from(bucketName)
-        .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: true });
-      if (error) throw error;
-      const { data } = this.supabaseClient.storage.from(bucketName).getPublicUrl(path);
-      return (data && data.publicUrl) || fileOrDataUrl;
+
+      // Gunakan timeout 3.5 detik agar proses penyimpanan tidak pernah macet/hang jika koneksi lambat
+      const uploadPromise = (async () => {
+        const { error } = await this.supabaseClient.storage
+          .from(bucketName)
+          .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: true });
+        if (error) throw error;
+        const { data } = this.supabaseClient.storage.from(bucketName).getPublicUrl(path);
+        return (data && data.publicUrl) || fileOrDataUrl;
+      })();
+
+      const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => resolve(fileOrDataUrl), 3500);
+      });
+
+      return await Promise.race([uploadPromise, timeoutPromise]);
     } catch (err) {
       console.warn('Gagal upload asset ke Supabase Storage:', err);
       return fileOrDataUrl;
@@ -1464,7 +1474,7 @@ class PaskasDataService {
     };
 
     const updated = await this.updateRegistration(id, updates);
-    await this.syncFinanceCloudBackup(id, updates);
+    this.syncFinanceCloudBackup(id, updates).catch(e => console.warn('Background sync finance error:', e));
     return updated;
   }
 
@@ -1510,7 +1520,7 @@ class PaskasDataService {
       payment_installments: installments
     };
     const updated = await this.updateRegistration(id, updates);
-    await this.syncFinanceCloudBackup(id, updates);
+    this.syncFinanceCloudBackup(id, updates).catch(e => console.warn('Background sync finance error:', e));
     return updated;
   }
 
@@ -1521,7 +1531,7 @@ class PaskasDataService {
       refund_notes: refundNotes || ''
     };
     const updated = await this.updateRegistration(id, updates);
-    await this.syncFinanceCloudBackup(id, updates);
+    this.syncFinanceCloudBackup(id, updates).catch(e => console.warn('Background sync finance error:', e));
     return updated;
   }
 
