@@ -14553,7 +14553,7 @@ function renderFinanceTable() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="9" style="text-align: center; padding: 36px; color: #94a3b8;">
+        <td colspan="10" style="text-align: center; padding: 36px; color: #94a3b8;">
           <i class="fa-solid fa-receipt" style="font-size: 26px; margin-bottom: 8px; display: block; color: #cbd5e1;"></i>
           Tidak ada data keuangan yang cocok dengan filter atau kata kunci.
         </td>
@@ -14575,7 +14575,7 @@ function renderFinanceTable() {
     }
     const latestProofUrl = p.payment_proof_url || (instList.slice().reverse().find(x => x.proof_url)?.proof_url || '');
     const latestNote = instList.length > 0 ? (instList[instList.length - 1].notes || '') : '';
-    const isVerified = p.payment_verified === 'verified' || (paid > 0 && p.payment_verified !== 'unverified');
+    const isVerified = p.payment_verified === 'verified';
 
     let statusBadge = '<span class="badge-debt">BELUM BAYAR</span>';
     if (remaining <= 0 && paid > 0) {
@@ -14586,19 +14586,46 @@ function renderFinanceTable() {
 
     if (p.attendance_status === 'cancelled') {
       statusBadge = '<span class="badge-cancelled">BATAL (REFUND)</span>';
-    } else if (paid > 0) {
-      statusBadge += `<div style="margin-top: 4px; font-size: 10.5px; font-weight: 800; color: ${isVerified ? '#059669' : '#d97706'};"><i class="fa-solid ${isVerified ? 'fa-circle-check' : 'fa-clock'}"></i> ${isVerified ? 'Terverifikasi' : 'Menunggu Verifikasi'}</div>`;
+    }
+
+    // Kolom Verifikasi Terpisah
+    let verifyColHtml = `<span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Belum Ada Input</span>`;
+    if (paid > 0) {
+      if (isVerified) {
+        verifyColHtml = `
+          <div style="display: inline-flex; flex-direction: column; align-items: center; gap: 4px;">
+            <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+              <i class="fa-solid fa-circle-check"></i> Sesuai
+            </span>
+            <button type="button" onclick="openParticipantProofViewer(${p.id})" title="Buka Verifikasi & Cek Bukti" style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 10.5px; padding: 2px 7px; border-radius: 5px; cursor: pointer;">
+              Ubah / Cek
+            </button>
+          </div>
+        `;
+      } else {
+        verifyColHtml = `
+          <button type="button" onclick="openParticipantProofViewer(${p.id})" title="Verifikasi apakah pembayaran sesuai atau tidak" style="background: #7c3aed; color: #ffffff; border: none; font-weight: 800; padding: 6px 11px; border-radius: 6px; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(124, 58, 237, 0.25);">
+            <i class="fa-solid fa-shield-halved"></i> Verifikasi
+          </button>
+        `;
+      }
     }
 
     const proofBtnHtml = latestProofUrl ? `
-      <button type="button" onclick="openParticipantProofViewer(${p.id})" title="Lihat Dokumen Bukti Pembayaran & Verifikasi" style="background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-weight: 800; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-        <i class="fa-solid fa-file-invoice"></i> Bukti
+      <button type="button" onclick="openParticipantProofViewer(${p.id})" title="Lihat Dokumen Bukti Pembayaran" style="background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-weight: 800; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+        <i class="fa-solid fa-eye"></i> Lihat Dokumen
       </button>
     ` : '';
 
     const resetBtnHtml = paid > 0 ? `
       <button type="button" onclick="resetSingleFinancePayment(${p.id})" title="Reset pembayaran peserta ini kembali ke Rp 0 (Belum Bayar)" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 800; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
         <i class="fa-solid fa-rotate-left"></i> Reset
+      </button>
+    ` : '';
+
+    const mobileVerifyBtnHtml = paid > 0 ? `
+      <button type="button" onclick="openParticipantProofViewer(${p.id})" style="background: ${isVerified ? '#ecfdf5' : '#7c3aed'}; color: ${isVerified ? '#059669' : '#ffffff'}; border: 1px solid ${isVerified ? '#a7f3d0' : '#7c3aed'}; font-weight: 800; padding: 3px 8px; border-radius: 5px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+        <i class="fa-solid ${isVerified ? 'fa-circle-check' : 'fa-shield-halved'}"></i> ${isVerified ? 'Sesuai' : 'Verifikasi'}
       </button>
     ` : '';
 
@@ -14630,6 +14657,7 @@ function renderFinanceTable() {
                 <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" style="padding: 3px 8px; font-size: 11px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer;">
                   <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
                 </button>
+                ${mobileVerifyBtnHtml}
                 ${proofBtnHtml}
                 ${resetBtnHtml}
               ` : `
@@ -14642,6 +14670,7 @@ function renderFinanceTable() {
                 <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Catat Cicilan" style="background: #f59e0b; color: #ffffff; font-weight: 700; border: none; padding: 4px 9px; border-radius: 5px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
                   <i class="fa-solid fa-receipt"></i> Cicil
                 </button>
+                ${mobileVerifyBtnHtml}
                 ${proofBtnHtml}
                 ${resetBtnHtml}
               `}
@@ -14656,6 +14685,7 @@ function renderFinanceTable() {
         <td style="font-weight: 800; color: #059669;">Rp ${paid.toLocaleString('id-ID')}</td>
         <td style="font-weight: 800; color: #dc2626;">Rp ${remaining.toLocaleString('id-ID')}</td>
         <td>${statusBadge}</td>
+        <td style="text-align: center;">${verifyColHtml}</td>
         <td class="sticky-action-col" style="text-align: center;">
           ${remaining <= 0 ? `
             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap;">
@@ -14665,7 +14695,6 @@ function renderFinanceTable() {
               <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Lihat riwayat pembayaran" style="padding: 4px 8px; font-size: 11px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">
                 <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
               </button>
-              ${proofBtnHtml}
               ${resetBtnHtml}
             </div>
           ` : `
@@ -14676,7 +14705,6 @@ function renderFinanceTable() {
               <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Catat Cicilan / Custom" style="background: #f59e0b; color: #ffffff; font-weight: 700; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
                 <i class="fa-solid fa-receipt"></i> Cicil
               </button>
-              ${proofBtnHtml}
               ${resetBtnHtml}
             </div>
           `}
@@ -15211,7 +15239,7 @@ async function submitQuickPayFromModal() {
       `Pelunasan Instan (${method})`,
       'Bendahara',
       selectedQuickProofDataUrl,
-      'verified'
+      'pending'
     );
     const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
     if (idx !== -1) {
@@ -15236,17 +15264,6 @@ async function submitPaymentInstallment() {
   if (!activePayParticipantId) return;
   const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
   if (!p) return;
-
-  const verifyRadio = document.querySelector('input[name="payModalVerifyRadio"]:checked');
-  const verifyStatus = verifyRadio ? verifyRadio.value : 'verified';
-
-  // Jika dipilih "Tidak Sesuai (Reset)", maka kosongkan input & reset pembayaran peserta ke Rp 0
-  if (verifyStatus === 'unverified') {
-    const amountInput = document.getElementById('payModalAmountInput');
-    if (amountInput) amountInput.value = '';
-    await resetSingleFinancePayment(activePayParticipantId, true, true);
-    return;
-  }
 
   const terminSelect = document.getElementById('payModalTerminSelect');
   const amountInput = document.getElementById('payModalAmountInput');
@@ -15275,7 +15292,7 @@ async function submitPaymentInstallment() {
       notes,
       'Bendahara',
       selectedRecordProofDataUrl,
-      'verified'
+      'pending'
     );
     const idx = allRegistrations.findIndex(x => Number(x.id) === Number(activePayParticipantId));
     if (idx !== -1) {
@@ -15284,7 +15301,7 @@ async function submitPaymentInstallment() {
     closeRecordPaymentModal();
     renderFinanceView();
     if (typeof renderPresensiView === 'function') renderPresensiView();
-    showToast(`Alhamdulillah! Pembayaran Rp ${amount.toLocaleString('id-ID')} berhasil dicatat & diverifikasi.`, 'success');
+    showToast(`Alhamdulillah! Pembayaran Rp ${amount.toLocaleString('id-ID')} berhasil dicatat. Silakan verifikasi di kolom Verifikasi.`, 'success');
   } catch (err) {
     console.error('Payment error:', err);
     showToast('Gagal menyimpan pembayaran: ' + err.message, 'error');
@@ -15365,11 +15382,7 @@ function openParticipantProofViewer(id) {
   const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
   if (!p) return;
   const url = getParticipantLatestProofUrl(p);
-  if (!url) {
-    showToast('Peserta ini belum memiliki dokumen bukti pembayaran.', 'warning');
-    return;
-  }
-  showPaymentProofModalContent(p, url);
+  showPaymentProofModalContent(p, url || '');
 }
 
 function showPaymentProofModalContent(p, url) {
@@ -15399,31 +15412,44 @@ function showPaymentProofModalContent(p, url) {
   }
 
   const openLink = document.getElementById('proofViewerOpenNewTab');
-  if (openLink) {
-    openLink.href = url;
-  }
-
   const imgEl = document.getElementById('proofViewerImg');
   const pdfEl = document.getElementById('proofViewerPdf');
   const emptyEl = document.getElementById('proofViewerEmpty');
 
-  const isPdf = url.startsWith('data:application/pdf') || url.toLowerCase().endsWith('.pdf');
-  if (isPdf) {
+  if (!url) {
+    if (openLink) openLink.style.display = 'none';
     if (imgEl) imgEl.style.display = 'none';
-    if (emptyEl) emptyEl.style.display = 'none';
-    if (pdfEl) {
-      pdfEl.src = url;
-      pdfEl.style.display = 'block';
-    }
-  } else {
     if (pdfEl) {
       pdfEl.src = '';
       pdfEl.style.display = 'none';
     }
-    if (emptyEl) emptyEl.style.display = 'none';
-    if (imgEl) {
-      imgEl.src = url;
-      imgEl.style.display = 'block';
+    if (emptyEl) {
+      emptyEl.innerHTML = '<i class="fa-regular fa-file-image" style="font-size: 24px; display: block; margin-bottom: 6px; color: #64748b;"></i>Belum ada dokumen bukti pembayaran yang diupload untuk peserta ini.<br><span style="font-size: 11.5px; color: #64748b;">Anda tetap dapat memverifikasi kesesuaian nominal di bawah ini.</span>';
+      emptyEl.style.display = 'block';
+    }
+  } else {
+    if (openLink) {
+      openLink.href = url;
+      openLink.style.display = 'inline-flex';
+    }
+    const isPdf = url.startsWith('data:application/pdf') || url.toLowerCase().endsWith('.pdf');
+    if (isPdf) {
+      if (imgEl) imgEl.style.display = 'none';
+      if (emptyEl) emptyEl.style.display = 'none';
+      if (pdfEl) {
+        pdfEl.src = url;
+        pdfEl.style.display = 'block';
+      }
+    } else {
+      if (pdfEl) {
+        pdfEl.src = '';
+        pdfEl.style.display = 'none';
+      }
+      if (emptyEl) emptyEl.style.display = 'none';
+      if (imgEl) {
+        imgEl.src = url;
+        imgEl.style.display = 'block';
+      }
     }
   }
 
