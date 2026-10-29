@@ -1732,26 +1732,6 @@
                     <!-- Status Pengiriman Email (Muncul saat tombol kirim ditekan) -->
                     <div id="successEmailStatusAlert" class="success-email-status-box" style="display: none;"></div>
 
-                    <!-- KARTU GABUNG GRUP WHATSAPP RESMI -->
-                    <div class="reg-success-wa-card" style="background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border: 1.5px solid #10b981; border-radius: 14px; padding: 18px 22px; margin: 22px 0 16px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; box-shadow: 0 8px 24px rgba(6, 78, 59, 0.35);">
-                      <div style="display: flex; align-items: center; gap: 14px;">
-                        <div style="width: 48px; height: 48px; border-radius: 50%; background: #25d366; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 26px; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.45); flex-shrink: 0;">
-                          <i class="fa-brands fa-whatsapp"></i>
-                        </div>
-                        <div>
-                          <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 8px;">
-                            Grup WhatsApp Resmi Acara <span style="background: rgba(37, 211, 102, 0.25); color: #34d399; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600; border: 1px solid rgba(52, 211, 153, 0.4);">Paskas Bahagia</span>
-                          </h4>
-                          <p style="margin: 4px 0 0 0; font-size: 13px; color: #d1fae5; line-height: 1.4;">
-                            Silakan langsung bergabung ke grup WhatsApp untuk koordinasi kedatangan, info akomodasi, dan kabar terkini.
-                          </p>
-                        </div>
-                      </div>
-                      <a href="https://chat.whatsapp.com/D0PK0ouycVOCAnmTg68FF8" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 8px; background: #25d366; color: #ffffff; font-weight: 700; font-size: 14px; padding: 12px 22px; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4); white-space: nowrap; transition: transform 0.2s ease;">
-                        <i class="fa-brands fa-whatsapp" style="font-size: 20px;"></i> Gabung Grup WA
-                      </a>
-                    </div>
-
                     <!-- KONTROL TOMBOL AKSI DI BAWAH (SESUAI PERMINTAAN USER) -->
                     <div class="reg-success-actions-toolbar">
                       <button type="button" class="btn-success-action btn-preview-ticket" onclick="toggleSuccessTicketPreview()" id="btnSuccessTogglePreview">
@@ -1765,6 +1745,10 @@
                       <button type="button" class="btn-success-action btn-download-png" onclick="triggerSuccessTicketDownload()" id="btnSuccessDownload">
                         <i class="fa-solid fa-file-arrow-down"></i> Unduh E-Tiket (PNG)
                       </button>
+
+                      <a href="https://chat.whatsapp.com/D0PK0ouycVOCAnmTg68FF8" target="_blank" rel="noopener noreferrer" class="btn-success-action btn-wa-group" title="Gabung ke Grup WhatsApp Resmi Acara" style="background: linear-gradient(135deg, #25d366, #128c7e); color: #ffffff; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> Gabung Grup WA
+                      </a>
 
                       <!-- TOMBOL UNDUH SEMUA E-TIKET (KHUSUS PENDAFTARAN ROMBONGAN) -->
                       <button type="button" class="btn-success-action btn-download-all-png" onclick="triggerSuccessDownloadAllTickets()" id="btnSuccessDownloadAll" style="display: none;">
@@ -6516,6 +6500,6 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/supabase-config.js?v=137.0"></script>
-  <script src="js/app.js?v=165.0"></script>
+  <script src="js/app.js?v=166.0"></script>
 </body>
 </html>
