@@ -14628,12 +14628,6 @@ function renderFinanceTable() {
       }
     }
 
-    const proofBtnHtml = latestProofUrl ? `
-      <button type="button" onclick="openParticipantProofViewer(${p.id})" title="Lihat Dokumen Bukti Pembayaran" style="background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-weight: 800; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-        <i class="fa-solid fa-eye"></i> Lihat Dokumen
-      </button>
-    ` : '';
-
     const resetBtnHtml = paid > 0 ? `
       <button type="button" onclick="resetSingleFinancePayment(${p.id})" title="Reset pembayaran peserta ini kembali ke Rp 0 (Belum Bayar)" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 800; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
         <i class="fa-solid fa-rotate-left"></i> Reset
@@ -14657,12 +14651,6 @@ function renderFinanceTable() {
         <td>
           <div style="font-weight: 800; color: #0f172a; font-size: 13.5px;">${p.full_name || '-'}</div>
           <div style="font-size: 11px; color: #64748b;">Kategori: ${p.age ? (p.age < 5 ? 'Balita' : (p.age <= 15 ? 'Anak' : 'Dewasa')) : 'Dewasa'} (${p.age || '16+'} thn)</div>
-          ${(latestNote || latestProofUrl) ? `
-            <div style="margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              ${latestNote ? `<span style="font-size: 11px; color: #475569; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;"><i class="fa-regular fa-comment-dots"></i> ${escapeHtml(latestNote)}</span>` : ''}
-              ${latestProofUrl ? `<button type="button" onclick="openParticipantProofViewer(${p.id})" style="background: #ecfdf5; color: #047857; border: 1px solid #6ee7b7; font-weight: 800; font-size: 10.5px; padding: 2px 7px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-eye"></i> Lihat Dokumen</button>` : ''}
-            </div>
-          ` : ''}
           
           <!-- Tombol Bayar Langsung untuk iPad & HP (Tidak perlu geser tabel) -->
           <div class="fin-mobile-action-pill" style="margin-top: 6px; display: none;">
@@ -14681,7 +14669,6 @@ function renderFinanceTable() {
                   <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
                 </button>
                 ${mobileVerifyBtnHtml}
-                ${proofBtnHtml}
                 ${resetBtnHtml}
               ` : `
                 <span style="font-size: 11px; font-weight: 800; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; padding: 2px 7px; border-radius: 5px;">
@@ -14694,7 +14681,6 @@ function renderFinanceTable() {
                   <i class="fa-solid fa-receipt"></i> Cicil
                 </button>
                 ${mobileVerifyBtnHtml}
-                ${proofBtnHtml}
                 ${resetBtnHtml}
               `}
             </div>
