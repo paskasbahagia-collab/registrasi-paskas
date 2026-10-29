@@ -2153,6 +2153,9 @@
                 <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('registered', this)">⏳ Belum Tiba (<span id="presTabPending">0</span>)</button>
                 <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('departed', this)">🛫 Pulang (<span id="presTabDeparted">0</span>)</button>
                 <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('cancelled', this)">❌ Batal (<span id="presTabCancelled">0</span>)</button>
+                <button type="button" class="btn btn-sm" onclick="resetAllPresenceData()" title="Reset semua status kehadiran peserta kembali ke Belum Tiba" style="background: #fff1f2; color: #e11d48; border: 1.5px solid #fecdd3; font-weight: 800; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                  <i class="fa-solid fa-rotate-left"></i> Reset Presensi
+                </button>
               </div>
             </div>
           </div>
@@ -2526,9 +2529,14 @@
                 <i class="fa-regular fa-calendar-check" style="color: #7c3aed; font-size: 18px;"></i>
                 <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;">Daftar Peserta &amp; Status Pembayaran</h3>
               </div>
-              <button type="button" class="btn btn-outline-export" onclick="exportFinanceToCSV()" title="Export data keuangan ke CSV" style="display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 700; color: #334155; cursor: pointer;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-outline-reset" onclick="resetAllFinancePayments()" title="Reset semua data pembayaran yang telah diinput kembali ke Belum Bayar (Rp 0)" style="display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; font-size: 13px; font-weight: 700; color: #e11d48; cursor: pointer;">
+                  <i class="fa-solid fa-rotate-left"></i> Reset Pembayaran
+                </button>
+                <button type="button" class="btn btn-outline-export" onclick="exportFinanceToCSV()" title="Export data keuangan ke CSV" style="display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 700; color: #334155; cursor: pointer;">
                 <i class="fa-solid fa-download"></i> Export Data
-              </button>
+                </button>
+              </div>
             </div>
 
             <!-- Unified Search & Filter Toolbar (1 Toolbar Terpadu) -->
@@ -5980,6 +5988,23 @@ CREATE TABLE IF NOT EXISTS registrations (
           </div>
         </div>
 
+        <!-- Upload Bukti Pembayaran & Lihat Dokumen di Modal Quick Pay -->
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 6px;">
+            Upload Dokumen / Bukti Pembayaran (Opsional):
+          </label>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <input type="file" id="quickPayProofInput" accept="image/*,.pdf" style="display: none;" onchange="handlePaymentProofSelected(event, 'quick')">
+            <button type="button" onclick="document.getElementById('quickPayProofInput').click()" style="background: #f8fafc; border: 1.5px dashed #94a3b8; color: #334155; font-weight: 700; font-size: 12px; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-cloud-arrow-up" style="color: #0284c7;"></i> <span id="quickPayProofBtnLabel">Pilih Dokumen / Foto Bukti</span>
+            </button>
+            <span id="quickPayProofStatusText" style="font-size: 11.5px; color: #64748b; flex: 1; min-width: 120px;">Belum ada dokumen diupload</span>
+            <button type="button" id="quickPayViewProofBtn" onclick="openPaymentProofViewerFromModal('quick')" style="display: none; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-weight: 800; font-size: 11.5px; padding: 6px 10px; border-radius: 7px; cursor: pointer; align-items: center; gap: 5px;">
+              <i class="fa-solid fa-eye"></i> Lihat Dokumen
+            </button>
+          </div>
+        </div>
+
         <!-- Tombol Aksi -->
         <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: center; margin-top: 6px;">
           <button type="button" class="btn btn-secondary btn-sm" onclick="closeQuickPayModal()" style="font-weight: 700; padding: 10px 20px; border-radius: 10px; border: 1.5px solid #cbd5e1 !important; background: #f1f5f9 !important; color: #334155 !important; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.borderColor='#94a3b8'; this.style.color='#0f172a'" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1'; this.style.color='#334155'">
@@ -6091,19 +6116,118 @@ CREATE TABLE IF NOT EXISTS registrations (
         </div>
 
         <div class="form-group" style="margin-bottom: 18px;">
-          <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 4px; display: block;">Catatan / Keterangan (Opsional):</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;">
+            <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #183f2b; margin: 0;">Catatan / Keterangan (Opsional):</label>
+            <div style="display: inline-flex; align-items: center; gap: 6px;">
+              <input type="file" id="payModalProofInput" accept="image/*,.pdf" style="display: none;" onchange="handlePaymentProofSelected(event, 'record')">
+              <button type="button" onclick="document.getElementById('payModalProofInput').click()" style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-weight: 800; font-size: 11.5px; padding: 5px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Upload Foto Bukti Transfer / Dokumen Pembayaran">
+                <i class="fa-solid fa-file-arrow-up"></i> <span id="payModalProofBtnLabel">Upload Dokumen</span>
+              </button>
+              <button type="button" id="payModalViewProofBtn" onclick="openPaymentProofViewerFromModal('record')" style="display: none; background: #ecfdf5; color: #047857; border: 1px solid #6ee7b7; font-weight: 800; font-size: 11.5px; padding: 5px 10px; border-radius: 6px; cursor: pointer; align-items: center; gap: 5px;" title="Lihat dokumen pembayaran yang telah diupload">
+                <i class="fa-solid fa-eye"></i> Lihat Dokumen
+              </button>
+            </div>
+          </div>
           <input type="text" id="payModalNotesInput" class="form-control" placeholder="Contoh: Bukti transfer via bank..." style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; min-height: 46px; height: 46px; padding: 10px 14px; line-height: normal; box-sizing: border-box;">
+          <div id="payModalProofStatusInfo" style="font-size: 11.5px; color: #64748b; margin-top: 6px; display: flex; align-items: center; justify-content: space-between;">
+            <span id="payModalProofFileName"><i class="fa-regular fa-file-image"></i> Belum ada dokumen pembayaran yang diupload</span>
+            <button type="button" id="payModalRemoveProofBtn" onclick="clearSelectedPaymentProof('record')" style="display: none; background: none; border: none; color: #dc2626; font-weight: 700; font-size: 11px; cursor: pointer; padding: 0;">
+              <i class="fa-solid fa-trash-can"></i> Hapus File
+            </button>
+          </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 10px; align-items: center; margin-top: 6px;">
+        <!-- Verifikasi Kesesuaian Pembayaran -->
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;">
+          <label style="display: block; font-size: 12px; font-weight: 800; color: #183f2b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px;">
+            <i class="fa-solid fa-shield-halved" style="color: #059669;"></i> Verifikasi Kesesuaian Pembayaran:
+          </label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <label id="lblVerifySesuai" style="display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1.5px solid #10b981; background: #ecfdf5; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 800; color: #065f46;">
+              <input type="radio" name="payModalVerifyRadio" value="verified" checked onchange="onPayVerifyRadioChanged(this.value)">
+              <span><i class="fa-solid fa-circle-check" style="color: #059669;"></i> Sesuai (Terverifikasi)</span>
+            </label>
+            <label id="lblVerifyTidakSesuai" style="display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1.5px solid #fecdd3; background: #fff1f2; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 800; color: #be123c;">
+              <input type="radio" name="payModalVerifyRadio" value="unverified" onchange="onPayVerifyRadioChanged(this.value)">
+              <span><i class="fa-solid fa-rotate-left" style="color: #e11d48;"></i> Tidak Sesuai (Reset)</span>
+            </label>
+          </div>
+          <div id="payModalVerifyHint" style="font-size: 11.5px; color: #64748b; margin-top: 6px;">
+            Jika dipilih <strong>Tidak Sesuai</strong>, maka nominal yang diisi atau pembayaran yang telah diinput otomatis kembali ke kosong (Rp 0).
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button type="button" id="btnModalResetPayment" onclick="resetSingleFinancePayment(activePayParticipantId, true)" style="display: none; font-weight: 800; padding: 9px 14px; border-radius: 10px; border: 1.5px solid #fecdd3; background: #fff1f2; color: #e11d48; font-size: 12.5px; cursor: pointer; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-rotate-left"></i> Reset ke Rp 0
+          </button>
+          <div style="display: flex; gap: 10px; align-items: center; margin-left: auto;">
           <button type="button" class="btn btn-secondary btn-sm" onclick="closeRecordPaymentModal()" style="font-weight: 700; padding: 10px 20px; border-radius: 10px; border: 1.5px solid #cbd5e1 !important; background: #f1f5f9 !important; color: #334155 !important; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.borderColor='#94a3b8'; this.style.color='#0f172a'" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1'; this.style.color='#334155'">
             <i class="fa-solid fa-xmark"></i> Batal
           </button>
-          <button type="submit" class="btn btn-primary btn-sm" style="font-weight: 800; padding: 10px 22px; border-radius: 10px; font-size: 13.5px; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);">
-            <i class="fa-solid fa-floppy-disk"></i> Simpan Pembayaran
+          <button type="submit" id="btnSubmitRecordPayment" class="btn btn-primary btn-sm" style="font-weight: 800; padding: 10px 22px; border-radius: 10px; font-size: 13.5px; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);">
+            <i class="fa-solid fa-floppy-disk"></i><span>Simpan Pembayaran</span>
           </button>
+          </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL: LIHAT DOKUMEN BUKTI & VERIFIKASI PEMBAYARAN      -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop" id="modalViewPaymentProof">
+    <div class="modal-auth-green-card" style="max-width: 560px; text-align: left; background: #ffffff; color: #1e293b; padding: 24px; border-radius: 16px; border: 1.5px solid #e2dac9; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+      <button type="button" class="modal-auth-close-btn" onclick="closePaymentProofViewer()" title="Tutup" style="color: #64748b;">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <div style="width: 42px; height: 42px; border-radius: 10px; background: #e0f2fe; border: 1px solid #bae6fd; display: flex; align-items: center; justify-content: center; color: #0284c7; font-size: 18px;">
+          <i class="fa-solid fa-file-invoice-dollar"></i>
+        </div>
+        <div>
+          <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #0f172a;">Dokumen Bukti &amp; Verifikasi Pembayaran</h3>
+          <span id="proofViewerParticipantInfo" style="font-size: 12px; color: #64748b; font-weight: 600;">Detail Peserta</span>
+        </div>
+      </div>
+
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 12.5px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <span style="color: #64748b; display: block; font-size: 11px; font-weight: 700;">NOMINAL TERBAYAR:</span>
+          <strong id="proofViewerPaidAmount" style="color: #059669; font-size: 15px; font-weight: 900;">Rp 0</strong>
+        </div>
+        <div>
+          <span style="color: #64748b; display: block; font-size: 11px; font-weight: 700;">KETERANGAN / METODE:</span>
+          <strong id="proofViewerNotes" style="color: #1e293b; font-size: 13px;">-</strong>
+        </div>
+        <a id="proofViewerOpenNewTab" href="#" target="_blank" rel="noopener" style="background: #ffffff; border: 1px solid #cbd5e1; color: #0284c7; font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+          <i class="fa-solid fa-up-right-from-square"></i> Buka Penuh
+        </a>
+      </div>
+
+      <div id="proofViewerMediaContainer" style="background: #0f172a; border-radius: 12px; padding: 12px; text-align: center; max-height: 360px; overflow: auto; margin-bottom: 16px; display: flex; align-items: center; justify-content: center;">
+        <img id="proofViewerImg" src="" alt="Bukti Pembayaran" style="max-width: 100%; max-height: 330px; border-radius: 8px; object-fit: contain; display: none;">
+        <iframe id="proofViewerPdf" src="" style="width: 100%; height: 320px; border: none; border-radius: 8px; display: none;"></iframe>
+        <div id="proofViewerEmpty" style="color: #94a3b8; padding: 30px; font-size: 13px; display: none;">
+          Tidak ada dokumen yang dapat ditampilkan.
+        </div>
+      </div>
+
+      <div id="proofViewerVerifyActions" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+        <button type="button" onclick="verifyParticipantPaymentAction(activeProofViewerParticipantId, false)" style="background: #fff1f2; color: #e11d48; border: 1.5px solid #fecdd3; font-weight: 800; padding: 9px 14px; border-radius: 8px; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-rotate-left"></i> Tidak Sesuai (Reset ke Rp 0)
+        </button>
+        <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
+          <button type="button" onclick="verifyParticipantPaymentAction(activeProofViewerParticipantId, true)" style="background: #10b981; color: #ffffff; border: none; font-weight: 800; padding: 9px 16px; border-radius: 8px; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16,185,129,0.25);">
+            <i class="fa-solid fa-circle-check"></i> Verifikasi Sesuai
+          </button>
+          <button type="button" onclick="closePaymentProofViewer()" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 700; padding: 9px 16px; border-radius: 8px; font-size: 12.5px; cursor: pointer;">
+            Tutup
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -6111,7 +6235,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
-  <script src="js/supabase-config.js?v=132.0"></script>
-  <script src="js/app.js?v=157.0"></script>
+  <script src="js/supabase-config.js?v=133.0"></script>
+  <script src="js/app.js?v=158.0"></script>
 </body>
 </html>

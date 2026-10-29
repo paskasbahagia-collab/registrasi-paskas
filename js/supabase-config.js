@@ -490,7 +490,7 @@ class PaskasDataService {
    */
   async uploadAssetFile(fileOrDataUrl, folder = 'assets', prefix = 'img') {
     if (!fileOrDataUrl) return fileOrDataUrl;
-    if (typeof fileOrDataUrl === 'string' && !fileOrDataUrl.startsWith('data:image')) {
+    if (typeof fileOrDataUrl === 'string' && !fileOrDataUrl.startsWith('data:')) {
       return fileOrDataUrl; // Sudah berbentuk link URL
     }
     this.ensureSupabaseClient();
@@ -498,10 +498,11 @@ class PaskasDataService {
     try {
       let blob;
       let ext = 'jpg';
-      if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:image/')) {
+      if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:')) {
         const res = await fetch(fileOrDataUrl);
         blob = await res.blob();
-        ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+        const mime = blob.type || 'image/jpeg';
+        ext = (mime.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
       } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
         blob = fileOrDataUrl;
         ext = (fileOrDataUrl.type?.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
@@ -627,6 +628,29 @@ class PaskasDataService {
       }
 
       // Update LocalStorage agar selalu konsisten dengan data gabungan cloud & lokal yang valid
+      let attSync = {};
+      let finSync = {};
+      try {
+        const rawAtt = safeStorage.getItem('paskas_attendance_sync');
+        if (rawAtt) attSync = JSON.parse(rawAtt) || {};
+      } catch (e) {}
+      try {
+        const rawFin = safeStorage.getItem('paskas_finance_sync');
+        if (rawFin) finSync = JSON.parse(rawFin) || {};
+      } catch (e) {}
+
+      cloudList = cloudList.map(item => {
+        const sid = String(item.id);
+        let merged = { ...item };
+        if (attSync[sid]) {
+          merged = { ...merged, ...attSync[sid] };
+        }
+        if (finSync[sid]) {
+          merged = { ...merged, ...finSync[sid] };
+        }
+        return merged;
+      });
+
       safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cloudList));
       return cloudList;
     }
@@ -1310,6 +1334,60 @@ class PaskasDataService {
     return updated;
   }
 
+  async resetParticipantPresence(id) {
+    const updates = {
+      attendance_status: 'registered',
+      check_in_at: null,
+      check_out_at: null,
+      cancel_reason: ''
+    };
+    const updated = await this.updateRegistration(id, updates);
+    try {
+      let syncMap = {};
+      const raw = safeStorage.getItem('paskas_attendance_sync');
+      if (raw) {
+        try { syncMap = JSON.parse(raw); } catch (e) {}
+      }
+      delete syncMap[id];
+      delete syncMap[String(id)];
+      await this.saveCloudSetting('paskas_attendance_sync', syncMap);
+    } catch (e) {
+      console.warn('Reset presensi cloud sync error:', e);
+    }
+    return updated;
+  }
+
+  async resetAllPresence() {
+    const updates = {
+      attendance_status: 'registered',
+      check_in_at: null,
+      check_out_at: null,
+      cancel_reason: ''
+    };
+    const current = await this.getLocalRegistrations();
+    const now = new Date().toISOString();
+    const updatedList = current.map(item => ({
+      ...item,
+      ...updates,
+      updated_at: now
+    }));
+    safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(updatedList));
+
+    if (this.isSupabaseConnected && this.supabaseClient) {
+      try {
+        await this.supabaseClient
+          .from('registrations')
+          .update(this.sanitizeRegistrationPayload({ ...updates, updated_at: now }))
+          .neq('id', 0);
+      } catch (err) {
+        console.warn('Supabase bulk reset presensi fallback:', err);
+      }
+    }
+
+    await this.saveCloudSetting('paskas_attendance_sync', {});
+    return updatedList;
+  }
+
   async syncAttendanceCloudBackup(id, updates) {
     try {
       let syncMap = {};
@@ -1329,7 +1407,7 @@ class PaskasDataService {
    * MODUL KEUANGAN & TERMIN PEMBAYARAN (BLUEPRINT MAULANA)
    * ===================================================================
    */
-  async recordPaymentInstallment(id, terminNumber, amount, method = 'Transfer', notes = '', adminName = 'Bendahara') {
+  async recordPaymentInstallment(id, terminNumber, amount, method = 'Transfer', notes = '', adminName = 'Bendahara', proofDataOrUrl = '', verificationStatus = 'verified') {
     const current = await this.getLocalRegistrations();
     const item = current.find(p => String(p.id) === String(id));
     if (!item) throw new Error('Data peserta tidak ditemukan');
@@ -1350,6 +1428,11 @@ class PaskasDataService {
       installments = Array.isArray(item.payment_installments) ? item.payment_installments : (typeof item.payment_installments === 'string' ? JSON.parse(item.payment_installments) : []);
     }
 
+    let uploadedProofUrl = '';
+    if (proofDataOrUrl) {
+      uploadedProofUrl = await this.uploadAssetFile(proofDataOrUrl, 'payment-proofs', item.registration_code || 'PKB');
+    }
+
     const newInstallment = {
       id: 'TRM-' + Date.now(),
       termin: Number(terminNumber) || (installments.length + 1),
@@ -1357,6 +1440,8 @@ class PaskasDataService {
       method: method,
       notes: notes,
       admin: adminName,
+      proof_url: uploadedProofUrl || '',
+      verification_status: verificationStatus || 'verified',
       paid_at: new Date().toISOString()
     };
     installments.push(newInstallment);
@@ -1365,14 +1450,43 @@ class PaskasDataService {
     const remaining = Math.max(0, totalFee - paidAmount);
     const paymentStatus = remaining <= 0 ? 'paid' : (paidAmount > 0 ? 'partial' : 'pending');
 
+    const latestProofUrl = uploadedProofUrl || item.payment_proof_url || (installments.slice().reverse().find(x => x.proof_url)?.proof_url || '');
+
     const updates = {
       total_fee: totalFee,
       paid_amount: paidAmount,
       remaining_amount: remaining,
       payment_status: paymentStatus,
-      payment_installments: installments
+      payment_installments: installments,
+      payment_proof_url: latestProofUrl,
+      payment_verified: verificationStatus || 'verified'
     };
 
+    const updated = await this.updateRegistration(id, updates);
+    await this.syncFinanceCloudBackup(id, updates);
+    return updated;
+  }
+
+  async verifyParticipantPayment(id, isVerified) {
+    if (!isVerified) {
+      return await this.resetParticipantPayment(id);
+    }
+    const current = await this.getLocalRegistrations();
+    const item = current.find(p => String(p.id) === String(id));
+    if (!item) throw new Error('Data peserta tidak ditemukan');
+
+    let installments = [];
+    if (item.payment_installments) {
+      try {
+        installments = Array.isArray(item.payment_installments) ? item.payment_installments : JSON.parse(item.payment_installments || '[]');
+      } catch (e) {}
+    }
+    installments = installments.map(inst => ({ ...inst, verification_status: 'verified' }));
+
+    const updates = {
+      payment_verified: 'verified',
+      payment_installments: installments
+    };
     const updated = await this.updateRegistration(id, updates);
     await this.syncFinanceCloudBackup(id, updates);
     return updated;
@@ -1387,6 +1501,104 @@ class PaskasDataService {
     const updated = await this.updateRegistration(id, updates);
     await this.syncFinanceCloudBackup(id, updates);
     return updated;
+  }
+
+  async resetParticipantPayment(id) {
+    const current = await this.getLocalRegistrations();
+    const item = current.find(p => String(p.id) === String(id));
+    let totalFee = Number(item?.total_fee || 0);
+    if (!totalFee || totalFee <= 0) {
+      const settings = this.getSettings();
+      const adultFee = Number(settings.adult_fee || 350000);
+      const childFee = Number(settings.child_fee || 100000);
+      const toddlerFee = Number(settings.toddler_fee || 50000);
+      const age = Number(item?.age || 0);
+      if (age > 0 && age < 5) totalFee = toddlerFee;
+      else if (age >= 5 && age <= 15) totalFee = childFee;
+      else totalFee = adultFee;
+    }
+
+    const updates = {
+      total_fee: totalFee,
+      paid_amount: 0,
+      remaining_amount: totalFee,
+      payment_status: 'pending',
+      payment_installments: [],
+      payment_proof_url: '',
+      payment_verified: '',
+      refund_status: 'none',
+      refund_amount: 0,
+      refund_notes: ''
+    };
+
+    const updated = await this.updateRegistration(id, updates);
+    try {
+      let syncMap = {};
+      const raw = safeStorage.getItem('paskas_finance_sync');
+      if (raw) {
+        try { syncMap = JSON.parse(raw); } catch (e) {}
+      }
+      delete syncMap[id];
+      delete syncMap[String(id)];
+      await this.saveCloudSetting('paskas_finance_sync', syncMap);
+    } catch (e) {
+      console.warn('Reset finance cloud sync error:', e);
+    }
+    return updated;
+  }
+
+  async resetAllPayments() {
+    const settings = this.getSettings();
+    const adultFee = Number(settings.adult_fee || 350000);
+    const childFee = Number(settings.child_fee || 100000);
+    const toddlerFee = Number(settings.toddler_fee || 50000);
+
+    const current = await this.getLocalRegistrations();
+    const now = new Date().toISOString();
+    const updatedList = current.map(item => {
+      const age = Number(item.age || 0);
+      let fee = adultFee;
+      if (age > 0 && age < 5) fee = toddlerFee;
+      else if (age >= 5 && age <= 15) fee = childFee;
+
+      return {
+        ...item,
+        total_fee: fee,
+        paid_amount: 0,
+        remaining_amount: fee,
+        payment_status: 'pending',
+        payment_installments: [],
+        payment_proof_url: '',
+        payment_verified: '',
+        refund_status: 'none',
+        refund_amount: 0,
+        refund_notes: '',
+        updated_at: now
+      };
+    });
+    safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(updatedList));
+
+    if (this.isSupabaseConnected && this.supabaseClient) {
+      try {
+        await this.supabaseClient
+          .from('registrations')
+          .update(this.sanitizeRegistrationPayload({
+            paid_amount: 0,
+            payment_status: 'pending',
+            payment_installments: [],
+            refund_status: 'none',
+            refund_amount: 0,
+            refund_notes: '',
+            updated_at: now
+          }))
+          .neq('id', 0);
+      } catch (err) {
+        console.warn('Supabase bulk reset finance fallback:', err);
+      }
+    }
+
+    await this.saveCloudSetting('paskas_finance_sync', {});
+    return updatedList;
   }
 
   async syncFinanceCloudBackup(id, updates) {

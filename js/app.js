@@ -13791,6 +13791,15 @@ function renderPresensiTable() {
         <button type="button" class="btn-checkout-action" onclick="doPresenceCheckOut(${p.id})">
           <i class="fa-solid fa-plane-departure"></i> Ceklis Pulang
         </button>
+        <button type="button" class="btn btn-xs" onclick="resetSinglePresence(${p.id})" title="Reset status kehadiran ke Belum Tiba" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 800; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; margin-left: 4px; display: inline-flex; align-items: center; gap: 4px;">
+          <i class="fa-solid fa-rotate-left"></i> Reset
+        </button>
+      `;
+    } else if (st === 'departed' || st === 'cancelled') {
+      actionButtons = `
+        <button type="button" class="btn btn-xs" onclick="resetSinglePresence(${p.id})" title="Reset status kehadiran ke Belum Tiba" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 800; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          <i class="fa-solid fa-rotate-left"></i> Reset
+        </button>
       `;
     }
 
@@ -14018,6 +14027,56 @@ async function submitCancelParticipantFromModal() {
   } catch (err) {
     console.error('Cancel participant error:', err);
     showToast('Gagal membatalkan peserta: ' + err.message, 'error');
+  }
+}
+
+async function resetSinglePresence(id, fromModal = false) {
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  if (!p) return;
+  if (!confirm(`Reset status kehadiran "${p.full_name}" kembali ke "Belum Tiba"?`)) return;
+
+  showToast(`Mereset kehadiran ${p.full_name}...`, 'info');
+  try {
+    const updated = await window.dataService.resetParticipantPresence(id);
+    const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
+    if (idx !== -1) {
+      allRegistrations[idx] = {
+        ...allRegistrations[idx],
+        ...(updated || {}),
+        attendance_status: 'registered',
+        check_in_at: null,
+        check_out_at: null,
+        cancel_reason: ''
+      };
+    }
+    if (fromModal) closePresensiDetailModal();
+    renderPresensiView();
+    if (typeof renderFinanceView === 'function') renderFinanceView();
+    showToast(`Status kehadiran ${p.full_name} berhasil direset ke Belum Tiba.`, 'success');
+  } catch (err) {
+    console.error('Reset presence error:', err);
+    showToast('Gagal mereset kehadiran: ' + err.message, 'error');
+  }
+}
+
+async function resetAllPresenceData() {
+  const hasAnyPresent = (allRegistrations || []).some(p => p.attendance_status && p.attendance_status !== 'registered');
+  if (!hasAnyPresent) {
+    showToast('Semua peserta sudah berstatus Belum Tiba.', 'info');
+    return;
+  }
+  if (!confirm('Apakah Anda yakin ingin MERESET SEMUA status kehadiran peserta kembali ke "Belum Tiba"?')) return;
+
+  showToast('Mereset seluruh data presensi peserta...', 'info');
+  try {
+    const updatedList = await window.dataService.resetAllPresence();
+    allRegistrations = updatedList;
+    renderPresensiView();
+    if (typeof renderFinanceView === 'function') renderFinanceView();
+    showToast('Seluruh status presensi peserta berhasil direset ke Belum Tiba!', 'success');
+  } catch (err) {
+    console.error('Reset all presence error:', err);
+    showToast('Gagal mereset seluruh presensi: ' + err.message, 'error');
   }
 }
 
@@ -14508,6 +14567,16 @@ function renderFinanceTable() {
     const paid = Number(p.paid_amount || 0);
     const remaining = Math.max(0, fee - paid);
 
+    let instList = [];
+    if (p.payment_installments) {
+      try {
+        instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+      } catch (e) {}
+    }
+    const latestProofUrl = p.payment_proof_url || (instList.slice().reverse().find(x => x.proof_url)?.proof_url || '');
+    const latestNote = instList.length > 0 ? (instList[instList.length - 1].notes || '') : '';
+    const isVerified = p.payment_verified === 'verified' || (paid > 0 && p.payment_verified !== 'unverified');
+
     let statusBadge = '<span class="badge-debt">BELUM BAYAR</span>';
     if (remaining <= 0 && paid > 0) {
       statusBadge = '<span class="badge-paid">LUNAS</span>';
@@ -14517,7 +14586,21 @@ function renderFinanceTable() {
 
     if (p.attendance_status === 'cancelled') {
       statusBadge = '<span class="badge-cancelled">BATAL (REFUND)</span>';
+    } else if (paid > 0) {
+      statusBadge += `<div style="margin-top: 4px; font-size: 10.5px; font-weight: 800; color: ${isVerified ? '#059669' : '#d97706'};"><i class="fa-solid ${isVerified ? 'fa-circle-check' : 'fa-clock'}"></i> ${isVerified ? 'Terverifikasi' : 'Menunggu Verifikasi'}</div>`;
     }
+
+    const proofBtnHtml = latestProofUrl ? `
+      <button type="button" onclick="openParticipantProofViewer(${p.id})" title="Lihat Dokumen Bukti Pembayaran & Verifikasi" style="background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-weight: 800; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+        <i class="fa-solid fa-file-invoice"></i> Bukti
+      </button>
+    ` : '';
+
+    const resetBtnHtml = paid > 0 ? `
+      <button type="button" onclick="resetSingleFinancePayment(${p.id})" title="Reset pembayaran peserta ini kembali ke Rp 0 (Belum Bayar)" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 800; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+        <i class="fa-solid fa-rotate-left"></i> Reset
+      </button>
+    ` : '';
 
     return `
       <tr>
@@ -14530,6 +14613,12 @@ function renderFinanceTable() {
         <td>
           <div style="font-weight: 800; color: #0f172a; font-size: 13.5px;">${p.full_name || '-'}</div>
           <div style="font-size: 11px; color: #64748b;">Kategori: ${p.age ? (p.age < 5 ? 'Balita' : (p.age <= 15 ? 'Anak' : 'Dewasa')) : 'Dewasa'} (${p.age || '16+'} thn)</div>
+          ${(latestNote || latestProofUrl) ? `
+            <div style="margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              ${latestNote ? `<span style="font-size: 11px; color: #475569; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;"><i class="fa-regular fa-comment-dots"></i> ${escapeHtml(latestNote)}</span>` : ''}
+              ${latestProofUrl ? `<button type="button" onclick="openParticipantProofViewer(${p.id})" style="background: #ecfdf5; color: #047857; border: 1px solid #6ee7b7; font-weight: 800; font-size: 10.5px; padding: 2px 7px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-eye"></i> Lihat Dokumen</button>` : ''}
+            </div>
+          ` : ''}
           
           <!-- Tombol Bayar Langsung untuk iPad & HP (Tidak perlu geser tabel) -->
           <div class="fin-mobile-action-pill" style="margin-top: 6px; display: none;">
@@ -14541,6 +14630,8 @@ function renderFinanceTable() {
                 <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" style="padding: 3px 8px; font-size: 11px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer;">
                   <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
                 </button>
+                ${proofBtnHtml}
+                ${resetBtnHtml}
               ` : `
                 <span style="font-size: 11px; font-weight: 800; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; padding: 2px 7px; border-radius: 5px;">
                   Sisa: Rp ${remaining.toLocaleString('id-ID')}
@@ -14551,6 +14642,8 @@ function renderFinanceTable() {
                 <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Catat Cicilan" style="background: #f59e0b; color: #ffffff; font-weight: 700; border: none; padding: 4px 9px; border-radius: 5px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
                   <i class="fa-solid fa-receipt"></i> Cicil
                 </button>
+                ${proofBtnHtml}
+                ${resetBtnHtml}
               `}
             </div>
           </div>
@@ -14565,22 +14658,26 @@ function renderFinanceTable() {
         <td>${statusBadge}</td>
         <td class="sticky-action-col" style="text-align: center;">
           ${remaining <= 0 ? `
-            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap;">
               <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                 <i class="fa-solid fa-circle-check"></i> Lunas
               </span>
-              <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Lihat riwayat pembayaran" style="padding: 4px 8px; font-size: 11px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; cursor: pointer;">
+              <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Lihat riwayat pembayaran" style="padding: 4px 8px; font-size: 11px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">
                 <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
               </button>
+              ${proofBtnHtml}
+              ${resetBtnHtml}
             </div>
           ` : `
-            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: nowrap;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap;">
               <button type="button" class="btn-quick-lunas" onclick="quickPayFull(${p.id})" title="Bayar Lunas Seketika Rp ${remaining.toLocaleString('id-ID')}" style="background: #10b981; color: #ffffff; font-weight: 800; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2);">
                 <i class="fa-solid fa-bolt"></i> Lunas
               </button>
               <button type="button" class="btn-pay-action" onclick="openRecordPaymentModal(${p.id})" title="Catat Cicilan / Custom" style="background: #f59e0b; color: #ffffff; font-weight: 700; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
                 <i class="fa-solid fa-receipt"></i> Cicil
               </button>
+              ${proofBtnHtml}
+              ${resetBtnHtml}
             </div>
           `}
         </td>
@@ -14677,6 +14774,157 @@ function exportFinanceToCSV() {
   showToast(`File CSV rekap keuangan (${filtered.length} peserta) berhasil diunduh!`, 'success');
 }
 
+let selectedRecordProofDataUrl = '';
+let selectedRecordProofName = '';
+let selectedQuickProofDataUrl = '';
+let selectedQuickProofName = '';
+let activeProofViewerParticipantId = null;
+
+function getParticipantLatestProofUrl(p) {
+  if (!p) return '';
+  if (p.payment_proof_url) return p.payment_proof_url;
+  if (p.payment_installments) {
+    try {
+      const inst = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+      const found = inst.slice().reverse().find(x => x && x.proof_url);
+      if (found) return found.proof_url;
+    } catch (e) {}
+  }
+  return '';
+}
+
+function handlePaymentProofSelected(event, mode = 'record') {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  const isImage = file.type.startsWith('image/');
+
+  if (!isPdf && !isImage) {
+    showToast('Mohon pilih file gambar (JPG/PNG) atau dokumen PDF.', 'warning');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const rawDataUrl = e.target.result;
+    if (isImage) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const maxDim = 1280;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+        applySelectedPaymentProof(mode, compressed, file.name);
+      };
+      img.src = rawDataUrl;
+    } else {
+      applySelectedPaymentProof(mode, rawDataUrl, file.name);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function applySelectedPaymentProof(mode, dataUrl, fileName) {
+  if (mode === 'quick') {
+    selectedQuickProofDataUrl = dataUrl;
+    selectedQuickProofName = fileName;
+    const stText = document.getElementById('quickPayProofStatusText');
+    if (stText) stText.innerHTML = `<strong style="color: #059669;"><i class="fa-solid fa-circle-check"></i> ${escapeHtml(fileName)}</strong>`;
+    const viewBtn = document.getElementById('quickPayViewProofBtn');
+    if (viewBtn) viewBtn.style.display = 'inline-flex';
+  } else {
+    selectedRecordProofDataUrl = dataUrl;
+    selectedRecordProofName = fileName;
+    const fName = document.getElementById('payModalProofFileName');
+    if (fName) fName.innerHTML = `<strong style="color: #059669;"><i class="fa-solid fa-circle-check"></i> Dokumen siap: ${escapeHtml(fileName)}</strong>`;
+    const viewBtn = document.getElementById('payModalViewProofBtn');
+    if (viewBtn) viewBtn.style.display = 'inline-flex';
+    const rmBtn = document.getElementById('payModalRemoveProofBtn');
+    if (rmBtn) rmBtn.style.display = 'inline-block';
+  }
+  showToast('Dokumen bukti pembayaran berhasil dilampirkan!', 'success');
+}
+
+function clearSelectedPaymentProof(mode = 'record') {
+  if (mode === 'quick') {
+    selectedQuickProofDataUrl = '';
+    selectedQuickProofName = '';
+    const input = document.getElementById('quickPayProofInput');
+    if (input) input.value = '';
+    const stText = document.getElementById('quickPayProofStatusText');
+    if (stText) stText.textContent = 'Belum ada dokumen diupload';
+    const viewBtn = document.getElementById('quickPayViewProofBtn');
+    if (viewBtn) viewBtn.style.display = 'none';
+  } else {
+    selectedRecordProofDataUrl = '';
+    selectedRecordProofName = '';
+    const input = document.getElementById('payModalProofInput');
+    if (input) input.value = '';
+    const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
+    const existingProof = getParticipantLatestProofUrl(p);
+    const fName = document.getElementById('payModalProofFileName');
+    const viewBtn = document.getElementById('payModalViewProofBtn');
+    const rmBtn = document.getElementById('payModalRemoveProofBtn');
+    if (existingProof) {
+      if (fName) fName.innerHTML = `<span style="color: #047857; font-weight: 700;"><i class="fa-solid fa-file-circle-check"></i> Dokumen pembayaran tersimpan (Klik "Lihat Dokumen")</span>`;
+      if (viewBtn) viewBtn.style.display = 'inline-flex';
+    } else {
+      if (fName) fName.innerHTML = `<i class="fa-regular fa-file-image"></i> Belum ada dokumen pembayaran yang diupload`;
+      if (viewBtn) viewBtn.style.display = 'none';
+    }
+    if (rmBtn) rmBtn.style.display = 'none';
+  }
+}
+
+function onPayVerifyRadioChanged(val) {
+  const submitBtn = document.getElementById('btnSubmitRecordPayment');
+  const amountInput = document.getElementById('payModalAmountInput');
+  const hint = document.getElementById('payModalVerifyHint');
+
+  if (val === 'unverified') {
+    if (amountInput) {
+      amountInput.value = '';
+      amountInput.required = false;
+      onPayAmountChanged();
+    }
+    if (submitBtn) {
+      submitBtn.style.background = '#e11d48';
+      submitBtn.style.boxShadow = '0 4px 14px rgba(225, 29, 72, 0.3)';
+      submitBtn.innerHTML = '<i class="fa-solid fa-rotate-left"></i><span>Reset Pembayaran (Rp 0)</span>';
+    }
+    if (hint) {
+      hint.innerHTML = '<strong style="color: #e11d48;"><i class="fa-solid fa-triangle-exclamation"></i> Mode Tidak Sesuai aktif:</strong> Nominal dikosongkan. Klik tombol merah di bawah untuk mereset pembayaran peserta kembali ke Rp 0 (Belum Bayar).';
+    }
+  } else {
+    if (amountInput) {
+      amountInput.required = true;
+    }
+    if (submitBtn) {
+      submitBtn.style.background = '';
+      submitBtn.style.boxShadow = '0 4px 14px rgba(245, 158, 11, 0.35)';
+      submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i><span>Simpan Pembayaran</span>';
+    }
+    if (hint) {
+      hint.innerHTML = 'Jika dipilih <strong>Tidak Sesuai</strong>, maka nominal yang diisi atau pembayaran yang telah diinput otomatis kembali ke kosong (Rp 0).';
+    }
+  }
+}
+
 function openRecordPaymentModal(id) {
   activePayParticipantId = id;
   const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
@@ -14705,13 +14953,38 @@ function openRecordPaymentModal(id) {
   if (qLunas) qLunas.textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
 
   const amountInput = document.getElementById('payModalAmountInput');
-  if (amountInput) amountInput.value = '';
+  if (amountInput) {
+    amountInput.value = '';
+    amountInput.required = true;
+  }
+
+  let instList = [];
+  if (p.payment_installments) {
+    try {
+      instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+    } catch (e) {}
+  }
+  const latestNote = instList.length > 0 ? (instList[instList.length - 1].notes || '') : '';
 
   const notesInput = document.getElementById('payModalNotesInput');
-  if (notesInput) notesInput.value = '';
+  if (notesInput) notesInput.value = latestNote;
 
   const methodSelect = document.getElementById('payModalMethodSelect');
   if (methodSelect) methodSelect.value = 'Transfer';
+
+  // Reset & tampilkan status dokumen bukti pembayaran
+  clearSelectedPaymentProof('record');
+
+  // Set default radio verifikasi ke 'verified'
+  const verifiedRadio = document.querySelector('input[name="payModalVerifyRadio"][value="verified"]');
+  if (verifiedRadio) verifiedRadio.checked = true;
+  onPayVerifyRadioChanged('verified');
+
+  // Tampilkan tombol Reset ke Rp 0 di modal jika sudah ada pembayaran
+  const btnModalReset = document.getElementById('btnModalResetPayment');
+  if (btnModalReset) {
+    btnModalReset.style.display = paid > 0 ? 'inline-flex' : 'none';
+  }
 
   onPayAmountChanged();
   modal.classList.add('active');
@@ -14868,12 +15141,13 @@ function quickPayFull(id) {
   const remEl = document.getElementById('quickPayRemainingAmount');
   if (remEl) remEl.textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
 
-  // Reset method radio ke Transfer
+  // Reset method radio ke Transfer & reset bukti upload
   const defaultRadio = document.querySelector('input[name="quickPayMethodRadio"][value="Transfer"]');
   if (defaultRadio) {
     defaultRadio.checked = true;
     updateQuickPayMethodStyle(defaultRadio);
   }
+  clearSelectedPaymentProof('quick');
 
   modal.classList.add('active');
 }
@@ -14935,7 +15209,9 @@ async function submitQuickPayFromModal() {
       remaining,
       method,
       `Pelunasan Instan (${method})`,
-      'Bendahara'
+      'Bendahara',
+      selectedQuickProofDataUrl,
+      'verified'
     );
     const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
     if (idx !== -1) {
@@ -14961,6 +15237,17 @@ async function submitPaymentInstallment() {
   const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
   if (!p) return;
 
+  const verifyRadio = document.querySelector('input[name="payModalVerifyRadio"]:checked');
+  const verifyStatus = verifyRadio ? verifyRadio.value : 'verified';
+
+  // Jika dipilih "Tidak Sesuai (Reset)", maka kosongkan input & reset pembayaran peserta ke Rp 0
+  if (verifyStatus === 'unverified') {
+    const amountInput = document.getElementById('payModalAmountInput');
+    if (amountInput) amountInput.value = '';
+    await resetSingleFinancePayment(activePayParticipantId, true, true);
+    return;
+  }
+
   const terminSelect = document.getElementById('payModalTerminSelect');
   const amountInput = document.getElementById('payModalAmountInput');
   const methodSelect = document.getElementById('payModalMethodSelect');
@@ -14980,7 +15267,16 @@ async function submitPaymentInstallment() {
   showToast('Menyimpan pembayaran ke Cloud Supabase...', 'info');
 
   try {
-    const updated = await window.dataService.recordPaymentInstallment(activePayParticipantId, terminNo, amount, method, notes, 'Bendahara');
+    const updated = await window.dataService.recordPaymentInstallment(
+      activePayParticipantId,
+      terminNo,
+      amount,
+      method,
+      notes,
+      'Bendahara',
+      selectedRecordProofDataUrl,
+      'verified'
+    );
     const idx = allRegistrations.findIndex(x => Number(x.id) === Number(activePayParticipantId));
     if (idx !== -1) {
       allRegistrations[idx] = { ...allRegistrations[idx], ...updated };
@@ -14988,10 +15284,181 @@ async function submitPaymentInstallment() {
     closeRecordPaymentModal();
     renderFinanceView();
     if (typeof renderPresensiView === 'function') renderPresensiView();
-    showToast(`Alhamdulillah! Pembayaran Rp ${amount.toLocaleString('id-ID')} berhasil dicatat.`, 'success');
+    showToast(`Alhamdulillah! Pembayaran Rp ${amount.toLocaleString('id-ID')} berhasil dicatat & diverifikasi.`, 'success');
   } catch (err) {
     console.error('Payment error:', err);
     showToast('Gagal menyimpan pembayaran: ' + err.message, 'error');
+  }
+}
+
+async function resetSingleFinancePayment(id, fromModal = false, skipConfirm = false) {
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  if (!p) return;
+
+  if (!skipConfirm) {
+    if (!confirm(`Reset data pembayaran "${p.full_name}" kembali ke kosong (Rp 0 / Belum Bayar)?`)) return;
+  }
+
+  showToast(`Mereset data pembayaran ${p.full_name} ke Rp 0...`, 'info');
+  try {
+    const fee = calculateParticipantFee(p);
+    const updated = await window.dataService.resetParticipantPayment(id);
+    const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
+    if (idx !== -1) {
+      allRegistrations[idx] = {
+        ...allRegistrations[idx],
+        ...(updated || {}),
+        total_fee: fee,
+        paid_amount: 0,
+        remaining_amount: fee,
+        payment_status: 'pending',
+        payment_installments: [],
+        payment_proof_url: '',
+        payment_verified: ''
+      };
+    }
+    if (fromModal) closeRecordPaymentModal();
+    closePaymentProofViewer();
+    renderFinanceView();
+    if (typeof renderPresensiView === 'function') renderPresensiView();
+    showToast(`Data pembayaran ${p.full_name} telah direset kembali ke Rp 0 (Belum Bayar).`, 'success');
+  } catch (err) {
+    console.error('Reset single payment error:', err);
+    showToast('Gagal mereset pembayaran: ' + err.message, 'error');
+  }
+}
+
+async function resetAllFinancePayments() {
+  const hasAnyPaid = (allRegistrations || []).some(p => Number(p.paid_amount || 0) > 0);
+  if (!hasAnyPaid) {
+    showToast('Semua peserta sudah berstatus Belum Bayar (Rp 0).', 'info');
+    return;
+  }
+  if (!confirm('Apakah Anda yakin ingin MERESET SEMUA data pembayaran peserta kembali ke Rp 0 (Belum Bayar)?')) return;
+
+  showToast('Mereset seluruh data pembayaran peserta...', 'info');
+  try {
+    const updatedList = await window.dataService.resetAllPayments();
+    allRegistrations = updatedList;
+    renderFinanceView();
+    if (typeof renderPresensiView === 'function') renderPresensiView();
+    showToast('Seluruh data pembayaran peserta berhasil direset kembali ke Rp 0 (Belum Bayar)!', 'success');
+  } catch (err) {
+    console.error('Reset all finance error:', err);
+    showToast('Gagal mereset seluruh pembayaran: ' + err.message, 'error');
+  }
+}
+
+function openPaymentProofViewerFromModal(mode = 'record') {
+  const id = mode === 'quick' ? activeQuickPayId : activePayParticipantId;
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  const tempUrl = mode === 'quick' ? selectedQuickProofDataUrl : selectedRecordProofDataUrl;
+  const url = tempUrl || getParticipantLatestProofUrl(p);
+  if (!url) {
+    showToast('Belum ada dokumen pembayaran yang diupload.', 'warning');
+    return;
+  }
+  showPaymentProofModalContent(p, url);
+}
+
+function openParticipantProofViewer(id) {
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  if (!p) return;
+  const url = getParticipantLatestProofUrl(p);
+  if (!url) {
+    showToast('Peserta ini belum memiliki dokumen bukti pembayaran.', 'warning');
+    return;
+  }
+  showPaymentProofModalContent(p, url);
+}
+
+function showPaymentProofModalContent(p, url) {
+  activeProofViewerParticipantId = p ? p.id : null;
+  const modal = document.getElementById('modalViewPaymentProof');
+  if (!modal) return;
+
+  const infoEl = document.getElementById('proofViewerParticipantInfo');
+  if (infoEl) {
+    infoEl.textContent = p ? `${p.full_name} (${p.registration_code || '-'}) • ${p.group_name || 'Mandiri'}` : 'Pratinjau Dokumen';
+  }
+
+  const paid = Number(p?.paid_amount || 0);
+  const paidEl = document.getElementById('proofViewerPaidAmount');
+  if (paidEl) paidEl.textContent = `Rp ${paid.toLocaleString('id-ID')}`;
+
+  let instList = [];
+  if (p?.payment_installments) {
+    try {
+      instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+    } catch (e) {}
+  }
+  const lastInst = instList.length > 0 ? instList[instList.length - 1] : null;
+  const notesEl = document.getElementById('proofViewerNotes');
+  if (notesEl) {
+    notesEl.textContent = lastInst ? `${lastInst.method || 'Transfer'}${lastInst.notes ? ' — ' + lastInst.notes : ''}` : 'Bukti Pembayaran';
+  }
+
+  const openLink = document.getElementById('proofViewerOpenNewTab');
+  if (openLink) {
+    openLink.href = url;
+  }
+
+  const imgEl = document.getElementById('proofViewerImg');
+  const pdfEl = document.getElementById('proofViewerPdf');
+  const emptyEl = document.getElementById('proofViewerEmpty');
+
+  const isPdf = url.startsWith('data:application/pdf') || url.toLowerCase().endsWith('.pdf');
+  if (isPdf) {
+    if (imgEl) imgEl.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (pdfEl) {
+      pdfEl.src = url;
+      pdfEl.style.display = 'block';
+    }
+  } else {
+    if (pdfEl) {
+      pdfEl.src = '';
+      pdfEl.style.display = 'none';
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (imgEl) {
+      imgEl.src = url;
+      imgEl.style.display = 'block';
+    }
+  }
+
+  modal.classList.add('active');
+}
+
+function closePaymentProofViewer() {
+  const modal = document.getElementById('modalViewPaymentProof');
+  if (modal) modal.classList.remove('active');
+}
+
+async function verifyParticipantPaymentAction(id, isVerified) {
+  if (!id) return;
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(id));
+  if (!p) return;
+
+  if (!isVerified) {
+    if (!confirm(`Verifikasi TIDAK SESUAI untuk "${p.full_name}"?\nNominal pembayaran yang telah diinput akan dikosongkan kembali ke Rp 0 (Belum Bayar).`)) return;
+    await resetSingleFinancePayment(id, true, true);
+    return;
+  }
+
+  showToast(`Memverifikasi pembayaran ${p.full_name}...`, 'info');
+  try {
+    const updated = await window.dataService.verifyParticipantPayment(id, true);
+    const idx = allRegistrations.findIndex(x => Number(x.id) === Number(id));
+    if (idx !== -1) {
+      allRegistrations[idx] = { ...allRegistrations[idx], ...(updated || {}), payment_verified: 'verified' };
+    }
+    closePaymentProofViewer();
+    renderFinanceView();
+    showToast(`Alhamdulillah! Pembayaran ${p.full_name} telah TERVERIFIKASI SESUAI.`, 'success');
+  } catch (err) {
+    console.error('Verify payment error:', err);
+    showToast('Gagal memverifikasi pembayaran: ' + err.message, 'error');
   }
 }
 
@@ -15130,6 +15597,8 @@ window.doPresenceCheckOut = doPresenceCheckOut;
 window.openPresensiDetailModal = openPresensiDetailModal;
 window.closePresensiDetailModal = closePresensiDetailModal;
 window.submitCancelParticipantFromModal = submitCancelParticipantFromModal;
+window.resetSinglePresence = resetSinglePresence;
+window.resetAllPresenceData = resetAllPresenceData;
 
 window.checkTreasurerSessionState = checkTreasurerSessionState;
 window.submitTreasurerLogin = submitTreasurerLogin;
@@ -15147,6 +15616,15 @@ window.closeQuickPayModal = closeQuickPayModal;
 window.updateQuickPayMethodStyle = updateQuickPayMethodStyle;
 window.submitQuickPayFromModal = submitQuickPayFromModal;
 window.onPayAmountChanged = onPayAmountChanged;
+window.handlePaymentProofSelected = handlePaymentProofSelected;
+window.clearSelectedPaymentProof = clearSelectedPaymentProof;
+window.onPayVerifyRadioChanged = onPayVerifyRadioChanged;
+window.resetSingleFinancePayment = resetSingleFinancePayment;
+window.resetAllFinancePayments = resetAllFinancePayments;
+window.openPaymentProofViewerFromModal = openPaymentProofViewerFromModal;
+window.openParticipantProofViewer = openParticipantProofViewer;
+window.closePaymentProofViewer = closePaymentProofViewer;
+window.verifyParticipantPaymentAction = verifyParticipantPaymentAction;
 window.saveNewTreasurerPassword = saveNewTreasurerPassword;
 window.resetTreasurerPasswordDefault = resetTreasurerPasswordDefault;
 window.saveTariffAndPresensiConfig = saveTariffAndPresensiConfig;
