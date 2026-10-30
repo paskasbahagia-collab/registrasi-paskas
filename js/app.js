@@ -12849,6 +12849,58 @@ function renderFormattedNarrationHTML(rawText) {
   }).join('');
 }
 
+function renderFormattedPaymentNotes(rawText) {
+  if (!rawText || !rawText.trim()) {
+    return `<div style="color: #94a3b8; font-style: italic; font-size: 12.5px; padding: 4px 0;"><i class="fa-regular fa-comment-dots" style="margin-right: 6px;"></i>Tidak ada catatan khusus yang dilampirkan pada pembayaran ini.</div>`;
+  }
+  
+  const paras = rawText.split(/\r?\n\s*\r?\n/).filter(p => p.trim());
+  return paras.map(para => {
+    const lines = para.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+    const formattedLines = lines.map(line => {
+      let l = escapeHtml(line);
+      
+      // Decode safe allowed formatting tags
+      l = l.replace(/&lt;(\/?)b&gt;/gi, '<$1b>');
+      l = l.replace(/&lt;(\/?)strong&gt;/gi, '<$1strong>');
+      l = l.replace(/&lt;(\/?)i&gt;/gi, '<$1i>');
+      l = l.replace(/&lt;(\/?)em&gt;/gi, '<$1em>');
+      l = l.replace(/&lt;(\/?)u&gt;/gi, '<$1u>');
+      l = l.replace(/&lt;mark&gt;/gi, '<mark style="background: #fef08a; color: #854d0e; padding: 1px 6px; border-radius: 4px; font-weight: 700;">');
+      l = l.replace(/&lt;\/mark&gt;/gi, '</mark>');
+      l = l.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+
+      // Markdown bold, italic, underline
+      l = l.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #0f172a; font-weight: 800;">$1</strong>');
+      l = l.replace(/\*(.+?)\*/g, '<em style="color: #334155; font-style: italic;">$1</em>');
+      l = l.replace(/__(.+?)__/g, '<u style="text-decoration-color: #f59e0b; text-underline-offset: 3px;">$1</u>');
+
+      // Check if line is a bullet item: starts with •, -, *, or . followed by space
+      const bulletMatch = l.match(/^([-•*]|\.)\s+(.+)$/);
+      if (bulletMatch) {
+        return `<div style="display: flex; align-items: baseline; gap: 8px; margin: 3px 0 3px 4px;">
+          <i class="fa-solid fa-circle-check" style="font-size: 11.5px; color: #10b981; flex-shrink: 0; transform: translateY(1px);"></i>
+          <span style="color: #1e293b; font-size: 13px; line-height: 1.55;">${bulletMatch[2]}</span>
+        </div>`;
+      }
+
+      // Check if line is numbered item: e.g. 1. or 1)
+      const numMatch = l.match(/^(\d+[\.)])\s+(.+)$/);
+      if (numMatch) {
+        return `<div style="display: flex; align-items: baseline; gap: 8px; margin: 3px 0 3px 4px;">
+          <span style="font-weight: 800; color: #0284c7; font-size: 12px; min-width: 18px;">${numMatch[1]}</span>
+          <span style="color: #1e293b; font-size: 13px; line-height: 1.55;">${numMatch[2]}</span>
+        </div>`;
+      }
+
+      return `<div style="line-height: 1.6; color: #1e293b; font-size: 13px;">${l}</div>`;
+    });
+
+    return `<div style="margin-bottom: 8px;">${formattedLines.join('')}</div>`;
+  }).join('');
+}
+
 function applyTextFormatting(btnEl, formatType) {
   const container = btnEl.closest('.form-group') || btnEl.closest('.settings-card-item-box') || btnEl.parentElement.parentElement;
   const textarea = container ? container.querySelector('textarea') : null;
@@ -14199,6 +14251,7 @@ initAntiInspectGuard();
 // Export fungsi pembantu format teks narasi & pengatur urutan kartu
 window.renderFormattedNarrationHTML = renderFormattedNarrationHTML;
 window.applyTextFormatting = applyTextFormatting;
+window.renderFormattedPaymentNotes = renderFormattedPaymentNotes;
 window.moveCardUp = moveCardUp;
 window.moveCardDown = moveCardDown;
 window.moveCardToPosition = moveCardToPosition;
@@ -15637,11 +15690,7 @@ function renderFinanceTable() {
                   : '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px; text-align: right;"><i class="fa-solid fa-money-bill-wave"></i> Cash</div>')
               : '<div style="font-size: 10px; font-weight: 600; color: #0284c7; margin-top: 2px; text-align: right;"><i class="fa-solid fa-building-columns"></i> Transfer</div>'
           ) : ''}
-          ${latestNote ? `
-            <div style="font-size: 10.5px; font-weight: 500; color: #475569; margin-top: 4px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; white-space: pre-wrap; word-break: break-word; line-height: 1.35; text-align: left; max-width: 220px;" title="${escapeHtml(latestNote)}">
-              <i class="fa-regular fa-note-sticky" style="color: #64748b; margin-right: 3px;"></i>${escapeHtml(latestNote)}
-            </div>
-          ` : ''}
+
         </td>
         <td class="col-fit" style="font-weight: 800; color: #dc2626; text-align: right; white-space: nowrap;">Rp ${remaining.toLocaleString('id-ID')}</td>
         <td class="col-fit" style="text-align: center; white-space: nowrap;">${statusBadge}</td>
@@ -16437,7 +16486,42 @@ function showPaymentProofModalContent(p, url) {
   const lastInst = instList.length > 0 ? instList[instList.length - 1] : null;
   const notesEl = document.getElementById('proofViewerNotes');
   if (notesEl) {
-    notesEl.textContent = lastInst ? `${lastInst.method || 'Transfer'}${lastInst.notes ? ' — ' + lastInst.notes : ''}` : 'Bukti Pembayaran';
+    notesEl.textContent = lastInst?.method || (p?.payment_method || 'Transfer');
+  }
+
+  // Gabungkan dan format catatan pembayaran (nyaman dibaca, mendukung paragraf & poin dari Gambar 1)
+  let combinedNotes = '';
+  if (instList.length > 0) {
+    const notesWithContent = instList.filter(item => (item.notes && item.notes.trim()));
+    if (notesWithContent.length > 1) {
+      combinedNotes = notesWithContent.map((item, i) => {
+        const tName = item.termin ? `Termin ${item.termin}` : `Cicilan ${i+1}`;
+        const amtStr = item.amount ? ` (Rp ${Number(item.amount).toLocaleString('id-ID')} • ${item.method || 'Transfer'})` : '';
+        return `**${tName}${amtStr}**\n${item.notes}`;
+      }).join('\n\n');
+    } else if (notesWithContent.length === 1) {
+      combinedNotes = notesWithContent[0].notes;
+    } else {
+      combinedNotes = lastInst?.notes || '';
+    }
+  } else {
+    combinedNotes = p?.notes || '';
+  }
+
+  const formattedNotesContainer = document.getElementById('proofViewerFormattedNotes');
+  if (formattedNotesContainer) {
+    formattedNotesContainer.innerHTML = renderFormattedPaymentNotes(combinedNotes);
+  }
+
+  const notesCountBadge = document.getElementById('proofViewerNotesCount');
+  if (notesCountBadge) {
+    if (instList.length > 1) {
+      notesCountBadge.textContent = `${instList.length} Transaksi Tercatat`;
+    } else if (lastInst?.termin) {
+      notesCountBadge.textContent = `Termin ${lastInst.termin}`;
+    } else {
+      notesCountBadge.textContent = 'Info Pembayaran';
+    }
   }
 
   const openLink = document.getElementById('proofViewerOpenNewTab');
