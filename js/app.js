@@ -15632,13 +15632,13 @@ function renderFinanceTable() {
 
     return `
       <tr>
-        <td class="col-fit" style="font-weight: 700; color: #64748b; text-align: center; white-space: nowrap;">${idx + 1}</td>
-        <td class="col-fit" style="text-align: center; white-space: nowrap;">
+        <td class="col-num" style="font-weight: 700; color: #64748b; text-align: center; white-space: nowrap;">${idx + 1}</td>
+        <td class="col-ticket" style="text-align: center; white-space: nowrap;">
           <span style="font-family: monospace; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 7px; border-radius: 4px;">
             ${p.registration_code || '-'}
           </span>
         </td>
-        <td class="col-flex" style="white-space: normal; word-break: break-word;">
+        <td class="col-name" style="white-space: normal; word-break: break-word;">
           <div style="font-weight: 800; color: #0f172a; font-size: 13.5px;">${p.full_name || '-'}</div>
           <div style="font-size: 11px; color: #64748b;">Kategori: ${p.age ? (p.age < 5 ? 'Balita' : (p.age <= 15 ? 'Anak' : 'Dewasa')) : 'Dewasa'} (${p.age || '16+'} thn)</div>
           
@@ -15676,12 +15676,12 @@ function renderFinanceTable() {
             </div>
           </div>
         </td>
-        <td class="col-flex" style="white-space: normal; word-break: break-word;">
+        <td class="col-group" style="white-space: normal; word-break: break-word;">
           <div style="font-weight: 700; color: #1e293b; font-size: 13px;">${p.group_name || 'Mandiri'}</div>
           <div style="font-size: 11px; color: #64748b;">${p.wilayah || '-'}</div>
         </td>
-        <td class="col-fit" style="font-weight: 800; color: #1e293b; text-align: right; white-space: nowrap;">Rp ${fee.toLocaleString('id-ID')}</td>
-        <td class="col-fit" style="font-weight: 800; color: #059669; text-align: right; white-space: nowrap;">
+        <td class="col-fee" style="font-weight: 800; color: #1e293b; text-align: right; white-space: nowrap;">Rp ${fee.toLocaleString('id-ID')}</td>
+        <td class="col-paid" style="font-weight: 800; color: #059669; text-align: right; white-space: nowrap;">
           Rp ${paid.toLocaleString('id-ID')}
           ${paid > 0 && instList.length > 0 ? (
             instList.some(x => /cash|tunai|kontan/i.test(x.method || ''))
@@ -15692,10 +15692,10 @@ function renderFinanceTable() {
           ) : ''}
 
         </td>
-        <td class="col-fit" style="font-weight: 800; color: #dc2626; text-align: right; white-space: nowrap;">Rp ${remaining.toLocaleString('id-ID')}</td>
-        <td class="col-fit" style="text-align: center; white-space: nowrap;">${statusBadge}</td>
-        <td class="col-fit" style="text-align: center; white-space: nowrap;">${verifyColHtml}</td>
-        <td class="sticky-action-col col-fit" style="text-align: center; white-space: nowrap;">
+        <td class="col-rem" style="font-weight: 800; color: #dc2626; text-align: right; white-space: nowrap;">Rp ${remaining.toLocaleString('id-ID')}</td>
+        <td class="col-status" style="text-align: center; white-space: nowrap;">${statusBadge}</td>
+        <td class="col-verify" style="text-align: center; white-space: nowrap;">${verifyColHtml}</td>
+        <td class="col-action sticky-action-col" style="text-align: center; white-space: nowrap;">
           ${remaining <= 0 ? `
             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap;">
               ${isVerified ? `

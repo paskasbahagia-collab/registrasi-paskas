@@ -13376,15 +13376,75 @@ input:checked + .slider:before {
   vertical-align: middle;
 }
 
+/* Proporsi Lebar Kolom Harmonis & Merata Sepanjang Layar */
+#financeTable .col-num {
+  width: 50px;
+  min-width: 45px;
+  text-align: center;
+  white-space: nowrap;
+}
+#financeTable .col-ticket {
+  width: 115px;
+  min-width: 105px;
+  text-align: center;
+  white-space: nowrap;
+}
+#financeTable .col-name {
+  width: 24%;
+  min-width: 180px;
+  white-space: normal;
+  word-break: break-word;
+}
+#financeTable .col-group {
+  width: 17%;
+  min-width: 140px;
+  white-space: normal;
+  word-break: break-word;
+}
+#financeTable .col-fee {
+  width: 9%;
+  min-width: 95px;
+  text-align: right;
+  white-space: nowrap;
+}
+#financeTable .col-paid {
+  width: 9%;
+  min-width: 95px;
+  text-align: right;
+  white-space: nowrap;
+}
+#financeTable .col-rem {
+  width: 9%;
+  min-width: 95px;
+  text-align: right;
+  white-space: nowrap;
+}
+#financeTable .col-status {
+  width: 9%;
+  min-width: 100px;
+  text-align: center;
+  white-space: nowrap;
+}
+#financeTable .col-verify {
+  width: 9%;
+  min-width: 105px;
+  text-align: center;
+  white-space: nowrap;
+}
+#financeTable .col-action {
+  width: 12%;
+  min-width: 135px;
+  text-align: center;
+  white-space: nowrap;
+}
+
 #financeTable th.col-fit,
 #financeTable td.col-fit {
-  width: 1%;
   white-space: nowrap;
 }
 
 #financeTable th.col-flex,
 #financeTable td.col-flex {
-  width: auto;
   white-space: normal;
   word-break: break-word;
 }
