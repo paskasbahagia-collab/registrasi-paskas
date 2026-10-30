@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=190.0">
+  <link rel="stylesheet" href="css/style.css?v=191.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -2196,6 +2196,110 @@
             <div><strong>Proteksi Pembatalan:</strong> Pembatalan kehadiran hanya bisa dilakukan lewat tombol detail <strong>[ 👁️ ]</strong> dan wajib mengisi alasan pembatalan agar tidak salah pencet saat antrean padat.</div>
           </div>
 
+          <!-- =================================================================== -->
+          <!-- MEJA REGISTRASI FRONT DESK: MODE KLASIFIKASI KONTINGEN VS INDIVIDU  -->
+          <!-- KARTU BESAR VERIFIKASI & CHECK-IN (SESUAI REQUEST OPERASIONAL USER) -->
+          <!-- =================================================================== -->
+          <div id="presensiFrontDeskSection" class="presensi-frontdesk-wrapper" style="margin-bottom: 24px;">
+
+            <!-- 1. Header Mode Switcher (Klasifikasi Kontingen vs Individu) -->
+            <div class="frontdesk-mode-header-card">
+              <div style="font-size: 11px; font-weight: 800; color: #183a27; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-clipboard-user" style="color: #10b981;"></i> MODE MEJA DEPAN CHECK-IN HARI-H
+              </div>
+              <div class="frontdesk-mode-pills-row">
+                <button type="button" class="btn-fd-mode active" id="btnFdModeKontingen" onclick="setFrontdeskMode('kontingen')">
+                  <i class="fa-solid fa-users"></i>
+                  <span>Presensi Kontingen / Rombongan</span>
+                </button>
+                <button type="button" class="btn-fd-mode" id="btnFdModeIndividu" onclick="setFrontdeskMode('individu')">
+                  <i class="fa-solid fa-user"></i>
+                  <span>Presensi Individu / Mandiri</span>
+                </button>
+                <button type="button" class="btn-fd-mode btn-fd-mode-toggle-table" id="btnFdToggleMasterTable" onclick="togglePresensiMasterTable()">
+                  <i class="fa-solid fa-table-list"></i>
+                  <span id="labelFdToggleMasterTable">Tampilkan Tabel Master (428)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. Panel Input Khusus Kontingen / Rombongan -->
+            <div id="fdKontingenControlWrap" class="fd-control-card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <label for="fdSelectKontingen" style="font-size: 13.5px; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-layer-group" style="color: #d97706;"></i> Pilih Kontingen / Kafilah Rombongan:
+                </label>
+                <span id="fdKontingenSummaryBadge" style="display: none; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0;">
+                  <!-- Diisi dinamis -->
+                </span>
+              </div>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 260px;">
+                  <select id="fdSelectKontingen" class="fd-select-large" onchange="onSelectFrontdeskKontingen(this.value)">
+                    <option value="">-- Memuat daftar kontingen... --</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Panel Input Khusus Individu / Mandiri -->
+            <div id="fdIndividuControlWrap" class="fd-control-card" style="display: none;">
+              <div style="margin-bottom: 10px;">
+                <label style="font-size: 13.5px; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-magnifying-glass" style="color: #2563eb;"></i> Cari Tiket / Nama Peserta Mandiri:
+                </label>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 240px; position: relative;">
+                  <i class="fa-solid fa-ticket" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 14px;"></i>
+                  <input type="text" id="fdSearchIndividuInput" class="fd-input-large" style="padding-left: 38px; width: 100%;" placeholder="Ketik No. Tiket (cth: PKB-445) atau Nama Peserta..." oninput="onFrontdeskIndividuSearchInput(this.value)">
+                </div>
+                <div style="flex: 1; min-width: 240px;">
+                  <select id="fdSelectIndividu" class="fd-select-large" onchange="onSelectFrontdeskIndividu(this.value)">
+                    <option value="">-- Atau pilih dari daftar peserta perorangan --</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Area Kartu Kotak Besar Verifikasi Data Diri (Front Desk Card) -->
+            <div id="fdVerificationArea">
+
+              <!-- A. State Kosong / Belum Ada Peserta Dipilih -->
+              <div id="fdEmptyState" class="fd-card-box" style="text-align: center; padding: 44px 20px; background: #ffffff;">
+                <div style="width: 70px; height: 70px; border-radius: 50%; background: #f0fdf4; border: 2px solid #bbf7d0; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+                  <i class="fa-solid fa-qrcode" style="font-size: 32px; color: #166534;"></i>
+                </div>
+                <h3 style="font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 8px 0;">
+                  Meja Registrasi &amp; Verifikasi Hari-H
+                </h3>
+                <p style="font-size: 13.5px; color: #64748b; max-width: 520px; margin: 0 auto 16px auto; line-height: 1.6;">
+                  Silakan pilih <strong>Kontingen / Rombongan</strong> pada menu di atas, atau masukkan <strong>Nomor Tiket (PKB-xxx)</strong> untuk memverifikasi data diri, membagikan seragam, dan mencatat kehadiran 1-klik.
+                </p>
+                <div style="display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+                  <span style="font-size: 12px; font-weight: 700; color: #166534; background: #f0fdf4; padding: 4px 12px; border-radius: 999px; border: 1px solid #bbf7d0;">
+                    <i class="fa-solid fa-users"></i> Mode Kontingen: Bisa Geser Anggota
+                  </span>
+                  <span style="font-size: 12px; font-weight: 700; color: #1e40af; background: #eff6ff; padding: 4px 12px; border-radius: 999px; border: 1px solid #bfdbfe;">
+                    <i class="fa-solid fa-user"></i> Mode Individu: Langsung Cari Tiket
+                  </span>
+                </div>
+              </div>
+
+              <!-- B. Kartu Kotak Besar Verifikasi (Tampil saat peserta dimuat) -->
+              <div id="fdCardBox" class="fd-card-box" style="display: none;">
+                <!-- Diisi dinamis oleh JS via renderFrontdeskVerificationCard() -->
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- =================================================================== -->
+          <!-- MASTER TABLE SECTION: DEFAULT DISEMBUNYIKAN SESUAI REQUEST USER     -->
+          <!-- =================================================================== -->
+          <div id="presensiMasterTableSection" style="display: none; margin-top: 14px;">
+
           <!-- Frosted Search & Filter Card -->
           <div class="presensi-filter-card">
             <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
@@ -2244,6 +2348,7 @@
               </table>
             </div>
           </div>
+          </div> <!-- Penutup #presensiMasterTableSection -->
 
         </div>
       </div>
@@ -6773,7 +6878,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
-  <script src="js/supabase-config.js?v=190.0"></script>
-  <script src="js/app.js?v=190.0"></script>
+  <script src="js/supabase-config.js?v=191.0"></script>
+  <script src="js/app.js?v=191.0"></script>
 </body>
 </html>

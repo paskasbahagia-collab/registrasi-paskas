@@ -14752,6 +14752,11 @@ function renderPresensiView() {
 
   // Render Table
   renderPresensiTable();
+
+  // Sinkronkan Meja Front Desk (Dropdown Kontingen, Individu, dan Kartu)
+  if (typeof initFrontdeskPresensi === 'function') {
+    initFrontdeskPresensi();
+  }
 }
 
 function renderPresensiDonutChart(onTime, late, pending, cancelled) {
@@ -17487,3 +17492,438 @@ function exitAdminBypassRegistration() {
   navigateTo('rekap');
 }
 window.exitAdminBypassRegistration = exitAdminBypassRegistration;
+
+
+/* ===================================================================
+   MEJA FRONT DESK HARI-H: LOGIKA CHECK-IN KONTINGEN VS INDIVIDU
+   =================================================================== */
+let frontdeskActiveMode = 'kontingen'; // 'kontingen' | 'individu'
+let frontdeskActiveKontingenName = '';
+let frontdeskKontingenMembers = [];
+let frontdeskKontingenIndex = 0;
+let frontdeskActiveIndividuRecord = null;
+let frontdeskIsMasterTableVisible = false;
+
+function initFrontdeskPresensi() {
+  const list = allRegistrations || [];
+  
+  // 1. Kumpulkan daftar unik Kontingen / Rombongan
+  const kontingenMap = new Map();
+  list.forEach(p => {
+    if (p.registration_type === 'rombongan' || (p.group_name && p.group_name.trim() !== '' && p.group_name.trim() !== '-')) {
+      const gName = (p.group_name || 'Rombongan Lain').trim();
+      if (!kontingenMap.has(gName)) {
+        kontingenMap.set(gName, { total: 0, attended: 0, pending: 0, members: [] });
+      }
+      const item = kontingenMap.get(gName);
+      item.total++;
+      item.members.push(p);
+      const st = p.attendance_status || 'registered';
+      if (st === 'attended' || st === 'attended_late') {
+        item.attended++;
+      } else {
+        item.pending++;
+      }
+    }
+  });
+
+  const selectKontingen = document.getElementById('fdSelectKontingen');
+  if (selectKontingen) {
+    const currentVal = selectKontingen.value || frontdeskActiveKontingenName;
+    const sortedGroups = Array.from(kontingenMap.keys()).sort((a, b) => a.localeCompare(b, 'id'));
+    
+    selectKontingen.innerHTML = '<option value="">-- Pilih Kontingen / Kafilah Rombongan --</option>' + 
+      sortedGroups.map(g => {
+        const info = kontingenMap.get(g);
+        const isComplete = info.attended === info.total && info.total > 0;
+        const icon = isComplete ? '✅' : (info.attended > 0 ? '🟡' : '⏳');
+        return `<option value="${escapeHtml(g)}" ${g === currentVal ? 'selected' : ''}>
+          ${icon} ${escapeHtml(g)} (${info.total} Peserta: ${info.attended} Hadir • ${info.pending} Belum)
+        </option>`;
+      }).join('');
+
+    if (currentVal && kontingenMap.has(currentVal)) {
+      frontdeskActiveKontingenName = currentVal;
+      frontdeskKontingenMembers = kontingenMap.get(currentVal).members;
+      if (frontdeskKontingenIndex >= frontdeskKontingenMembers.length) {
+        frontdeskKontingenIndex = 0;
+      }
+      if (frontdeskActiveMode === 'kontingen' && frontdeskKontingenMembers.length > 0) {
+        renderFrontdeskVerificationCard(frontdeskKontingenMembers[frontdeskKontingenIndex], true);
+        updateFrontdeskKontingenBadge();
+      }
+    }
+  }
+
+  // 2. Kumpulkan daftar Peserta Individu / Mandiri
+  const selectIndividu = document.getElementById('fdSelectIndividu');
+  if (selectIndividu) {
+    const individuList = list.filter(p => p.registration_type !== 'rombongan' && (!p.group_name || p.group_name.trim() === '' || p.group_name.trim() === '-'))
+      .sort((a, b) => (a.registration_code || '').localeCompare(b.registration_code || '', undefined, { numeric: true }));
+
+    const currentIndId = selectIndividu.value;
+    selectIndividu.innerHTML = '<option value="">-- Pilih dari Daftar Peserta Individu --</option>' + 
+      individuList.map(p => {
+        const st = p.attendance_status || 'registered';
+        const isAtt = st === 'attended' || st === 'attended_late';
+        return `<option value="${p.id}" ${String(p.id) === String(currentIndId) ? 'selected' : ''}>
+          ${isAtt ? '✅' : '⏳'} ${escapeHtml(p.registration_code || 'ID')} - ${escapeHtml(p.full_name)} (${p.gender === 'Laki-laki' ? 'L' : 'P'}, ${p.age || '-'} th) [${isAtt ? 'Hadir' : 'Belum Tiba'}]
+        </option>`;
+      }).join('');
+
+    if (frontdeskActiveIndividuRecord && frontdeskActiveMode === 'individu') {
+      const freshInd = list.find(x => Number(x.id) === Number(frontdeskActiveIndividuRecord.id));
+      if (freshInd) {
+        frontdeskActiveIndividuRecord = freshInd;
+        renderFrontdeskVerificationCard(freshInd, false);
+      }
+    }
+  }
+}
+
+function setFrontdeskMode(mode) {
+  frontdeskActiveMode = mode;
+  const btnK = document.getElementById('btnFdModeKontingen');
+  const btnI = document.getElementById('btnFdModeIndividu');
+  const wrapK = document.getElementById('fdKontingenControlWrap');
+  const wrapI = document.getElementById('fdIndividuControlWrap');
+
+  if (btnK) btnK.classList.toggle('active', mode === 'kontingen');
+  if (btnI) btnI.classList.toggle('active', mode === 'individu');
+
+  if (wrapK) wrapK.style.display = (mode === 'kontingen') ? 'block' : 'none';
+  if (wrapI) wrapI.style.display = (mode === 'individu') ? 'block' : 'none';
+
+  if (mode === 'kontingen') {
+    if (frontdeskActiveKontingenName && frontdeskKontingenMembers.length > 0) {
+      renderFrontdeskVerificationCard(frontdeskKontingenMembers[frontdeskKontingenIndex], true);
+      updateFrontdeskKontingenBadge();
+    } else {
+      showFrontdeskEmptyState();
+    }
+  } else {
+    if (frontdeskActiveIndividuRecord) {
+      renderFrontdeskVerificationCard(frontdeskActiveIndividuRecord, false);
+    } else {
+      showFrontdeskEmptyState();
+    }
+  }
+}
+
+function togglePresensiMasterTable() {
+  frontdeskIsMasterTableVisible = !frontdeskIsMasterTableVisible;
+  const section = document.getElementById('presensiMasterTableSection');
+  const btn = document.getElementById('btnFdToggleMasterTable');
+  const label = document.getElementById('labelFdToggleMasterTable');
+
+  if (section) {
+    section.style.display = frontdeskIsMasterTableVisible ? 'block' : 'none';
+    if (frontdeskIsMasterTableVisible) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  if (btn) btn.classList.toggle('active', frontdeskIsMasterTableVisible);
+  if (label) {
+    const total = (allRegistrations || []).length;
+    label.textContent = frontdeskIsMasterTableVisible ? 'Sembunyikan Tabel Master' : `Tampilkan Tabel Master (${total})`;
+  }
+}
+
+function onSelectFrontdeskKontingen(groupName) {
+  if (!groupName) {
+    frontdeskActiveKontingenName = '';
+    frontdeskKontingenMembers = [];
+    frontdeskKontingenIndex = 0;
+    showFrontdeskEmptyState();
+    const badge = document.getElementById('fdKontingenSummaryBadge');
+    if (badge) badge.style.display = 'none';
+    return;
+  }
+
+  const list = allRegistrations || [];
+  const members = list.filter(p => (p.group_name || '').trim().toLowerCase() === groupName.trim().toLowerCase())
+    .sort((a, b) => (a.registration_code || '').localeCompare(b.registration_code || '', undefined, { numeric: true }));
+
+  frontdeskActiveKontingenName = groupName;
+  frontdeskKontingenMembers = members;
+  frontdeskKontingenIndex = 0;
+
+  if (members.length > 0) {
+    renderFrontdeskVerificationCard(members[0], true);
+    updateFrontdeskKontingenBadge();
+  } else {
+    showFrontdeskEmptyState();
+  }
+}
+
+function updateFrontdeskKontingenBadge() {
+  const badge = document.getElementById('fdKontingenSummaryBadge');
+  if (!badge || !frontdeskActiveKontingenName) return;
+
+  const total = frontdeskKontingenMembers.length;
+  const attended = frontdeskKontingenMembers.filter(m => m.attendance_status === 'attended' || m.attendance_status === 'attended_late').length;
+  const pending = total - attended;
+
+  badge.style.display = 'inline-block';
+  badge.innerHTML = `<i class="fa-solid fa-users"></i> ${escapeHtml(frontdeskActiveKontingenName)}: <strong>${total} Jiwa</strong> (${attended} Hadir • ${pending} Belum)`;
+}
+
+function stepFrontdeskKontingen(delta) {
+  if (!frontdeskKontingenMembers || frontdeskKontingenMembers.length === 0) return;
+  const nextIdx = frontdeskKontingenIndex + delta;
+  if (nextIdx >= 0 && nextIdx < frontdeskKontingenMembers.length) {
+    frontdeskKontingenIndex = nextIdx;
+    renderFrontdeskVerificationCard(frontdeskKontingenMembers[frontdeskKontingenIndex], true);
+  }
+}
+
+function switchFrontdeskKontingenMember(idx) {
+  const n = Number(idx);
+  if (!isNaN(n) && n >= 0 && n < frontdeskKontingenMembers.length) {
+    frontdeskKontingenIndex = n;
+    renderFrontdeskVerificationCard(frontdeskKontingenMembers[frontdeskKontingenIndex], true);
+  }
+}
+
+function onSelectFrontdeskIndividu(id) {
+  if (!id) {
+    frontdeskActiveIndividuRecord = null;
+    showFrontdeskEmptyState();
+    return;
+  }
+  const p = (allRegistrations || []).find(x => Number(x.id) === Number(id));
+  if (p) {
+    frontdeskActiveIndividuRecord = p;
+    renderFrontdeskVerificationCard(p, false);
+  }
+}
+
+function onFrontdeskIndividuSearchInput(q) {
+  const query = (q || '').trim().toLowerCase();
+  if (!query) return;
+
+  const list = allRegistrations || [];
+  const matched = list.find(p => {
+    const code = (p.registration_code || '').toLowerCase();
+    const name = (p.full_name || '').toLowerCase();
+    return code === query || code.replace(/[^0-9]/g, '') === query.replace(/[^0-9]/g, '') || name.includes(query);
+  });
+
+  if (matched) {
+    frontdeskActiveIndividuRecord = matched;
+    renderFrontdeskVerificationCard(matched, false);
+    const select = document.getElementById('fdSelectIndividu');
+    if (select) select.value = matched.id;
+  }
+}
+
+function showFrontdeskEmptyState() {
+  const empty = document.getElementById('fdEmptyState');
+  const card = document.getElementById('fdCardBox');
+  if (empty) empty.style.display = 'block';
+  if (card) card.style.display = 'none';
+}
+
+function renderFrontdeskVerificationCard(p, isGroup = false) {
+  const empty = document.getElementById('fdEmptyState');
+  const cardBox = document.getElementById('fdCardBox');
+  if (!p || !cardBox) return;
+
+  if (empty) empty.style.display = 'none';
+  cardBox.style.display = 'block';
+
+  const st = p.attendance_status || 'registered';
+  const isAttended = st === 'attended' || st === 'attended_late';
+  const isPending = !isAttended;
+
+  let timeStr = '';
+  if (p.check_in_at) {
+    try {
+      const d = new Date(p.check_in_at);
+      timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+    } catch (e) {}
+  }
+
+  // Payment Calculation
+  const fee = calculateParticipantFee(p);
+  const paid = Number(p.paid_amount || 0);
+  const remaining = Math.max(0, fee - paid);
+  const isVerified = p.payment_verified === 'verified';
+  const isFullyPaid = (paid > 0 && remaining <= 0 && isVerified);
+
+  // Health Note Alert
+  const healthText = (p.health_notes || '').trim();
+  const hasHealthIssue = healthText && !/^(tidak\s*ada|sehat|nihil|-)$/i.test(healthText);
+
+  // Foto
+  const photoUrl = p.photo_url || p.photo_data || '';
+  const initial = (p.full_name || 'P').trim()[0].toUpperCase();
+
+  let sliderHtml = '';
+  if (isGroup && frontdeskKontingenMembers && frontdeskKontingenMembers.length > 0) {
+    const totalMem = frontdeskKontingenMembers.length;
+    sliderHtml = `
+      <div class="fd-group-nav-slider">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="btn-group-nav-arrow" onclick="stepFrontdeskKontingen(-1)" ${frontdeskKontingenIndex === 0 ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''}>
+            <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+          </button>
+          
+          <div style="text-align: center; flex: 1; min-width: 180px;">
+            <span style="font-size: 13.5px; font-weight: 800; color: #fbbf24;">
+              Peserta ${frontdeskKontingenIndex + 1} dari ${totalMem} di Kontingen [${escapeHtml(frontdeskActiveKontingenName)}]
+            </span>
+          </div>
+
+          <button type="button" class="btn-group-nav-arrow" onclick="stepFrontdeskKontingen(1)" ${frontdeskKontingenIndex >= totalMem - 1 ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''}>
+            Berikutnya <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <!-- Attendance Strip: Langsung Tahu Siapa Saja yang Sudah vs Belum Hadir di Kontingen Ini -->
+        <div class="fd-attendance-strip">
+          ${frontdeskKontingenMembers.map((m, mIdx) => {
+            const mSt = m.attendance_status || 'registered';
+            const mIsAtt = mSt === 'attended' || mSt === 'attended_late';
+            const mIsActive = mIdx === frontdeskKontingenIndex;
+            const firstName = (m.full_name || 'Peserta').trim().split(' ')[0];
+            return `
+              <div class="fd-member-chip ${mIsAtt ? 'attended' : 'pending'} ${mIsActive ? 'active' : ''}" onclick="switchFrontdeskKontingenMember(${mIdx})" title="Klik untuk verifikasi ${escapeHtml(m.full_name)}">
+                <span>${mIdx + 1}. ${escapeHtml(firstName)}</span>
+                ${mIsAtt ? '<i class="fa-solid fa-circle-check" style="color: #86efac;"></i>' : '<i class="fa-solid fa-clock" style="color: #fde047;"></i>'}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  cardBox.innerHTML = `
+    ${sliderHtml}
+
+    <div class="fd-card-inner">
+      <!-- Kolom Kiri: Foto Besar & Badge Status -->
+      <div class="fd-card-left">
+        <div class="fd-photo-wrap ${isAttended ? 'attended' : 'pending'}">
+          ${photoUrl ? `<img src="${photoUrl}" alt="${escapeHtml(p.full_name)}" class="fd-photo-img">` : `<div class="fd-photo-placeholder">${initial}</div>`}
+        </div>
+
+        <div class="fd-ticket-code-badge">
+          <i class="fa-solid fa-ticket"></i> ${escapeHtml(p.registration_code || '-')}
+        </div>
+
+        <div>
+          ${st === 'attended' ? `<span class="badge-attended" style="font-size: 11.5px; padding: 4px 10px;"><i class="fa-solid fa-circle-check"></i> Hadir Tepat</span>` : 
+            (st === 'attended_late' ? `<span class="badge-attended-late" style="font-size: 11.5px; padding: 4px 10px;"><i class="fa-solid fa-triangle-exclamation"></i> Hadir Telat</span>` : 
+            (st === 'departed' ? `<span class="badge-departed" style="font-size: 11.5px; padding: 4px 10px;"><i class="fa-solid fa-plane-departure"></i> Pulang</span>` : 
+            `<span class="badge-pending" style="font-size: 11.5px; padding: 4px 10px;"><i class="fa-solid fa-clock"></i> Belum Tiba</span>`))}
+        </div>
+      </div>
+
+      <!-- Kolom Kanan: Data Diri & Logistik Meja Depan -->
+      <div class="fd-card-right">
+        <h2 class="fd-participant-name">${escapeHtml(p.full_name || '-')}</h2>
+        
+        <div class="fd-participant-meta">
+          <span>${p.gender === 'Laki-laki' ? '<i class="fa-solid fa-mars" style="color: #0284c7;"></i> Laki-laki' : '<i class="fa-solid fa-venus" style="color: #ec4899;"></i> Perempuan'}</span>
+          <span>&bull; Usia: <strong>${p.age ? p.age + ' Tahun' : 'Dewasa'}</strong></span>
+          <span>&bull; Rombongan: <strong>${escapeHtml(p.group_name || 'Mandiri')}</strong></span>
+          <span>(${escapeHtml(p.wilayah || 'Pusat')}${p.daerah ? ' / ' + escapeHtml(p.daerah) : ''})</span>
+        </div>
+
+        <!-- 3 Grid Logistik Meja Depan: Seragam, Pembayaran, Kesehatan -->
+        <div class="fd-logistics-grid">
+          <!-- Box 1: Seragam -->
+          <div class="fd-logistic-box">
+            <div class="fd-logistic-label"><i class="fa-solid fa-shirt"></i> Ukuran Seragam</div>
+            <div class="fd-logistic-val">
+              <span class="badge-size-highlight">${escapeHtml(p.cloth_size || 'Standar')}</span>
+            </div>
+          </div>
+
+          <!-- Box 2: Pembayaran -->
+          <div class="fd-logistic-box">
+            <div class="fd-logistic-label"><i class="fa-solid fa-wallet"></i> Status Pembayaran</div>
+            <div class="fd-logistic-val">
+              ${isFullyPaid ? `
+                <span style="color: #059669; font-weight: 800; font-size: 13px;">
+                  <i class="fa-solid fa-circle-check"></i> LUNAS (Rp ${paid.toLocaleString('id-ID')})
+                </span>
+              ` : `
+                <span style="color: #dc2626; font-weight: 800; font-size: 12.5px;">
+                  <i class="fa-solid fa-circle-exclamation"></i> KURANG: Rp ${remaining.toLocaleString('id-ID')}
+                </span>
+              `}
+            </div>
+          </div>
+
+          <!-- Box 3: Posko Medis -->
+          <div class="fd-logistic-box">
+            <div class="fd-logistic-label"><i class="fa-solid fa-notes-medical"></i> Catatan Medis</div>
+            <div class="fd-logistic-val" style="font-size: 12px; font-weight: 700; ${hasHealthIssue ? 'color: #dc2626;' : 'color: #166534;'}">
+              ${hasHealthIssue ? `<i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(healthText)}` : `<i class="fa-solid fa-circle-check"></i> Sehat`}
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail Transportasi / Kedatangan -->
+        <div style="background: #f1f5f9; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #475569; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <i class="fa-solid fa-plane-arrival" style="color: #0284c7;"></i>
+          <span>Kedatangan: <strong>${escapeHtml(p.arrival_date || '-')}</strong> (${escapeHtml(p.arrival_transport || 'Armada Mandiri')})</span>
+          <span style="color: #cbd5e1;">|</span>
+          <i class="fa-solid fa-plane-departure" style="color: #64748b;"></i>
+          <span>Kepulangan: <strong>${escapeHtml(p.departure_date || '-')}</strong> (${escapeHtml(p.departure_transport || 'Armada Mandiri')})</span>
+        </div>
+
+        <!-- Baris Tombol Aksi Check-in Presensi Meja Depan -->
+        <div>
+          ${isPending ? `
+            <button type="button" class="btn-fd-action-checkin" onclick="frontdeskCheckInCurrent(${p.id})">
+              <i class="fa-solid fa-circle-check" style="font-size: 22px;"></i> CEKLIS HADIR SEKARANG
+            </button>
+          ` : `
+            <div class="fd-attended-status-bar">
+              <div style="font-size: 14px; font-weight: 800; color: #065f46; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 20px;"></i>
+                <span>Jemaah Telah Hadir (Jam Tiba: ${timeStr || 'OK'})</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-sm" onclick="doPresenceCheckOut(${p.id})" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer;">
+                  <i class="fa-solid fa-plane-departure"></i> Ceklis Pulang
+                </button>
+                <button type="button" class="btn btn-sm" onclick="resetSinglePresence(${p.id})" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer;">
+                  <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+              </div>
+            </div>
+          `}
+        </div>
+
+        ${(isGroup && frontdeskKontingenMembers && frontdeskKontingenIndex < frontdeskKontingenMembers.length - 1) ? `
+          <button type="button" onclick="stepFrontdeskKontingen(1)" style="margin-top: 10px; width: 100%; padding: 10px 14px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; font-weight: 800; font-size: 13px; color: #1e293b; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>Lanjut ke Anggota Rombongan Berikutnya</span> <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        ` : ''}
+
+      </div>
+    </div>
+  `;
+}
+
+async function frontdeskCheckInCurrent(id) {
+  if (!id) return;
+  await doPresenceCheckIn(id);
+  const fresh = (allRegistrations || []).find(x => Number(x.id) === Number(id));
+  if (fresh) {
+    if (frontdeskActiveMode === 'kontingen') {
+      frontdeskKontingenMembers[frontdeskKontingenIndex] = fresh;
+      renderFrontdeskVerificationCard(fresh, true);
+      updateFrontdeskKontingenBadge();
+    } else {
+      frontdeskActiveIndividuRecord = fresh;
+      renderFrontdeskVerificationCard(fresh, false);
+    }
+  }
+}
