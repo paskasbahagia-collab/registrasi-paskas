@@ -2392,6 +2392,16 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+function isFemaleGender(gender) {
+  if (!gender) return false;
+  const g = String(gender).trim().toLowerCase();
+  return g.includes('perempuan') || g.includes('akhwat') || g.includes('wanita') || g === 'p';
+}
+
+function normalizeGender(gender) {
+  return isFemaleGender(gender) ? 'Perempuan' : 'Laki-laki';
+}
+
 // ===================================================================
 // ===================================================================
 // PAS FOTO PESERTA: COMPRESSION & UPLOAD HANDLERS
@@ -5328,10 +5338,10 @@ function renderActiveTicket(record) {
     elArrivalTime.textContent = record.arrival_time ? record.arrival_time : (record.arrival_date ? formatTicketDate(record.arrival_date) : '15:00 AM');
   }
 
-  // Deteksi status anak di bawah umur (< 15 th)
+  // Deteksi gender & status anak di bawah umur (< 15 th)
   const ageVal = parseInt(record.age, 10);
   const isChild = record.is_child || (!isNaN(ageVal) && ageVal > 0 && ageVal < 15);
-  const genderChar = (record.gender && record.gender.toLowerCase().startsWith('p')) ? 'P' : 'L';
+  const genderChar = isFemaleGender(record.gender) ? 'P' : 'L';
 
   const isAllocActive = isRoomGroupAllocationEnabled();
 
@@ -6660,6 +6670,11 @@ window.registerAnotherParticipant = registerAnotherParticipant;
 // ===================================================================
 async function loadAndRenderRegistrations() {
   allRegistrations = await window.dataService.getRegistrations();
+  if (Array.isArray(allRegistrations)) {
+    allRegistrations.forEach(r => {
+      if (r && r.gender) r.gender = normalizeGender(r.gender);
+    });
+  }
   filteredRegistrations = [...allRegistrations];
   currentPage = 1;
 
@@ -6766,6 +6781,11 @@ async function syncRegistrationsSilently() {
         lastDataFingerprint = calculateDataFingerprint(allRegistrations);
       }
       if (freshFp !== lastDataFingerprint || (!allRegistrations || allRegistrations.length !== freshList.length)) {
+        if (Array.isArray(freshList)) {
+          freshList.forEach(r => {
+            if (r && r.gender) r.gender = normalizeGender(r.gender);
+          });
+        }
         allRegistrations = freshList;
         lastDataFingerprint = freshFp;
         refreshActiveScreenViews();
@@ -6937,8 +6957,8 @@ function updateSummaryMetrics() {
   ));
   const totalKafilah = uniqueGroupNames.length;
 
-  const male = allRegistrations.filter(r => r.gender === 'Laki-laki').length;
-  const female = allRegistrations.filter(r => r.gender === 'Perempuan').length;
+  const female = allRegistrations.filter(r => isFemaleGender(r.gender)).length;
+  const male = allRegistrations.length - female;
 
   const malePct = totalOrang > 0 ? Math.round((male / totalOrang) * 100) : 0;
   const femalePct = totalOrang > 0 ? (100 - malePct) : 0;
@@ -7186,7 +7206,11 @@ function applyRekapFilters() {
     const matchType = type === 'ALL' || item.registration_type === type;
 
     // Gender match
-    const matchGender = gender === 'ALL' || item.gender === gender;
+    let matchGender = true;
+    if (gender !== 'ALL') {
+      const itemIsFemale = isFemaleGender(item.gender);
+      matchGender = (gender === 'Perempuan') ? itemIsFemale : !itemIsFemale;
+    }
 
     // Wilayah match
     const matchWilayah = wilayah === 'ALL' || normalizeWilayahName(item.wilayah) === wilayah;
@@ -7239,7 +7263,7 @@ function renderRekapTable() {
   tbody.innerHTML = currentItems.map((item, index) => {
     const rowNo = startIndex + index + 1;
     try {
-    const isMale = item.gender === 'Laki-laki';
+    const isMale = !isFemaleGender(item.gender);
     const isSpecialMed = hasParticipantMedicalIssue(item);
 
     const ageVal = item.age ? parseInt(item.age, 10) : null;
@@ -7673,7 +7697,10 @@ function openEditAttendeeModal(id) {
   if (badgeCode) badgeCode.textContent = attendee.registration_code || 'PKB-XXX';
 
   document.getElementById('editAttFullName').value = attendee.full_name || '';
-  document.getElementById('editAttGender').value = attendee.gender || 'Ikhwan';
+  const elGender = document.getElementById('editAttGender');
+  if (elGender) {
+    elGender.value = isFemaleGender(attendee.gender) ? 'Perempuan' : 'Laki-laki';
+  }
   document.getElementById('editAttAge').value = attendee.age || '';
 
   const regType = attendee.registration_type || 'individu';
@@ -7743,7 +7770,8 @@ async function submitEditAttendee(e) {
       return;
     }
 
-    const gender = document.getElementById('editAttGender')?.value || 'Ikhwan';
+    const rawGender = document.getElementById('editAttGender')?.value;
+    const gender = normalizeGender(rawGender);
     const ageRaw = document.getElementById('editAttAge')?.value;
     const ageNum = parseInt(ageRaw, 10);
     const age = isNaN(ageNum) ? null : ageNum;
@@ -7814,6 +7842,14 @@ async function submitEditAttendee(e) {
     const attendeeModal = document.getElementById('attendeeDetailModal');
     if (attendeeModal && attendeeModal.classList.contains('active')) {
       viewAttendeeDetail(id);
+    }
+
+    // 5. Jika modal Tiket sedang terbuka untuk peserta ini, re-render tiketnya
+    if (typeof currentTicketRecord !== 'undefined' && currentTicketRecord && String(currentTicketRecord.id) === String(id)) {
+      currentTicketRecord = { ...currentTicketRecord, ...updates, ...(updated || {}) };
+      if (typeof renderActiveTicket === 'function') {
+        renderActiveTicket(currentTicketRecord);
+      }
     }
 
     closeEditAttendeeModal();
@@ -8289,8 +8325,8 @@ function renderCharts() {
   const topWilayahPct = totalOrang > 0 ? Math.round((topWilayahCount / totalOrang) * 100) : 0;
 
   // Gender & Type
-  const male = allRegistrations.filter(r => r.gender === 'Laki-laki').length;
-  const female = allRegistrations.filter(r => r.gender === 'Perempuan').length;
+  const female = allRegistrations.filter(r => isFemaleGender(r.gender)).length;
+  const male = allRegistrations.length - female;
   const malePct = totalOrang > 0 ? Math.round((male / totalOrang) * 100) : 0;
   const femalePct = totalOrang > 0 ? (100 - malePct) : 0;
   const individu = allRegistrations.filter(r => r.registration_type === 'individu').length;
@@ -16437,5 +16473,7 @@ window.closeWhatsAppBroadcastModal = closeWhatsAppBroadcastModal;
 window.resetDefaultWhatsAppTemplate = resetDefaultWhatsAppTemplate;
 window.renderWhatsAppBroadcastList = renderWhatsAppBroadcastList;
 window.resetWhatsAppSentHistory = resetWhatsAppSentHistory;
+window.isFemaleGender = isFemaleGender;
+window.normalizeGender = normalizeGender;
 
 
