@@ -16084,7 +16084,16 @@ function renderPayModalInstallmentsList(p, instList) {
   container.style.display = 'block';
   if (countBadge) countBadge.textContent = `${instList.length} Transaksi Tercatat`;
 
-  listEl.innerHTML = instList.map((t, idx) => {
+  const infoNotice = `
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-size: 11.5px; color: #1e40af; display: flex; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-circle-info" style="font-size: 14px; color: #3b82f6; flex-shrink: 0;"></i>
+      <span>
+        <strong>Petunjuk:</strong> Klik tombol <strong style="color: #166534;">[ ✏️ Edit ]</strong> pada kartu di bawah jika ingin merevisi nominal/catatan termin. Form di bawah ini digunakan untuk <strong>menambah pembayaran cicilan baru</strong>.
+      </span>
+    </div>
+  `;
+
+  listEl.innerHTML = infoNotice + instList.map((t, idx) => {
     const isVerified = t.verification_status === 'verified';
     const tId = t.id || ('idx_' + idx);
     const tAmount = Number(t.amount || 0);
@@ -16266,7 +16275,13 @@ async function deleteInstallmentAction(instId, isVerified) {
   }
 
   // Refresh modal views
-  openRecordPaymentModal(activePayParticipantId);
+  if (document.getElementById('modalRecordPayment')?.classList.contains('active')) {
+    openRecordPaymentModal(activePayParticipantId);
+  }
+  if (document.getElementById('modalViewPaymentProof')?.classList.contains('active')) {
+    const freshP = allRegistrations.find(x => Number(x.id) === Number(activePayParticipantId));
+    if (freshP) showPaymentProofModalContent(freshP, freshP.payment_proof_url);
+  }
   renderFinanceView();
   showToast('Termin pembayaran berhasil dihapus.', 'info');
 
@@ -16762,6 +16777,35 @@ function openParticipantProofViewer(id) {
   showPaymentProofModalContent(p, url || '');
 }
 
+
+function openRecordPaymentFromProofViewer() {
+  const pId = activeProofViewerParticipantId;
+  closePaymentProofViewer();
+  if (pId) {
+    openRecordPaymentModal(pId);
+  }
+}
+
+function openRecordPaymentFromProofViewerAndEdit(instId) {
+  const pId = activeProofViewerParticipantId;
+  closePaymentProofViewer();
+  if (pId) {
+    openRecordPaymentModal(pId);
+    setTimeout(() => {
+      startEditInstallment(instId, false);
+    }, 150);
+  }
+}
+
+async function deleteInstallmentFromProofViewer(instId, isVerified) {
+  activePayParticipantId = activeProofViewerParticipantId;
+  await deleteInstallmentAction(instId, isVerified);
+}
+
+window.openRecordPaymentFromProofViewer = openRecordPaymentFromProofViewer;
+window.openRecordPaymentFromProofViewerAndEdit = openRecordPaymentFromProofViewerAndEdit;
+window.deleteInstallmentFromProofViewer = deleteInstallmentFromProofViewer;
+
 function showPaymentProofModalContent(p, url) {
   activeProofViewerParticipantId = p ? p.id : null;
   const modal = document.getElementById('modalViewPaymentProof');
@@ -16812,7 +16856,7 @@ function showPaymentProofModalContent(p, url) {
                   ${item.method || 'Transfer'}
                 </span>
               </div>
-              <div>
+              <div style="display: flex; align-items: center; gap: 6px;">
                 ${isVer ? `
                   <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 3px;" title="Terverifikasi sah oleh bendahara">
                     <i class="fa-solid fa-circle-check"></i> Terverifikasi
@@ -16822,6 +16866,12 @@ function showPaymentProofModalContent(p, url) {
                     <i class="fa-solid fa-hourglass-half"></i> Belum Diverifikasi
                   </span>
                 `}
+                <button type="button" onclick="openRecordPaymentFromProofViewerAndEdit('${item.id || ('idx_' + i)}')" title="Edit catatan atau nominal termin ini" style="background: #f0fdf4; color: #166534; border: 1px solid #86efac; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;">
+                  <i class="fa-solid fa-pen-to-square"></i> Edit
+                </button>
+                <button type="button" onclick="deleteInstallmentFromProofViewer('${item.id || ('idx_' + i)}', ${isVer})" title="Hapus termin pembayaran ini" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 700; font-size: 11px; padding: 3px 7px; border-radius: 5px; cursor: pointer;">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
               </div>
             </div>
             
