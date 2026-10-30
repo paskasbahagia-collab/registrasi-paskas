@@ -3054,8 +3054,8 @@
                 <button type="button" class="btn btn-editorial-outline" onclick="window.print()" title="Cetak Rekap">
                   <i class="fa-solid fa-print"></i> Cetak
                 </button>
-                <button type="button" class="btn btn-primary btn-editorial-primary" onclick="navigateTo('registration')">
-                  <i class="fa-solid fa-plus"></i> Tambah Peserta
+                <button type="button" class="btn btn-primary btn-editorial-primary" onclick="openModalTambahPesertaKhusus()" title="Input Peserta Khusus / Susulan (Panitia)">
+                  <i class="fa-solid fa-user-plus"></i> Tambah Peserta Khusus
                 </button>
                 <button type="button" class="btn btn-editorial-outline" onclick="navigateTo('dashboard')" title="Kembali ke Beranda">
                   <i class="fa-solid fa-arrow-left"></i> Beranda
@@ -6627,12 +6627,196 @@ CREATE TABLE IF NOT EXISTS registrations (
     </div>
   </div>
 
+  
+  <!-- ======================================================= -->
+  <!-- MODAL KHUSUS: INPUT PESERTA KHUSUS / SUSULAN PANITIA    -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop" id="modalTambahPesertaKhusus" style="display: none;">
+    <div class="modal-auth-green-card" style="max-width: 680px; width: 95%; text-align: left; background: #ffffff; color: #1e293b; padding: 26px 28px; border-radius: 18px; border: 1.5px solid #d4af37; box-shadow: 0 25px 60px rgba(0,0,0,0.35); max-height: 92vh; overflow-y: auto;">
+      
+      <!-- Header Modal -->
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 20px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #064e3b, #047857); border: 1.5px solid #d4af37; display: flex; align-items: center; justify-content: center; color: #fbbf24; font-size: 20px; flex-shrink: 0;">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: #064e3b; letter-spacing: -0.01em;">
+              Input Peserta Khusus / Susulan
+            </h3>
+            <p style="margin: 2px 0 0; font-size: 12px; color: #64748b;">
+              Formulir internal panitia untuk mendaftarkan peserta tanpa terpengaruh batas waktu pendaftaran.
+            </p>
+          </div>
+        </div>
+        <button type="button" class="modal-auth-close-btn" onclick="closeModalTambahPesertaKhusus()" title="Tutup" style="color: #64748b; font-size: 20px; background: none; border: none; cursor: pointer; padding: 4px 8px;">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="formTambahPesertaKhusus" onsubmit="handleSimpanPesertaKhusus(event)">
+        
+        <!-- Baris 1: Format Kepesertaan -->
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
+          <label style="display: block; font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">
+            FORMAT KEPESERTAAN <span style="color: #dc2626;">*</span>
+          </label>
+          <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 700; color: #1e293b; cursor: pointer;">
+              <input type="radio" name="khusus_reg_type" value="individu" checked onchange="toggleKhususGroupField(false)">
+              <i class="fa-solid fa-user text-forest"></i> Mandiri / Perorangan
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 700; color: #1e293b; cursor: pointer;">
+              <input type="radio" name="khusus_reg_type" value="kelompok" onchange="toggleKhususGroupField(true)">
+              <i class="fa-solid fa-users text-gold"></i> Rombongan / Kafilah
+            </label>
+          </div>
+
+          <!-- Input Rombongan (Muncul jika pilih Rombongan) -->
+          <div id="wrapKhususGroup" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #cbd5e1;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <label for="khusus_group_select" style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 4px;">Pilih Rombongan yang Ada</label>
+                <select id="khusus_group_select" class="form-control form-control-sm" style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 600;" onchange="handleKhususGroupSelectChange()">
+                  <option value="">-- Ketik Nama Rombongan Baru --</option>
+                </select>
+              </div>
+              <div>
+                <label for="khusus_group_name" style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 4px;">Atau Nama Rombongan Baru <span style="color: #dc2626;">*</span></label>
+                <input type="text" id="khusus_group_name" class="form-control form-control-sm" placeholder="Contoh: Rombongan Paskas Bali" style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Baris 2: Nama Lengkap & Jenis Kelamin -->
+        <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label for="khusus_full_name" style="display: block; font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+              NAMA LENGKAP PESERTA <span style="color: #dc2626;">*</span>
+            </label>
+            <input type="text" id="khusus_full_name" class="form-control form-control-sm" placeholder="Nama lengkap sesuai identitas..." required style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-weight: 700;">
+          </div>
+          <div>
+            <label for="khusus_gender" style="display: block; font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+              JENIS KELAMIN <span style="color: #dc2626;">*</span>
+            </label>
+            <select id="khusus_gender" class="form-control form-control-sm" required style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 700;">
+              <option value="Laki-laki">Laki-laki (Ikhwan)</option>
+              <option value="Perempuan">Perempuan (Akhwat)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Baris 3: Usia (Hitung Kategori & Tagihan Otomatis) & Ukuran Baju -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label for="khusus_age" style="font-size: 12px; font-weight: 800; color: #0f172a;">
+                USIA (TAHUN) <span style="color: #dc2626;">*</span>
+              </label>
+              <span id="khusus_category_badge" style="font-size: 11px; font-weight: 800; color: #064e3b; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 6px;">
+                Dewasa • Rp 200.000
+              </span>
+            </div>
+            <input type="number" id="khusus_age" class="form-control form-control-sm" placeholder="Contoh: 35" min="1" max="100" value="30" required style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-weight: 700;" oninput="updateKhususAgeCategory()">
+          </div>
+          <div>
+            <label for="khusus_cloth_size" style="display: block; font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+              UKURAN BAJU SERAGAM <span style="color: #dc2626;">*</span>
+            </label>
+            <select id="khusus_cloth_size" class="form-control form-control-sm" required style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 700;">
+              <option value="S">S</option>
+              <option value="M">M</option>
+              <option value="L" selected>L</option>
+              <option value="XL">XL</option>
+              <option value="XXL">XXL</option>
+              <option value="3XL">3XL</option>
+              <option value="4XL">4XL</option>
+              <option value="Anak <12 Thn (Tanpa Kaos)">Anak &lt;12 Thn (Tanpa Kaos)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Baris 4: No WhatsApp & Email -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label for="khusus_phone" style="display: block; font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+              NO. WHATSAPP AKTIF <span style="color: #dc2626;">*</span>
+            </label>
+            <input type="tel" id="khusus_phone" class="form-control form-control-sm" placeholder="08xxxxxxxxxx" required style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 600;">
+          </div>
+          <div>
+            <label for="khusus_email" style="display: block; font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+              ALAMAT EMAIL (OPSIONAL)
+            </label>
+            <input type="email" id="khusus_email" class="form-control form-control-sm" placeholder="nama@email.com" style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
+          </div>
+        </div>
+
+        <!-- Baris 5: Wilayah & Daerah Asal -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label for="khusus_wilayah" style="display: block; font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+              WILAYAH KAFILAH <span style="color: #dc2626;">*</span>
+            </label>
+            <select id="khusus_wilayah" class="form-control form-control-sm" required style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 700;">
+              <!-- Injected by JS master wilayah -->
+            </select>
+          </div>
+          <div>
+            <label for="khusus_daerah" style="display: block; font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+              DAERAH ASAL (KOTA/KAB) <span style="color: #dc2626;">*</span>
+            </label>
+            <input type="text" id="khusus_daerah" class="form-control form-control-sm" placeholder="Contoh: Pontianak, Bandung..." required style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 600;">
+          </div>
+        </div>
+
+        <!-- Baris 6: Transportasi & Riwayat Medis -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+          <div>
+            <label for="khusus_transport" style="display: block; font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+              MODA TRANSPORTASI <span style="color: #dc2626;">*</span>
+            </label>
+            <select id="khusus_transport" class="form-control form-control-sm" required style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 600;">
+              <option value="Pesawat Terbang">Pesawat Terbang</option>
+              <option value="Bus" selected>Bus</option>
+              <option value="Mobil Pribadi">Mobil Pribadi</option>
+              <option value="Kereta Api">Kereta Api</option>
+              <option value="Travel / Elf / HiAce">Travel / Elf / HiAce</option>
+              <option value="Kapal Laut">Kapal Laut</option>
+              <option value="Sepeda Motor">Sepeda Motor</option>
+              <option value="Lainnya">Lainnya</option>
+            </select>
+          </div>
+          <div>
+            <label for="khusus_medical" style="display: block; font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+              RIWAYAT KESEHATAN / MEDIS
+            </label>
+            <input type="text" id="khusus_medical" class="form-control form-control-sm" value="Sehat" placeholder="Ketik riwayat penyakit atau 'Sehat'..." style="border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
+          </div>
+        </div>
+
+        <!-- Footer Tombol Aksi -->
+        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; border-top: 1.5px solid #e2e8f0; padding-top: 18px; margin-top: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModalTambahPesertaKhusus()" style="font-weight: 700; padding: 10px 20px; border-radius: 10px; border: 1.5px solid #cbd5e1 !important; background: #f1f5f9 !important; color: #334155 !important; font-size: 13.5px; cursor: pointer;">
+            <i class="fa-solid fa-xmark"></i> Batal
+          </button>
+          <button type="submit" id="btnSubmitPesertaKhusus" class="btn btn-primary btn-sm" style="font-weight: 800; padding: 10px 24px; border-radius: 10px; font-size: 13.5px; background: linear-gradient(135deg, #059669, #10b981); border: none; color: #ffffff; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-floppy-disk"></i> <span id="btnSubmitPesertaKhususText">Simpan &amp; Terbitkan Tiket</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
   <script src="js/supabase-config.js?v=137.0"></script>
-  <script src="js/app.js?v=171.0"></script>
+  <script src="js/app.js?v=172.0"></script>
 </body>
 </html>

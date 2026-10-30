@@ -16667,3 +16667,216 @@ window.isFemaleGender = isFemaleGender;
 window.normalizeGender = normalizeGender;
 
 
+
+
+// ===================================================================
+// MODAL KHUSUS: INPUT PESERTA KHUSUS / SUSULAN PANITIA
+// ===================================================================
+function updateKhususAgeCategory() {
+  const age = parseInt(document.getElementById('khusus_age')?.value || '0', 10);
+  const badge = document.getElementById('khusus_category_badge');
+  if (!badge) return;
+  if (age > 0 && age < 5) {
+    badge.textContent = 'Balita • Rp 50.000';
+    badge.style.color = '#0284c7';
+    badge.style.background = '#e0f2fe';
+    badge.style.borderColor = '#bae6fd';
+  } else if (age >= 5 && age <= 15) {
+    badge.textContent = 'Anak-anak • Rp 100.000';
+    badge.style.color = '#059669';
+    badge.style.background = '#ecfdf5';
+    badge.style.borderColor = '#a7f3d0';
+  } else {
+    badge.textContent = 'Dewasa • Rp 200.000';
+    badge.style.color = '#7c3aed';
+    badge.style.background = '#f5f3ff';
+    badge.style.borderColor = '#ddd6fe';
+  }
+}
+
+function toggleKhususGroupField(isGroup) {
+  const wrap = document.getElementById('wrapKhususGroup');
+  if (wrap) wrap.style.display = isGroup ? 'block' : 'none';
+  const nameInput = document.getElementById('khusus_group_name');
+  if (nameInput) {
+    nameInput.required = isGroup;
+  }
+}
+
+function handleKhususGroupSelectChange() {
+  const sel = document.getElementById('khusus_group_select');
+  const input = document.getElementById('khusus_group_name');
+  if (sel && input && sel.value) {
+    input.value = sel.value;
+  }
+}
+
+function openModalTambahPesertaKhusus() {
+  const modal = document.getElementById('modalTambahPesertaKhusus');
+  if (!modal) return;
+
+  // 1. Populate Wilayah Dropdown
+  const wilSelect = document.getElementById('khusus_wilayah');
+  if (wilSelect) {
+    const list = (typeof getMasterWilayahList === 'function') ? getMasterWilayahList() : ['Pontianak', 'Kubu Raya', 'Jawa Barat', 'Jawa Timur', 'Sumatera 1', 'Sumatera 2', 'Kalimantan 1', 'Kalimantan 2', 'Indonesia Bagian Timur'];
+    wilSelect.innerHTML = list.map(w => `<option value="${escapeAttr(w)}">${escapeHtml(w)}</option>`).join('');
+  }
+
+  // 2. Populate Group Dropdown from allRegistrations
+  const grpSelect = document.getElementById('khusus_group_select');
+  if (grpSelect) {
+    const existingGroups = new Set();
+    (allRegistrations || []).forEach(r => {
+      const g = (r.group_name || '').trim();
+      if (g && g !== '-' && g.toLowerCase() !== 'mandiri') existingGroups.add(g);
+    });
+    let grpHtml = '<option value="">-- Ketik Nama Rombongan Baru --</option>';
+    Array.from(existingGroups).sort().forEach(g => {
+      grpHtml += `<option value="${escapeAttr(g)}">${escapeHtml(g)}</option>`;
+    });
+    grpSelect.innerHTML = grpHtml;
+  }
+
+  // 3. Reset form
+  const form = document.getElementById('formTambahPesertaKhusus');
+  if (form) form.reset();
+  const radIndividu = document.querySelector('input[name="khusus_reg_type"][value="individu"]');
+  if (radIndividu) radIndividu.checked = true;
+  toggleKhususGroupField(false);
+  updateKhususAgeCategory();
+
+  // 4. Buka modal
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+  setTimeout(() => {
+    document.getElementById('khusus_full_name')?.focus();
+  }, 100);
+}
+
+function closeModalTambahPesertaKhusus() {
+  const modal = document.getElementById('modalTambahPesertaKhusus');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('active');
+  }
+}
+
+async function handleSimpanPesertaKhusus(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const btn = document.getElementById('btnSubmitPesertaKhusus');
+  const btnText = document.getElementById('btnSubmitPesertaKhususText');
+  const origText = btnText ? btnText.textContent : 'Simpan & Terbitkan Tiket';
+
+  try {
+    const type = document.querySelector('input[name="khusus_reg_type"]:checked')?.value || 'individu';
+    const fullName = (document.getElementById('khusus_full_name')?.value || '').trim();
+    if (!fullName) {
+      showToast('Mohon isi nama lengkap peserta.', 'warning');
+      document.getElementById('khusus_full_name')?.focus();
+      return;
+    }
+
+    const gender = document.getElementById('khusus_gender')?.value || 'Laki-laki';
+    const rawAge = document.getElementById('khusus_age')?.value;
+    const age = parseInt(rawAge || '0', 10);
+    if (!rawAge || isNaN(age) || age <= 0) {
+      showToast('Mohon isi usia peserta dengan benar.', 'warning');
+      document.getElementById('khusus_age')?.focus();
+      return;
+    }
+
+    const clothSize = document.getElementById('khusus_cloth_size')?.value || 'L';
+    const phone = (document.getElementById('khusus_phone')?.value || '').trim();
+    if (!phone) {
+      showToast('Mohon isi nomor WhatsApp aktif peserta.', 'warning');
+      document.getElementById('khusus_phone')?.focus();
+      return;
+    }
+
+    const email = (document.getElementById('khusus_email')?.value || '').trim();
+    const wilayah = document.getElementById('khusus_wilayah')?.value || 'Pontianak';
+    const daerah = (document.getElementById('khusus_daerah')?.value || '').trim() || wilayah;
+    const transport = document.getElementById('khusus_transport')?.value || 'Bus';
+    const medical = (document.getElementById('khusus_medical')?.value || '').trim() || 'Sehat';
+
+    let groupName = '-';
+    let groupLeader = fullName;
+    if (type === 'kelompok') {
+      groupName = (document.getElementById('khusus_group_name')?.value || '').trim() || (document.getElementById('khusus_group_select')?.value || '').trim();
+      if (!groupName) {
+        showToast('Mohon isi Nama Rombongan.', 'warning');
+        document.getElementById('khusus_group_name')?.focus();
+        return;
+      }
+    }
+
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan ke Cloud...';
+
+    // Auto alokasi kamar & generate code
+    const isChild = age < 15;
+    const alloc = autoAllocateRoomAndGroup(gender, isChild, '', allRegistrations || []);
+    const code = generateRegistrationCode(type, 0);
+
+    const record = {
+      registration_code: code,
+      registration_type: type,
+      group_name: groupName,
+      group_code: alloc.group_code || 'G-01',
+      group_leader_name: groupLeader,
+      room_number: alloc.room_number || '101',
+      room_name: alloc.room_name || 'Kamar 101',
+      building: alloc.building || (gender === 'Perempuan' ? 'Gedung Akhwat' : 'Gedung Ikhwan'),
+      full_name: fullName,
+      age: age,
+      join_year: new Date().getFullYear(),
+      is_child: isChild,
+      guardian_name: null,
+      gender: gender,
+      wilayah: wilayah,
+      daerah: daerah,
+      arrival_date: '2026-11-10',
+      arrival_time: '12:00',
+      departure_date: '2026-11-13',
+      departure_time: '14:00',
+      transport_arrival: transport,
+      transport_departure: transport,
+      cloth_size: clothSize,
+      medical_history: medical,
+      photo_url: null,
+      phone_number: phone,
+      email: email,
+      notes: 'Peserta Khusus (Input Panitia)',
+      attendance_status: 'pending'
+    };
+
+    const saved = await window.dataService.addRegistration(record);
+
+    showToast(`Alhamdulillah! Peserta khusus ${fullName} berhasil didaftarkan (${saved.registration_code})`, 'success');
+    closeModalTambahPesertaKhusus();
+
+    // Reload and refresh rekap table
+    if (typeof loadAndRenderRegistrations === 'function') {
+      await loadAndRenderRegistrations();
+    }
+
+    // Tampilkan E-Tiket Boarding Pass seketika
+    if (typeof showTicketModal === 'function') {
+      showTicketModal(saved);
+    }
+  } catch (err) {
+    console.error('Error simpan peserta khusus:', err);
+    showToast('Gagal menyimpan peserta: ' + (err.message || err), 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (btnText) btnText.textContent = origText;
+  }
+}
+
+window.openModalTambahPesertaKhusus = openModalTambahPesertaKhusus;
+window.closeModalTambahPesertaKhusus = closeModalTambahPesertaKhusus;
+window.updateKhususAgeCategory = updateKhususAgeCategory;
+window.toggleKhususGroupField = toggleKhususGroupField;
+window.handleKhususGroupSelectChange = handleKhususGroupSelectChange;
+window.handleSimpanPesertaKhusus = handleSimpanPesertaKhusus;
