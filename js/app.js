@@ -6344,6 +6344,8 @@ function showSuccessRegistrationView(recordOrBatch, type = 'individu') {
   if (floatingBar) floatingBar.style.display = 'none';
   if (formCard) formCard.style.display = 'none';
   if (promptBox) promptBox.style.display = 'none';
+  const closedBoxEl = document.getElementById('regClosedPromptBox');
+  if (closedBoxEl) closedBoxEl.style.display = 'none';
 
   // LANGSUNG TAMPILKAN KONTAINER SUKSES IN-PAGE
   if (container) {
@@ -6755,6 +6757,7 @@ async function triggerSuccessDownloadAllTickets() {
 }
 
 function finishSuccessRegistration() {
+  window.isViewedFromTicketSearch = false;
   if (window.isAdminBypassRegistration) {
     window.isAdminBypassRegistration = false;
     const banner = document.getElementById('adminBypassBanner');
@@ -6793,12 +6796,220 @@ function registerAnotherParticipant() {
   if (hangingGallery) hangingGallery.style.display = '';
   if (floatingBar) floatingBar.style.display = '';
 
+  if (window.isViewedFromTicketSearch) {
+    window.isViewedFromTicketSearch = false;
+    openPublicTicketSearch();
+    return;
+  }
+
   resetToSelectionScreen();
   if (typeof navigateTo === 'function') {
     navigateTo('registration');
   }
   openRegistrationSelector();
 }
+
+
+// ===================================================================
+// FITUR PENCARIAN & CEK STATUS E-TIKET PESERTA (PUBLIK)
+// ===================================================================
+window.isViewedFromTicketSearch = false;
+
+function openPublicTicketSearch() {
+  if (typeof navigateTo === 'function') {
+    navigateTo('registration');
+  }
+  const closedBox = document.getElementById('regClosedPromptBox');
+  if (closedBox) {
+    closedBox.style.display = 'block';
+  }
+  const inputEl = document.getElementById('inputSearchPublicTicket');
+  if (inputEl) {
+    setTimeout(() => {
+      inputEl.focus();
+      inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+  }
+}
+
+async function handleSearchPublicTicket() {
+  const inputEl = document.getElementById('inputSearchPublicTicket');
+  const resultsEl = document.getElementById('searchPublicTicketResults');
+  const btnEl = document.getElementById('btnSearchPublicTicket');
+  if (!inputEl) return;
+
+  const rawQuery = inputEl.value.trim();
+  if (!rawQuery) {
+    showToast('Silakan masukkan Nama atau Nomor Tiket Anda terlebih dahulu.', 'warning');
+    inputEl.focus();
+    return;
+  }
+
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Mencari...</span>';
+  }
+
+  try {
+    // Pastikan data registrasi sudah termuat
+    if (!allRegistrations || allRegistrations.length === 0) {
+      if (window.dataService && typeof window.dataService.getRegistrations === 'function') {
+        allRegistrations = await window.dataService.getRegistrations();
+      }
+    }
+
+    const q = rawQuery.toLowerCase();
+    const cleanDigits = q.replace(/\D/g, '');
+
+    const matched = (allRegistrations || []).filter(p => {
+      const name = (p.full_name || '').toLowerCase();
+      const code = (p.registration_code || '').toLowerCase();
+      const phone = (p.phone || '').replace(/\D/g, '');
+      const group = (p.group_name || '').toLowerCase();
+      const daerah = (p.daerah || '').toLowerCase();
+
+      // Cocokkan kode tiket persis atau parsial (misal PKB-416 atau 416)
+      if (code === q || code.replace('pkb-', '') === q.replace('pkb-', '')) return true;
+      if (code.includes(q)) return true;
+
+      // Cocokkan nama peserta
+      if (name.includes(q)) return true;
+
+      // Cocokkan nama rombongan / kafilah
+      if (group && group.includes(q)) return true;
+
+      // Cocokkan nomor HP jika input mengandung minimal 4 digit
+      if (cleanDigits.length >= 4 && phone.includes(cleanDigits)) return true;
+
+      return false;
+    });
+
+    if (resultsEl) resultsEl.style.display = 'block';
+
+    if (matched.length === 0) {
+      if (resultsEl) {
+        resultsEl.innerHTML = `
+          <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 10px; padding: 14px 16px; color: #9f1239; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(225,29,72,0.06);">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13.5px; margin-bottom: 4px;">
+              <i class="fa-solid fa-triangle-exclamation" style="font-size: 15px;"></i> Data Tiket Tidak Ditemukan
+            </div>
+            Tidak ditemukan data peserta dengan kata kunci "<strong>${escapeHtml(rawQuery)}</strong>".
+            <div style="font-size: 11.5px; color: #64748b; margin-top: 6px;">
+              💡 <em>Tips: Coba gunakan Nomor Tiket (contoh: <code>PKB-416</code>), nama lengkap, atau nomor WhatsApp yang didaftarkan.</em>
+            </div>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    // JIKA TEPAT 1 HASIL COCOK: LANGSUNG BUKA GAMBAR 2 (showSuccessRegistrationView)
+    if (matched.length === 1) {
+      const target = matched[0];
+      if (resultsEl) {
+        resultsEl.innerHTML = `
+          <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 10px; padding: 12px 16px; color: #065f46; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-circle-check" style="font-size: 16px; color: #10b981;"></i>
+            <span>Data ditemukan! Membuka E-Tiket untuk <strong>${escapeHtml(target.full_name)}</strong>...</span>
+          </div>
+        `;
+      }
+      setTimeout(() => {
+        openTargetParticipantSuccessView(target);
+      }, 400);
+      return;
+    }
+
+    // JIKA LEBIH DARI 1 HASIL COCOK: TAMPILKAN DAFTAR KANDIDAT PESERTA AGAR TEPAT SASARAN
+    if (resultsEl) {
+      resultsEl.innerHTML = `
+        <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 14px; margin-top: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 13px; font-weight: 800; color: #0f172a;">
+              <i class="fa-solid fa-users" style="color: #0284c7; margin-right: 6px;"></i> Ditemukan ${matched.length} Peserta yang Cocok
+            </span>
+            <small style="font-size: 11px; color: #64748b; font-weight: 600;">Klik nama Anda untuk melihat tiket:</small>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; padding-right: 4px;">
+            ${matched.map(p => `
+              <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; transition: border-color 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.03);"
+                onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#e2e8f0'">
+                <div>
+                  <div style="font-size: 13.5px; font-weight: 800; color: #0f172a;">
+                    ${escapeHtml(p.full_name)}
+                    ${p.age ? `<span style="font-size: 11.5px; font-weight: 600; color: #64748b;">(${p.age} th)</span>` : ''}
+                  </div>
+                  <div style="font-size: 11.5px; color: #64748b; margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span style="background: #e0f2fe; color: #0369a1; font-weight: 800; padding: 1px 6px; border-radius: 4px; font-size: 11px;">
+                      ${escapeHtml(p.registration_code || '-')}
+                    </span>
+                    <span>• ${escapeHtml(p.wilayah || 'Mandiri')} ${p.daerah ? `/ ${escapeHtml(p.daerah)}` : ''}</span>
+                    ${p.group_name ? `<span style="color: #059669; font-weight: 700;">(${escapeHtml(p.group_name)})</span>` : ''}
+                  </div>
+                </div>
+                <button type="button" onclick="selectSearchPublicTicketResult(${p.id})"
+                  style="background: #183f2b; color: #ffffff; border: none; font-weight: 800; font-size: 11.5px; padding: 6px 12px; border-radius: 6px; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 4px rgba(24,63,43,0.2);">
+                  <i class="fa-solid fa-ticket"></i> Buka Tiket
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+  } catch (err) {
+    console.error('Error searching public ticket:', err);
+    showToast('Terjadi kesalahan saat mencari tiket: ' + err.message, 'error');
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i><span>Cari Tiket Saya</span>';
+    }
+  }
+}
+
+function openTargetParticipantSuccessView(target) {
+  if (!target) return;
+  window.isViewedFromTicketSearch = true;
+
+  if (target.registration_type === 'kelompok' && target.group_name) {
+    const batch = (allRegistrations || []).filter(x => x.group_name === target.group_name);
+    if (batch.length > 1) {
+      showSuccessRegistrationView(batch, 'kelompok');
+      const idx = batch.findIndex(x => Number(x.id) === Number(target.id));
+      if (idx !== -1 && typeof successSwitchGroupMember === 'function') {
+        setTimeout(() => successSwitchGroupMember(idx), 80);
+      }
+    } else {
+      showSuccessRegistrationView(target, 'individu');
+    }
+  } else {
+    showSuccessRegistrationView(target, 'individu');
+  }
+
+  // Sesuaikan tombol secondary di bagian bawah Gambar 2
+  const btnSecondary = document.getElementById('btnSuccessSecondaryAction');
+  if (btnSecondary) {
+    btnSecondary.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Cari Tiket / Peserta Lain';
+  }
+
+  // Gulir halus ke kartu sukses Mahabbah
+  const successCard = document.querySelector('.reg-success-card');
+  if (successCard) {
+    successCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function selectSearchPublicTicketResult(id) {
+  const p = (allRegistrations || []).find(x => Number(x.id) === Number(id));
+  if (p) openTargetParticipantSuccessView(p);
+}
+
+window.openPublicTicketSearch = openPublicTicketSearch;
+window.handleSearchPublicTicket = handleSearchPublicTicket;
+window.openTargetParticipantSuccessView = openTargetParticipantSuccessView;
+window.selectSearchPublicTicketResult = selectSearchPublicTicketResult;
 
 window.showSuccessRegistrationView = showSuccessRegistrationView;
 window.toggleSuccessTicketPreview = toggleSuccessTicketPreview;

@@ -151,6 +151,10 @@
             <i class="fa-solid fa-user-plus"></i>
             <span>Registrasi</span>
           </button>
+          <button class="nav-link" onclick="openPublicTicketSearch()" title="Cek Tiket &amp; Status Pendaftaran Anda">
+            <i class="fa-solid fa-ticket"></i>
+            <span>Cek Tiket</span>
+          </button>
           <button class="nav-link admin-only" data-page="rekap" onclick="navigateTo('rekap')">
             <i class="fa-solid fa-chart-pie"></i>
             <span>Rekap Data</span>
@@ -188,6 +192,9 @@
       </button>
       <button class="mobile-link" data-page="registration" onclick="navigateTo('registration'); toggleMobileNav();">
         <i class="fa-solid fa-user-plus"></i> Registrasi Peserta
+      </button>
+      <button class="mobile-link" onclick="openPublicTicketSearch(); toggleMobileNav();">
+        <i class="fa-solid fa-ticket"></i> Cek Tiket Peserta
       </button>
       <button class="mobile-link admin-only" data-page="rekap" onclick="navigateTo('rekap'); toggleMobileNav();">
         <i class="fa-solid fa-chart-pie"></i> Rekap Data Peserta
@@ -277,6 +284,10 @@
               <button class="btn btn-primary btn-glow" onclick="navigateTo('registration')">
                 <i class="fa-solid fa-ticket"></i>
                 <span>Daftar Sekarang</span>
+              </button>
+              <button type="button" class="btn btn-glass-gold" onclick="openPublicTicketSearch()" style="display: inline-flex;">
+                <i class="fa-solid fa-magnifying-glass text-gold"></i>
+                <span>Cek Tiket Saya</span>
               </button>
               <button type="button" class="btn btn-glass-gold" id="heroAnnouncementBtn" onclick="openHeroAnnouncement()" style="display: none;">
                 <i class="fa-solid fa-bullhorn text-gold"></i>
@@ -590,6 +601,36 @@
                 <button type="button" class="btn-forest-pill" onclick="navigateTo('dashboard')">
                   <i class="fa-solid fa-house"></i> Kembali ke Dashboard
                 </button>
+              </div>
+
+              <!-- KOTAK PENCARIAN TIKET PESERTA (CEK PENDAFTARAN & TIKET SAYA) -->
+              <div class="ticket-search-box-wrap" style="margin-top: 24px; padding-top: 20px; border-top: 1.5px dashed #cbd5e1; text-align: left;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <i class="fa-solid fa-ticket text-gold" style="font-size: 18px;"></i>
+                  <h4 style="margin: 0; font-size: 15px; font-weight: 800; color: #183f2b;">Sudah Pernah Mendaftar? Cek Tiket &amp; Status Anda</h4>
+                </div>
+                <p style="margin: 0 0 14px 0; font-size: 12.5px; color: #64748b; line-height: 1.5;">
+                  Ketik <strong>Nama Lengkap</strong> atau <strong>Nomor Tiket</strong> (contoh: <code>PKB-416</code> atau <code>Saiful</code>) untuk melihat kembali E-Tiket, kirim tiket ke email, dan bergabung ke grup WhatsApp.
+                </p>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <div style="flex: 1; min-width: 240px; position: relative;">
+                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 14px;"></i>
+                    <input type="text" id="inputSearchPublicTicket" placeholder="Ketik Nama atau Nomor Tiket (cth: PKB-416)..." 
+                      style="width: 100%; padding: 11px 14px 11px 38px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; color: #0f172a; outline: none; transition: border-color 0.2s;"
+                      onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#cbd5e1'"
+                      onkeydown="if(event.key === 'Enter') handleSearchPublicTicket()">
+                  </div>
+                  <button type="button" onclick="handleSearchPublicTicket()" id="btnSearchPublicTicket"
+                    style="background: #183f2b; color: #ffffff; border: none; font-weight: 800; font-size: 13.5px; padding: 11px 20px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(24,63,43,0.25);"
+                    onmouseover="this.style.background='#10b981'" onmouseout="this.style.background='#183f2b'">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Cari Tiket Saya</span>
+                  </button>
+                </div>
+
+                <!-- Kontainer Hasil Pencarian / Feedback -->
+                <div id="searchPublicTicketResults" style="display: none; margin-top: 14px;"></div>
               </div>
             </div>
 
@@ -1778,7 +1819,7 @@
 
                     <!-- Opsi Tambahan Ramah Pengguna -->
                     <div class="reg-success-secondary-footer">
-                      <button type="button" class="btn-link-another-reg" onclick="registerAnotherParticipant()">
+                      <button type="button" class="btn-link-another-reg" id="btnSuccessSecondaryAction" onclick="registerAnotherParticipant()">
                         <i class="fa-solid fa-user-plus"></i> Daftarkan Peserta / Kafilah Lain
                       </button>
                     </div>
@@ -6736,6 +6777,6 @@ CREATE TABLE IF NOT EXISTS registrations (
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
   <script src="js/supabase-config.js?v=138.0"></script>
-  <script src="js/app.js?v=182.0"></script>
+  <script src="js/app.js?v=183.0"></script>
 </body>
 </html>
