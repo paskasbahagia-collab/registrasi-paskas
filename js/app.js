@@ -14252,6 +14252,9 @@ initAntiInspectGuard();
 window.renderFormattedNarrationHTML = renderFormattedNarrationHTML;
 window.applyTextFormatting = applyTextFormatting;
 window.renderFormattedPaymentNotes = renderFormattedPaymentNotes;
+window.startEditInstallment = startEditInstallment;
+window.cancelEditInstallmentMode = cancelEditInstallmentMode;
+window.deleteInstallmentAction = deleteInstallmentAction;
 window.moveCardUp = moveCardUp;
 window.moveCardDown = moveCardDown;
 window.moveCardToPosition = moveCardToPosition;
@@ -15025,6 +15028,7 @@ let isTreasurerLoggedIn = false;
 let currentFinanceFilter = 'all';
 let financeRatioChartInstance = null;
 let activePayParticipantId = null;
+let activeEditingInstallmentId = null;
 
 function checkTreasurerSessionState() {
   const stored = sessionStorage.getItem('paskas_treasurer_session');
@@ -16033,6 +16037,10 @@ function openRecordPaymentModal(id) {
     btnModalReset.style.display = paid > 0 ? 'inline-flex' : 'none';
   }
 
+  // Render daftar riwayat termin pembayaran tercatat
+  cancelEditInstallmentMode();
+  renderPayModalInstallmentsList(p, instList);
+
   onPayAmountChanged();
   modal.classList.add('active');
   if (amountInput) {
@@ -16043,6 +16051,213 @@ function openRecordPaymentModal(id) {
 function closeRecordPaymentModal() {
   const modal = document.getElementById('modalRecordPayment');
   if (modal) modal.classList.remove('active');
+  cancelEditInstallmentMode();
+}
+
+function renderPayModalInstallmentsList(p, instList) {
+  const container = document.getElementById('payModalInstallmentsSection');
+  const listEl = document.getElementById('payModalInstallmentsList');
+  const countBadge = document.getElementById('payModalInstCountBadge');
+  if (!container || !listEl) return;
+
+  if (!instList || instList.length === 0) {
+    container.style.display = 'none';
+    listEl.innerHTML = '';
+    return;
+  }
+
+  container.style.display = 'block';
+  if (countBadge) countBadge.textContent = `${instList.length} Transaksi Tercatat`;
+
+  listEl.innerHTML = instList.map((t, idx) => {
+    const isVerified = t.verification_status === 'verified';
+    const tId = t.id || ('idx_' + idx);
+    const tAmount = Number(t.amount || 0);
+    const tTermin = t.termin || (idx + 1);
+
+    return `
+      <div class="installment-segment-card" style="background: #ffffff; border: 1.5px solid ${isVerified ? '#a7f3d0' : '#e2e8f0'}; border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span style="font-size: 11px; font-weight: 800; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 5px;">
+              Termin ${tTermin}
+            </span>
+            <span style="font-size: 13.5px; font-weight: 800; color: #059669;">
+              Rp ${tAmount.toLocaleString('id-ID')}
+            </span>
+            <span style="font-size: 10.5px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 1px 6px; border-radius: 4px;">
+              ${t.method || 'Transfer'}
+            </span>
+            ${isVerified ? `
+              <span style="font-size: 10.5px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;" title="Pembayaran ini sudah diverifikasi sah oleh bendahara">
+                <i class="fa-solid fa-lock"></i> Terverifikasi
+              </span>
+            ` : `
+              <span style="font-size: 10.5px; font-weight: 800; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;" title="Pembayaran ini masih menunggu verifikasi mutasi rekening">
+                <i class="fa-solid fa-hourglass-half"></i> Belum Diverifikasi
+              </span>
+            `}
+          </div>
+          ${t.notes ? `
+            <div style="font-size: 11.5px; color: #475569; margin-top: 4px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #f1f5f9;">
+              <i class="fa-regular fa-note-sticky" style="color: #94a3b8; margin-right: 4px;"></i>${escapeHtml(t.notes)}
+            </div>
+          ` : ''}
+          <div style="font-size: 10px; color: #94a3b8; margin-top: 3px;">
+            ${t.paid_at ? new Date(t.paid_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : 'Waktu transaksi tercatat'}
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+          <button type="button" onclick="startEditInstallment('${tId}', ${isVerified})" title="Koreksi nominal atau catatan termin ini" style="background: #f0fdf4; color: #166534; border: 1.5px solid #86efac; font-weight: 800; font-size: 11.5px; padding: 5px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.15s;" onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+            <i class="fa-solid fa-pen-to-square"></i> Edit
+          </button>
+          <button type="button" onclick="deleteInstallmentAction('${tId}', ${isVerified})" title="Hapus termin pembayaran ini" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 700; font-size: 11px; padding: 5px 8px; border-radius: 6px; cursor: pointer;">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function startEditInstallment(instId, isVerified) {
+  if (isVerified) {
+    const ok = confirm("⚠️ PERHATIAN:\nTermin ini statusnya SUDAH TERVERIFIKASI oleh bendahara.\n\nJika Anda mengedit data transaksi ini, status verifikasi akan otomatis dikembalikan ke 'Belum Diverifikasi (Pending)' agar bendahara mencocokkan mutasi rekening kembali.\n\nApakah Anda yakin ingin mengedit termin ini?");
+    if (!ok) return;
+  }
+
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
+  if (!p) return;
+
+  let instList = [];
+  if (p.payment_installments) {
+    try {
+      instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+    } catch (e) {}
+  }
+
+  let inst = instList.find(x => String(x.id || '') === String(instId));
+  if (!inst && String(instId).startsWith('idx_')) {
+    const rawIdx = Number(String(instId).replace('idx_', ''));
+    if (rawIdx >= 0 && rawIdx < instList.length) inst = instList[rawIdx];
+  }
+  if (!inst) {
+    showToast('Data termin tidak ditemukan.', 'error');
+    return;
+  }
+
+  activeEditingInstallmentId = instId;
+
+  // Tampilkan banner edit mode
+  const banner = document.getElementById('payModalEditBanner');
+  const bannerTitle = document.getElementById('payModalEditBannerTitle');
+  if (banner) banner.style.display = 'flex';
+  if (bannerTitle) bannerTitle.textContent = `Mode Edit: Memperbarui Termin ${inst.termin || 1}`;
+
+  // Isi form dengan data termin yang dipilih
+  const amountInput = document.getElementById('payModalAmountInput');
+  const terminSelect = document.getElementById('payModalTerminSelect');
+  const methodSelect = document.getElementById('payModalMethodSelect');
+  const notesInput = document.getElementById('payModalNotesInput');
+  const submitBtn = document.getElementById('btnSubmitRecordPayment');
+
+  if (amountInput) amountInput.value = inst.amount || '';
+  if (terminSelect) terminSelect.value = String(inst.termin || '1');
+  if (methodSelect) methodSelect.value = inst.method || 'Transfer';
+  if (notesInput) notesInput.value = inst.notes || '';
+
+  if (submitBtn) {
+    submitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i><span>Perbarui Termin ${inst.termin || 1}</span>`;
+    submitBtn.style.background = '#059669';
+  }
+
+  // Scroll form ke view
+  const formEl = document.getElementById('recordPaymentForm');
+  if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (amountInput) amountInput.focus();
+}
+
+function cancelEditInstallmentMode() {
+  activeEditingInstallmentId = null;
+
+  const banner = document.getElementById('payModalEditBanner');
+  if (banner) banner.style.display = 'none';
+
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
+  const fee = p ? calculateParticipantFee(p) : 0;
+  const paid = Number(p?.paid_amount || 0);
+  const remaining = Math.max(0, fee - paid);
+
+  const amountInput = document.getElementById('payModalAmountInput');
+  const notesInput = document.getElementById('payModalNotesInput');
+  const submitBtn = document.getElementById('btnSubmitRecordPayment');
+
+  if (amountInput) amountInput.value = '';
+  if (notesInput) notesInput.value = '';
+  if (submitBtn) {
+    submitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i><span>Simpan Pembayaran</span>`;
+    submitBtn.style.background = '';
+  }
+
+  onPayAmountChanged();
+}
+
+async function deleteInstallmentAction(instId, isVerified) {
+  if (isVerified) {
+    if (!confirm('⚠️ PERHATIAN:\nTermin ini SUDAH DIVERIFIKASI sah oleh bendahara.\n\nMenghapus termin ini akan membatalkan pembayaran tersebut dan mengurangi total saldo yang terbayar.\n\nApakah Anda yakin ingin menghapus termin ini?')) {
+      return;
+    }
+  } else {
+    if (!confirm('Apakah Anda yakin ingin menghapus data termin pembayaran ini?')) {
+      return;
+    }
+  }
+
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(activePayParticipantId));
+  if (!p) return;
+
+  let instList = [];
+  if (p.payment_installments) {
+    try {
+      instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+    } catch (e) {}
+  }
+
+  let filterFn = (x, idx) => String(x.id || '') !== String(instId);
+  if (String(instId).startsWith('idx_')) {
+    const rawIdx = Number(String(instId).replace('idx_', ''));
+    filterFn = (x, idx) => idx !== rawIdx;
+  }
+
+  const newInstList = instList.filter(filterFn);
+  const fee = calculateParticipantFee(p);
+  const newPaid = newInstList.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const newRemaining = Math.max(0, fee - newPaid);
+  const anyPending = newInstList.some(t => t.verification_status !== 'verified');
+  const newVerified = newPaid === 0 ? 'pending' : (anyPending ? 'pending' : 'verified');
+  const newStatus = newPaid === 0 ? 'pending' : (newVerified !== 'verified' ? 'pending_verification' : (newRemaining <= 0 ? 'paid' : 'partial'));
+
+  const idx = allRegistrations.findIndex(x => Number(x.id) === Number(activePayParticipantId));
+  if (idx !== -1) {
+    allRegistrations[idx] = {
+      ...allRegistrations[idx],
+      paid_amount: newPaid,
+      remaining_amount: newRemaining,
+      payment_status: newStatus,
+      payment_verified: newVerified,
+      payment_installments: newInstList
+    };
+  }
+
+  // Refresh modal views
+  openRecordPaymentModal(activePayParticipantId);
+  renderFinanceView();
+  showToast('Termin pembayaran berhasil dihapus.', 'info');
+
+  window.dataService.deletePaymentInstallment(activePayParticipantId, instId).catch(err => {
+    console.warn('Delete installment cloud sync:', err);
+  });
 }
 
 function onPayAmountChanged() {
@@ -16330,6 +16545,75 @@ async function submitPaymentInstallment() {
     try {
       instList = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
     } catch (e) {}
+  }
+
+  // JIKA DALAM MODE EDIT TERMIN
+  if (activeEditingInstallmentId) {
+    let editIdx = instList.findIndex(x => String(x.id || '') === String(activeEditingInstallmentId));
+    if (editIdx === -1 && String(activeEditingInstallmentId).startsWith('idx_')) {
+      const rawIdx = Number(String(activeEditingInstallmentId).replace('idx_', ''));
+      if (rawIdx >= 0 && rawIdx < instList.length) editIdx = rawIdx;
+    }
+
+    if (editIdx !== -1) {
+      const oldInst = instList[editIdx];
+      const newInstList = [...instList];
+      newInstList[editIdx] = {
+        ...oldInst,
+        termin: Number(terminNo) || oldInst.termin,
+        amount: amount,
+        method: method,
+        notes: notes,
+        proof_url: selectedRecordProofDataUrl || oldInst.proof_url || '',
+        verification_status: 'pending', // Dikembalikan ke pending agar aman diverifikasi ulang
+        updated_at: new Date().toISOString()
+      };
+
+      const newPaid = newInstList.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const newRemaining = Math.max(0, fee - newPaid);
+      const anyPending = newInstList.some(t => t.verification_status !== 'verified');
+      const newVerified = anyPending ? 'pending' : (newPaid > 0 ? 'verified' : 'pending');
+      const newStatus = newVerified !== 'verified' ? 'pending_verification' : (newRemaining <= 0 ? 'paid' : (newPaid > 0 ? 'partial' : 'pending'));
+
+      const editingId = activeEditingInstallmentId;
+      activeEditingInstallmentId = null;
+
+      if (idx !== -1) {
+        allRegistrations[idx] = {
+          ...allRegistrations[idx],
+          paid_amount: newPaid,
+          remaining_amount: newRemaining,
+          payment_status: newStatus,
+          payment_verified: newVerified,
+          payment_proof_url: selectedRecordProofDataUrl || allRegistrations[idx].payment_proof_url || '',
+          payment_installments: newInstList
+        };
+      }
+
+      closeRecordPaymentModal();
+      renderFinanceView();
+      if (typeof renderPresensiView === 'function') renderPresensiView();
+      showToast(`Alhamdulillah! Perubahan Termin ${terminNo} berhasil diperbarui.`, 'success');
+
+      window.dataService.saveEditedPaymentInstallment(
+        activePayParticipantId,
+        editingId,
+        terminNo,
+        amount,
+        method,
+        notes,
+        selectedRecordProofDataUrl
+      ).then(updated => {
+        if (idx !== -1 && updated) {
+          allRegistrations[idx] = { ...allRegistrations[idx], ...updated };
+          renderFinanceView();
+        }
+      }).catch(err => {
+        console.error('Save edited installment error:', err);
+        showToast('Catatan tersimpan lokal. Gagal sinkron ke Cloud: ' + err.message, 'warning');
+      });
+      return;
+    }
   }
 
   // 1. UPDATE INSTAN / CEPAT (Optimistic Update): Tutup modal dan perbarui tabel seketika

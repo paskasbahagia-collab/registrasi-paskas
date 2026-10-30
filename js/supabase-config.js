@@ -1540,6 +1540,131 @@ class PaskasDataService {
    * MODUL KEUANGAN & TERMIN PEMBAYARAN (BLUEPRINT MAULANA)
    * ===================================================================
    */
+  async saveEditedPaymentInstallment(id, installmentId, newTermin, newAmount, newMethod, newNotes, newProofUrl = '') {
+    const current = await this.getLocalRegistrations();
+    const item = current.find(p => String(p.id) === String(id));
+    if (!item) throw new Error('Data peserta tidak ditemukan');
+
+    let totalFee = Number(item.total_fee || 0);
+    if (!totalFee || totalFee <= 0) {
+      const settings = this.getSettings();
+      const adultFee = Number(settings.adult_fee || 350000);
+      const childFee = Number(settings.child_fee || 100000);
+      const toddlerFee = Number(settings.toddler_fee || 50000);
+      const age = Number(item.age || 0);
+      if (age > 0 && age < 5) totalFee = toddlerFee;
+      else if (age >= 5 && age <= 15) totalFee = childFee;
+      else totalFee = adultFee;
+    }
+
+    let installments = [];
+    if (item.payment_installments) {
+      installments = Array.isArray(item.payment_installments) ? item.payment_installments : (typeof item.payment_installments === 'string' ? JSON.parse(item.payment_installments) : []);
+    }
+
+    let instIndex = installments.findIndex(x => String(x.id || '') === String(installmentId));
+    if (instIndex === -1 && String(installmentId).startsWith('idx_')) {
+      const rawIdx = Number(String(installmentId).replace('idx_', ''));
+      if (rawIdx >= 0 && rawIdx < installments.length) instIndex = rawIdx;
+    }
+    if (instIndex === -1) throw new Error('Termin pembayaran tidak ditemukan');
+
+    const oldInst = installments[instIndex];
+    let uploadedProofUrl = oldInst.proof_url || '';
+    if (newProofUrl && newProofUrl.startsWith('data:')) {
+      uploadedProofUrl = await this.uploadAssetFile(newProofUrl, 'payment-proofs', item.registration_code || 'PKB');
+    } else if (newProofUrl) {
+      uploadedProofUrl = newProofUrl;
+    }
+
+    // Perbarui data termin tersebut
+    installments[instIndex] = {
+      ...oldInst,
+      termin: Number(newTermin) || oldInst.termin,
+      amount: Number(newAmount) || 0,
+      method: newMethod || oldInst.method,
+      notes: newNotes !== undefined ? newNotes : (oldInst.notes || ''),
+      proof_url: uploadedProofUrl,
+      verification_status: 'pending', // Dikembalikan ke pending agar aman diverifikasi ulang
+      updated_at: new Date().toISOString()
+    };
+
+    const paidAmount = installments.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const remaining = Math.max(0, totalFee - paidAmount);
+    const anyPending = installments.some(t => t.verification_status !== 'verified');
+    const paymentVerified = anyPending ? 'pending' : (paidAmount > 0 ? 'verified' : 'pending');
+    const paymentStatus = paymentVerified !== 'verified' ? 'pending_verification' : (remaining <= 0 ? 'paid' : (paidAmount > 0 ? 'partial' : 'pending'));
+
+    const latestProofUrl = uploadedProofUrl || item.payment_proof_url || (installments.slice().reverse().find(x => x.proof_url)?.proof_url || '');
+
+    const updates = {
+      total_fee: totalFee,
+      paid_amount: paidAmount,
+      remaining_amount: remaining,
+      payment_status: paymentStatus,
+      payment_installments: installments,
+      payment_proof_url: latestProofUrl,
+      payment_verified: paymentVerified
+    };
+
+    const updated = await this.updateRegistration(id, updates);
+    this.syncFinanceCloudBackup(id, updates).catch(e => console.warn('Background sync finance error:', e));
+    return updated;
+  }
+
+  async deletePaymentInstallment(id, installmentId) {
+    const current = await this.getLocalRegistrations();
+    const item = current.find(p => String(p.id) === String(id));
+    if (!item) throw new Error('Data peserta tidak ditemukan');
+
+    let totalFee = Number(item.total_fee || 0);
+    if (!totalFee || totalFee <= 0) {
+      const settings = this.getSettings();
+      const adultFee = Number(settings.adult_fee || 350000);
+      const childFee = Number(settings.child_fee || 100000);
+      const toddlerFee = Number(settings.toddler_fee || 50000);
+      const age = Number(item.age || 0);
+      if (age > 0 && age < 5) totalFee = toddlerFee;
+      else if (age >= 5 && age <= 15) totalFee = childFee;
+      else totalFee = adultFee;
+    }
+
+    let installments = [];
+    if (item.payment_installments) {
+      installments = Array.isArray(item.payment_installments) ? item.payment_installments : (typeof item.payment_installments === 'string' ? JSON.parse(item.payment_installments) : []);
+    }
+
+    let filterFn = (x, idx) => String(x.id || '') !== String(installmentId);
+    if (String(installmentId).startsWith('idx_')) {
+      const rawIdx = Number(String(installmentId).replace('idx_', ''));
+      filterFn = (x, idx) => idx !== rawIdx;
+    }
+
+    installments = installments.filter(filterFn);
+
+    const paidAmount = installments.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const remaining = Math.max(0, totalFee - paidAmount);
+    const anyPending = installments.some(t => t.verification_status !== 'verified');
+    const paymentVerified = paidAmount === 0 ? 'pending' : (anyPending ? 'pending' : 'verified');
+    const paymentStatus = paidAmount === 0 ? 'pending' : (paymentVerified !== 'verified' ? 'pending_verification' : (remaining <= 0 ? 'paid' : 'partial'));
+
+    const latestProofUrl = installments.slice().reverse().find(x => x.proof_url)?.proof_url || '';
+
+    const updates = {
+      total_fee: totalFee,
+      paid_amount: paidAmount,
+      remaining_amount: remaining,
+      payment_status: paymentStatus,
+      payment_installments: installments,
+      payment_proof_url: latestProofUrl,
+      payment_verified: paymentVerified
+    };
+
+    const updated = await this.updateRegistration(id, updates);
+    this.syncFinanceCloudBackup(id, updates).catch(e => console.warn('Background sync finance error:', e));
+    return updated;
+  }
+
   async recordPaymentInstallment(id, terminNumber, amount, method = 'Transfer', notes = '', adminName = 'Bendahara', proofDataOrUrl = '', verificationStatus = 'verified') {
     const current = await this.getLocalRegistrations();
     const item = current.find(p => String(p.id) === String(id));
