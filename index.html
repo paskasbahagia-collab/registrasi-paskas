@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=179.0">
+  <link rel="stylesheet" href="css/style.css?v=189.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -602,8 +602,8 @@
                   Ketik <strong>Nama Lengkap</strong> atau <strong>Nomor Tiket</strong> (contoh: <code>PKB-416</code> atau <code>Saiful</code>) untuk melihat kembali E-Tiket, kirim tiket ke email, dan bergabung ke grup WhatsApp.
                 </p>
 
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                  <div style="flex: 1; min-width: 240px; position: relative;">
+                <div class="ticket-search-input-row" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <div style="flex: 1; min-width: 200px; position: relative;">
                     <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 14px;"></i>
                     <input type="text" id="inputSearchPublicTicket" placeholder="Ketik Nama atau Nomor Tiket (cth: PKB-416)..." 
                       style="width: 100%; padding: 11px 14px 11px 38px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; color: #0f172a; outline: none; transition: border-color 0.2s;"
@@ -1689,7 +1689,7 @@
                     <!-- Greeting Section -->
                     <div class="reg-success-greeting-block">
                       <h2 class="reg-success-headline">
-                        Jazakumullahu khairan, <span id="successAttendeeName" class="reg-success-name-highlight">Nama Peserta</span>,
+                        Jazakumullahu khairan, <span id="successAttendeeName" class="reg-success-name-highlight">Nama Peserta</span>
                       </h2>
                       <p class="reg-success-subheadline">telah menjadi bagian dari PASKAS Bahagia.</p>
                     </div>
@@ -1754,24 +1754,32 @@
 
                       <!-- SLIDER NAVIGASI TIKET ROMBONGAN (Aktif otomatis untuk pendaftaran rombongan) -->
                       <div id="successGroupNavSlider" class="success-group-nav-slider" style="display: none;">
-                        <button type="button" class="btn-group-nav-arrow" id="btnSuccessPrevTicket" onclick="successStepGroupTicket(-1)" title="Tiket Sebelumnya">
-                          <i class="fa-solid fa-chevron-left"></i> Sebelumnya
-                        </button>
-                        
-                        <div class="success-group-nav-center">
+                        <!-- Baris 1: Dropdown Pilih Nama Peserta Rombongan (Full Width, Sangat Nyaman di HP) -->
+                        <div class="success-group-select-wrap">
                           <select id="successGroupMemberSelect" class="success-group-member-select" onchange="successSwitchGroupMember(this.value)">
                             <!-- Diisi dinamis via JS -->
                           </select>
-                          <span class="success-group-nav-counter" id="successGroupCounterText">Peserta 1 dari 1</span>
                         </div>
+                        
+                        <!-- Baris 2: Tombol Navigasi & Status Counter (Tertata Rapi 3 Kolom) -->
+                        <div class="success-group-controls-row">
+                          <button type="button" class="btn-group-nav-arrow" id="btnSuccessPrevTicket" onclick="successStepGroupTicket(-1)" title="Tiket Sebelumnya">
+                            <i class="fa-solid fa-chevron-left"></i> <span>Sebelumnya</span>
+                          </button>
+                          
+                          <span class="success-group-nav-counter" id="successGroupCounterText">Peserta 1 dari 1</span>
 
-                        <button type="button" class="btn-group-nav-arrow" id="btnSuccessNextTicket" onclick="successStepGroupTicket(1)" title="Tiket Berikutnya">
-                          Berikutnya <i class="fa-solid fa-chevron-right"></i>
-                        </button>
+                          <button type="button" class="btn-group-nav-arrow" id="btnSuccessNextTicket" onclick="successStepGroupTicket(1)" title="Tiket Berikutnya">
+                            <span>Berikutnya</span> <i class="fa-solid fa-chevron-right"></i>
+                          </button>
+                        </div>
                       </div>
 
                       <div class="success-ticket-viewport" id="successTicketRenderArea">
                         <!-- Tiket disuntikkan secara dinamis via JS -->
+                      </div>
+                      <div style="text-align: center; font-size: 11px; color: #94a3b8; margin-top: 8px;">
+                        <i class="fa-solid fa-mobile-screen"></i> Pratinjau pas di layar HP • Klik <strong>Unduh E-Tiket (PNG)</strong> di bawah untuk gambar asli tajam
                       </div>
                     </div>
 
@@ -1798,7 +1806,7 @@
 
                       <!-- TOMBOL UNDUH SEMUA E-TIKET (KHUSUS PENDAFTARAN ROMBONGAN) -->
                       <button type="button" class="btn-success-action btn-download-all-png" onclick="triggerSuccessDownloadAllTickets()" id="btnSuccessDownloadAll" style="display: none;">
-                        <i class="fa-solid fa-layer-group"></i> Unduh Semua E-Tiket (<span id="successBatchCountLabel">0 Tiket</span>)
+                        <i class="fa-solid fa-layer-group"></i> Unduh Semua Tiket (<span id="successBatchCountLabel">0</span>)
                       </button>
 
                       <button type="button" class="btn-success-action btn-finish-reg" onclick="finishSuccessRegistration()">
@@ -2671,7 +2679,7 @@
 
             <!-- Petunjuk Geser untuk iPad & HP -->
             <div class="fin-swipe-indicator" style="display: none; align-items: center; justify-content: space-between; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; margin-bottom: 10px;">
-              <span><i class="fa-solid fa-arrows-left-right"></i> Geser tabel untuk melihat rincian lengkap</span>
+              <span><i class="fa-solid fa-arrows-left-right"></i> Geser tabel ke kanan untuk Verifikasi &amp; Bayar</span>
               <span style="background: #10b981; color: #ffffff; padding: 2px 8px; border-radius: 6px; font-size: 11px;">Tombol Bayar Tersedia &rarr;</span>
             </div>
 
@@ -6765,7 +6773,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
-  <script src="js/supabase-config.js?v=138.0"></script>
-  <script src="js/app.js?v=184.0"></script>
+  <script src="js/supabase-config.js?v=189.0"></script>
+  <script src="js/app.js?v=189.0"></script>
 </body>
 </html>

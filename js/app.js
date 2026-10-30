@@ -5681,11 +5681,20 @@ async function generateDirectTicketCanvas(record) {
 async function captureTicketElementAsCanvas(ticketSourceEl, record = null) {
   const rec = record || currentTicketRecord || {};
 
-  // 1. Coba html2canvas jika library siap
+  // 1. Direct 2D Canvas Engine: PRIORITAS UTAMA (Super cepat ~20ms, tanpa freeze/timeout, 100% bebas CORS, Retina HD 1720x556)
+  try {
+    const directCanvas = await generateDirectTicketCanvas(rec);
+    if (directCanvas && directCanvas.width >= 100 && directCanvas.height >= 50) {
+      return directCanvas;
+    }
+  } catch (directErr) {
+    console.warn('Direct 2D Canvas engine error, mencoba html2canvas:', directErr);
+  }
+
+  // 2. Fallback html2canvas jika Direct Canvas gagal
   if (typeof html2canvas === 'function' && ticketSourceEl) {
     let tempWrapper = null;
     try {
-      // Sanitasi tag img
       const imgs = ticketSourceEl.querySelectorAll('img');
       imgs.forEach(img => {
         const rawSrc = img.getAttribute('src');
@@ -5714,7 +5723,6 @@ async function captureTicketElementAsCanvas(ticketSourceEl, record = null) {
       cloned.style.margin = '0';
       cloned.style.transform = 'none';
 
-      // Pastikan background menggunakan data URI bebas CORS
       const bgData = getValidTicketTemplateUrl();
       if (bgData) cloned.style.backgroundImage = `url('${bgData}')`;
 
@@ -5731,11 +5739,11 @@ async function captureTicketElementAsCanvas(ticketSourceEl, record = null) {
         allowTaint: false,
         backgroundColor: '#ffffff',
         logging: false,
-        imageTimeout: 3500
+        imageTimeout: 1500
       });
 
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('html2canvas_timeout')), 4000);
+        setTimeout(() => reject(new Error('html2canvas_timeout')), 1800);
       });
 
       const canvas = await Promise.race([renderPromise, timeoutPromise]);
@@ -5743,7 +5751,7 @@ async function captureTicketElementAsCanvas(ticketSourceEl, record = null) {
         return canvas;
       }
     } catch (e) {
-      console.warn('html2canvas skipped, menggunakan Direct 2D Engine:', e.message || e);
+      console.warn('html2canvas skipped:', e.message || e);
     } finally {
       if (tempWrapper && tempWrapper.parentNode) {
         tempWrapper.parentNode.removeChild(tempWrapper);
@@ -5751,7 +5759,6 @@ async function captureTicketElementAsCanvas(ticketSourceEl, record = null) {
     }
   }
 
-  // 2. Direct 2D Canvas Engine (100% cepat, bebas CORS, tanpa timeout)
   return await generateDirectTicketCanvas(rec);
 }
 
@@ -6104,19 +6111,23 @@ async function sendTicketEmail() {
     const emailjsTemplateId = settings.emailjs_template_id || '';
     const emailjsPublicKey = settings.emailjs_public_key || '';
 
-    // Render gambar kartu tiket secara otomatis untuk dilampirkan ke email
+    // Render gambar kartu tiket secara instan via Direct 2D Engine (<25ms, pasti ada gambar HD)
     let imageBase64 = '';
-    const ticketCard = document.getElementById('printableTicket');
-    if (ticketCard && typeof html2canvas === 'function') {
-      try {
-        if (statusBox) {
-          statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan gambar E-Tiket & memproses pengiriman...`;
-        }
-        const canvas = await captureTicketElementAsCanvas(ticketCard);
-        imageBase64 = canvas.toDataURL('image/png');
-      } catch (canvasErr) {
-        console.warn('Gagal render gambar tiket untuk email:', canvasErr);
+    try {
+      if (statusBox) {
+        statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan gambar E-Tiket HD & memproses pengiriman...`;
       }
+      const canvas = await generateDirectTicketCanvas(currentTicketRecord);
+      if (canvas) {
+        imageBase64 = canvas.toDataURL('image/png');
+      }
+    } catch (canvasErr) {
+      console.warn('Gagal render direct canvas tiket:', canvasErr);
+      try {
+        const ticketCard = document.getElementById('printableTicket');
+        const canvas = await captureTicketElementAsCanvas(ticketCard, currentTicketRecord);
+        if (canvas) imageBase64 = canvas.toDataURL('image/png');
+      } catch (e2) {}
     }
 
     if (googleScriptUrl) {
@@ -6135,6 +6146,7 @@ async function sendTicketEmail() {
           body: body,
           registration_code: currentTicketRecord.registration_code || '-',
           image_base64: imageBase64,
+          ticket_image: imageBase64,
           photo_base64: [currentTicketRecord.photo_url, currentTicketRecord.photo_data].find(p => typeof p === 'string' && p.startsWith('data:image')) || ''
         })
       });
@@ -6480,7 +6492,7 @@ function showSuccessRegistrationView(recordOrBatch, type = 'individu') {
   if (type === 'kelompok' && activeSuccessBatch && activeSuccessBatch.length > 1) {
     if (btnDownloadAll) {
       btnDownloadAll.style.display = 'inline-flex';
-      if (batchLabel) batchLabel.textContent = `${activeSuccessBatch.length} Tiket`;
+      if (batchLabel) batchLabel.textContent = `${activeSuccessBatch.length}`; // Dibuat ringkas agar tombol di HP tidak pecah baris
     }
     if (btnDownloadSingle) {
       btnDownloadSingle.innerHTML = '<i class="fa-solid fa-file-arrow-down"></i> Unduh E-Tiket Ini (PNG)';
@@ -6516,6 +6528,61 @@ function showSuccessRegistrationView(recordOrBatch, type = 'individu') {
   }, 100);
 }
 
+
+
+function fitSuccessTicketToViewport() {
+  const ticket = document.getElementById('successClonedPrintableTicket');
+  const viewport = document.querySelector('.success-ticket-viewport');
+  const renderArea = document.getElementById('successTicketRenderArea');
+  if (!ticket || !renderArea) return;
+
+  // Ukur lebar kontainer riil yang tersedia di layar HP
+  const viewportWidth = (viewport ? viewport.clientWidth : 0) || (window.innerWidth - 32);
+  const targetWidth = 860;
+  const targetHeight = 278;
+
+  if (viewportWidth < targetWidth && viewportWidth > 0) {
+    // Beri sedikit margin agar tiket pas presisi dan cantik di layar HP
+    const availableWidth = Math.max(260, viewportWidth - 8);
+    const scale = availableWidth / targetWidth;
+
+    ticket.style.transformOrigin = 'top center';
+    ticket.style.webkitTransformOrigin = 'top center';
+    ticket.style.transform = 'scale(' + scale + ')';
+    ticket.style.webkitTransform = 'scale(' + scale + ')';
+    ticket.style.margin = '0 auto';
+
+    const scaledHeight = Math.ceil(targetHeight * scale);
+    renderArea.style.height = (scaledHeight + 4) + 'px';
+    renderArea.style.width = '100%';
+    renderArea.style.display = 'flex';
+    renderArea.style.justifyContent = 'center';
+    renderArea.style.overflow = 'hidden';
+  } else {
+    ticket.style.transform = 'none';
+    ticket.style.webkitTransform = 'none';
+    ticket.style.margin = '0 auto';
+    renderArea.style.height = 'auto';
+    renderArea.style.width = 'auto';
+    renderArea.style.overflow = 'visible';
+  }
+}
+
+window.addEventListener('resize', () => {
+  if (typeof fitSuccessTicketToViewport === 'function') {
+    fitSuccessTicketToViewport();
+  }
+});
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    if (typeof fitSuccessTicketToViewport === 'function') {
+      fitSuccessTicketToViewport();
+    }
+  }, 100);
+});
+window.fitSuccessTicketToViewport = fitSuccessTicketToViewport;
+
+
 function renderSuccessTicketIntoArea(record) {
   const renderArea = document.getElementById('successTicketRenderArea');
   if (!renderArea || !record) return;
@@ -6539,6 +6606,10 @@ function renderSuccessTicketIntoArea(record) {
         el.id = 'cloned_' + el.id;
       });
       renderArea.appendChild(clonedTicket);
+      fitSuccessTicketToViewport();
+      setTimeout(fitSuccessTicketToViewport, 40);
+      setTimeout(fitSuccessTicketToViewport, 150);
+      setTimeout(fitSuccessTicketToViewport, 30);
     }
   } catch (err) {
     console.warn('Gagal merender pratinjau tiket sukses:', err);
@@ -6638,6 +6709,7 @@ function toggleSuccessTicketPreview(forceOpen = null) {
   }
 
   if (isSuccessTicketPreviewOpen) {
+    setTimeout(fitSuccessTicketToViewport, 50);
     collapsible.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
@@ -6932,24 +7004,29 @@ async function handleSearchPublicTicket() {
           </div>
           <div style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; padding-right: 4px;">
             ${matched.map(p => `
-              <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; transition: border-color 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.03);"
+              <div class="ticket-search-result-card" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; transition: border-color 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.03);"
                 onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#e2e8f0'">
-                <div>
-                  <div style="font-size: 13.5px; font-weight: 800; color: #0f172a;">
-                    ${escapeHtml(p.full_name)}
-                    ${p.age ? `<span style="font-size: 11.5px; font-weight: 600; color: #64748b;">(${p.age} th)</span>` : ''}
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;">
+                    <span style="font-size: 14px; font-weight: 800; color: #0f172a; word-break: break-word;">${escapeHtml(p.full_name)}</span>
+                    ${p.age ? `<span style="font-size: 11px; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; white-space: nowrap;">${p.age} th</span>` : ''}
                   </div>
-                  <div style="font-size: 11.5px; color: #64748b; margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    <span style="background: #e0f2fe; color: #0369a1; font-weight: 800; padding: 1px 6px; border-radius: 4px; font-size: 11px;">
-                      ${escapeHtml(p.registration_code || '-')}
+                  <div style="font-size: 11.5px; color: #64748b; margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span style="background: #e0f2fe; color: #0284c7; font-weight: 800; padding: 2px 7px; border-radius: 5px; font-size: 11px; border: 1px solid #bae6fd; white-space: nowrap;">
+                      <i class="fa-solid fa-ticket"></i> ${escapeHtml(p.registration_code || '-')}
                     </span>
-                    <span>• ${escapeHtml(p.wilayah || 'Mandiri')} ${p.daerah ? `/ ${escapeHtml(p.daerah)}` : ''}</span>
-                    ${p.group_name ? `<span style="color: #059669; font-weight: 700;">(${escapeHtml(p.group_name)})</span>` : ''}
+                    <span style="color: #334155; font-weight: 600;">• ${escapeHtml(p.wilayah || 'Mandiri')}${p.daerah ? ' / ' + escapeHtml(p.daerah) : ''}</span>
                   </div>
+                  ${p.group_name ? `
+                    <div style="font-size: 11px; color: #059669; font-weight: 700; margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+                      <i class="fa-solid fa-user-group"></i> <span>${escapeHtml(p.group_name)}</span>
+                    </div>
+                  ` : ''}
                 </div>
-                <button type="button" onclick="selectSearchPublicTicketResult(${p.id})"
-                  style="background: #183f2b; color: #ffffff; border: none; font-weight: 800; font-size: 11.5px; padding: 6px 12px; border-radius: 6px; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 4px rgba(24,63,43,0.2);">
-                  <i class="fa-solid fa-ticket"></i> Buka Tiket
+                <button type="button" class="btn-open-ticket" onclick="selectSearchPublicTicketResult(${p.id})"
+                  style="background: #183f2b; color: #ffffff; border: none; font-weight: 800; font-size: 12px; padding: 8px 14px; border-radius: 8px; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(24,63,43,0.25); transition: all 0.15s;"
+                  onmouseover="this.style.background='#10b981'" onmouseout="this.style.background='#183f2b'">
+                  <i class="fa-solid fa-eye"></i> Buka Tiket
                 </button>
               </div>
             `).join('')}
@@ -15869,7 +15946,7 @@ function renderFinanceTable() {
           </span>
         </td>
         <td class="col-name" style="white-space: normal; word-break: break-word;">
-          <div style="font-weight: 800; color: #0f172a; font-size: 13.5px;">${p.full_name || '-'}</div>
+          <div style="font-weight: 800; color: #0f172a; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="openRecordPaymentModal(${p.id})" title="Klik untuk Buka Catat Pembayaran & Verifikasi">${p.full_name || '-'} <i class="fa-solid fa-pen-to-square" style="font-size: 11px; color: #10b981;" title="Catat / Verifikasi"></i></div>
           <div style="font-size: 11px; color: #64748b;">Kategori: ${p.age ? (p.age < 5 ? 'Balita' : (p.age <= 15 ? 'Anak' : 'Dewasa')) : 'Dewasa'} (${p.age || '16+'} thn)</div>
           
           <!-- Tombol Bayar Langsung untuk iPad & HP (Tidak perlu geser tabel) -->
