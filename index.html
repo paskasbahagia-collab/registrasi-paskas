@@ -2311,6 +2311,14 @@
                   <div class="fin-stat-label">Pembayaran Diterima</div>
                   <div class="fin-stat-value" style="color: #065f46;" id="financeStatTotalMasuk">Rp 0</div>
                   <div class="fin-stat-sub"><span id="financePctMasuk">0%</span> dari total tagihan</div>
+                  <div style="font-size: 11px; margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span style="background: #fef3c7; color: #92400e; padding: 2px 7px; border-radius: 5px; font-weight: 700; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 4px;">
+                      <i class="fa-solid fa-money-bill-wave"></i> Cash: <strong id="finStatTotalCash">Rp 0</strong>
+                    </span>
+                    <span style="background: #e0f2fe; color: #075985; padding: 2px 7px; border-radius: 5px; font-weight: 700; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 4px;">
+                      <i class="fa-solid fa-building-columns"></i> Transfer: <strong id="finStatTotalTransfer">Rp 0</strong>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2434,10 +2442,12 @@
                   <thead>
                     <tr style="border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 700; text-align: left;">
                       <th style="padding: 8px 6px;">Termin</th>
-                      <th style="padding: 8px 6px;">Target Tagihan</th>
-                      <th style="padding: 8px 6px;">Sudah Diterima</th>
-                      <th style="padding: 8px 6px;">Belum Diterima</th>
-                      <th style="padding: 8px 6px; width: 105px;">Progres</th>
+                      <th style="padding: 8px 6px;">Target</th>
+                      <th style="padding: 8px 6px;">Total Masuk</th>
+                      <th style="padding: 8px 6px; color: #b45309;"><i class="fa-solid fa-money-bill-wave"></i> Cash (Tunai)</th>
+                      <th style="padding: 8px 6px; color: #0284c7;"><i class="fa-solid fa-building-columns"></i> Transfer</th>
+                      <th style="padding: 8px 6px;">Sisa Tagihan</th>
+                      <th style="padding: 8px 6px; width: 95px;">Progres</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2445,6 +2455,8 @@
                       <td style="padding: 10px 6px; font-weight: 700; color: #1e293b;">Termin 1 (DP)</td>
                       <td style="padding: 10px 6px; color: #334155;" id="termin1Target">Rp 0</td>
                       <td style="padding: 10px 6px; color: #059669; font-weight: 700;" id="termin1Sudah">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #b45309; font-weight: 700;" id="termin1Cash">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #0284c7; font-weight: 700;" id="termin1Transfer">Rp 0</td>
                       <td style="padding: 10px 6px; color: #64748b;" id="termin1Belum">Rp 0</td>
                       <td style="padding: 10px 6px;">
                         <div style="display: flex; align-items: center; gap: 6px;">
@@ -2459,6 +2471,8 @@
                       <td style="padding: 10px 6px; font-weight: 700; color: #1e293b;">Termin 2</td>
                       <td style="padding: 10px 6px; color: #334155;" id="termin2Target">Rp 0</td>
                       <td style="padding: 10px 6px; color: #059669; font-weight: 700;" id="termin2Sudah">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #b45309; font-weight: 700;" id="termin2Cash">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #0284c7; font-weight: 700;" id="termin2Transfer">Rp 0</td>
                       <td style="padding: 10px 6px; color: #64748b;" id="termin2Belum">Rp 0</td>
                       <td style="padding: 10px 6px;">
                         <div style="display: flex; align-items: center; gap: 6px;">
@@ -2473,6 +2487,8 @@
                       <td style="padding: 10px 6px; font-weight: 700; color: #1e293b;">Pelunasan</td>
                       <td style="padding: 10px 6px; color: #334155;" id="termin3Target">Rp 0</td>
                       <td style="padding: 10px 6px; color: #059669; font-weight: 700;" id="termin3Sudah">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #b45309; font-weight: 700;" id="termin3Cash">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #0284c7; font-weight: 700;" id="termin3Transfer">Rp 0</td>
                       <td style="padding: 10px 6px; color: #64748b;" id="termin3Belum">Rp 0</td>
                       <td style="padding: 10px 6px;">
                         <div style="display: flex; align-items: center; gap: 6px;">
@@ -2486,7 +2502,9 @@
                     <tr style="background: #f8fafc; font-weight: 900;">
                       <td style="padding: 10px 6px; color: #0f172a;">Total</td>
                       <td style="padding: 10px 6px; color: #0f172a;" id="terminTotalTarget">Rp 0</td>
-                      <td style="padding: 10px 6px; color: #0f172a;" id="terminTotalSudah">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #059669; font-weight: 900;" id="terminTotalSudah">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #b45309; font-weight: 900;" id="terminTotalCash">Rp 0</td>
+                      <td style="padding: 10px 6px; color: #0284c7; font-weight: 900;" id="terminTotalTransfer">Rp 0</td>
                       <td style="padding: 10px 6px; color: #0f172a;" id="terminTotalBelum">Rp 0</td>
                       <td style="padding: 10px 6px;">
                         <div style="display: flex; align-items: center; gap: 6px;">
@@ -2583,6 +2601,11 @@
                 <option value="balita">Balita (&lt; 5 Tahun)</option>
                 <option value="anak">Anak-anak (5 - 15 Tahun)</option>
                 <option value="dewasa">Dewasa (&gt; 15 Tahun)</option>
+              </select>
+              <select id="finFilterMetode" class="fin-select-filter" onchange="filterFinanceData()" title="Filter Metode Pembayaran" style="height: 38px; background: #ffffff; border: 1.5px solid #10b981; border-radius: 8px; padding: 0 12px; font-size: 13px; font-weight: 700; color: #065f46;">
+                <option value="all">Semua Metode</option>
+                <option value="cash">💵 Khusus Cash (Tunai)</option>
+                <option value="transfer">💳 Khusus Transfer / QRIS</option>
               </select>
               <select id="finFilterTermin" class="fin-select-filter" onchange="filterFinanceData()" title="Filter Termin" style="height: 38px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #334155;">
                 <option value="all">Semua Termin</option>
@@ -6367,7 +6390,7 @@ CREATE TABLE IF NOT EXISTS registrations (
             <label style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border: 1.5px solid #e2e8f0; border-radius: 10px; cursor: pointer; text-align: center; background: #ffffff; transition: all 0.2s;" class="method-option-card">
               <input type="radio" name="quickPayMethodRadio" value="Tunai" style="position: absolute; opacity: 0;" onchange="updateQuickPayMethodStyle(this)">
               <i class="fa-solid fa-money-bill-wave" style="font-size: 18px; color: #059669;"></i>
-              <span style="font-size: 12px; font-weight: 800; color: #1e293b;">Tunai</span>
+              <span style="font-size: 12px; font-weight: 800; color: #1e293b;">Cash (Tunai)</span>
             </label>
           </div>
         </div>
@@ -6503,6 +6526,7 @@ CREATE TABLE IF NOT EXISTS registrations (
           <select id="payModalMethodSelect" class="form-control" style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; min-height: 46px; height: 46px; padding: 10px 14px; font-weight: 600; line-height: normal; box-sizing: border-box;">
             <option value="Transfer" selected>Transfer</option>
             <option value="QRIS">QRIS</option>
+            <option value="Cash">Cash (Tunai)</option>
             <option value="Tunai">Tunai</option>
           </select>
         </div>

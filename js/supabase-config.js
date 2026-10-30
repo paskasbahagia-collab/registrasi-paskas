@@ -273,6 +273,10 @@ class PaskasDataService {
             try {
               if (row.setting_value) safeStorage.setItem('paskas_finance_sync', row.setting_value);
             } catch (e) { }
+          } else if (row.setting_key === 'paskas_wa_broadcast_sent') {
+            try {
+              if (row.setting_value) safeStorage.setItem('paskas_wa_broadcast_sent', row.setting_value);
+            } catch (e) { }
           } else if (row.setting_key === 'is_room_group_enabled' || row.setting_key === 'paskas_room_group_enabled') {
             try {
               if (row.setting_value) safeStorage.setItem('paskas_room_group_enabled', row.setting_value);
@@ -1781,6 +1785,45 @@ class PaskasDataService {
       await this.saveCloudSetting('paskas_finance_sync', syncMap);
     } catch (e) {
       console.warn('Backup keuangan cloud sync:', e);
+    }
+  }
+
+  async syncWhatsAppSentCloud(id = null) {
+    try {
+      let syncMap = {};
+      if (this.isSupabaseConnected && this.supabaseClient) {
+        try {
+          const { data: row } = await this.supabaseClient
+            .from('app_settings')
+            .select('setting_value')
+            .eq('setting_key', 'paskas_wa_broadcast_sent')
+            .single();
+          if (row && row.setting_value) {
+            syncMap = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
+          }
+        } catch (e) {}
+      }
+      if (!syncMap || typeof syncMap !== 'object') syncMap = {};
+      const raw = safeStorage.getItem('paskas_wa_broadcast_sent');
+      if (raw) {
+        try {
+          const localMap = JSON.parse(raw);
+          if (localMap && typeof localMap === 'object') {
+            syncMap = { ...localMap, ...syncMap };
+          }
+        } catch (e) {}
+      }
+      if (id) {
+        syncMap[String(id)] = new Date().toISOString();
+      }
+      safeStorage.setItem('paskas_wa_broadcast_sent', JSON.stringify(syncMap));
+      if (id) {
+        await this.saveCloudSetting('paskas_wa_broadcast_sent', syncMap);
+      }
+      return syncMap;
+    } catch (e) {
+      console.warn('Sync WA broadcast sent error:', e);
+      return {};
     }
   }
 

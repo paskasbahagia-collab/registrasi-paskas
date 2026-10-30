@@ -8010,13 +8010,21 @@ function markWhatsAppSent(id) {
     const sentMap = getWhatsAppSentMap();
     sentMap[String(id)] = new Date().toISOString();
     safeStorage.setItem('paskas_wa_broadcast_sent', JSON.stringify(sentMap));
+    if (window.dataService && typeof window.dataService.syncWhatsAppSentCloud === 'function') {
+      window.dataService.syncWhatsAppSentCloud(id).catch(e => console.warn('Cloud sync WA error:', e));
+    }
   } catch (e) {}
 }
 
-function resetWhatsAppSentHistory() {
+async function resetWhatsAppSentHistory() {
   if (!confirm('Apakah Anda yakin ingin mereset seluruh riwayat status pengiriman WhatsApp? Semua peserta akan kembali bertanda "Belum Dikirim".')) return;
   try {
     safeStorage.removeItem('paskas_wa_broadcast_sent');
+    if (window.dataService && typeof window.dataService.saveCloudSetting === 'function') {
+      try {
+        await window.dataService.saveCloudSetting('paskas_wa_broadcast_sent', {});
+      } catch (e) {}
+    }
     renderWhatsAppBroadcastList();
     showToast('Riwayat status broadcast WhatsApp berhasil direset.', 'info');
   } catch (e) {}
@@ -8111,6 +8119,13 @@ function openWhatsAppBroadcastModal() {
 
   renderWhatsAppBroadcastList();
   modal.classList.add('active');
+
+  // Tarik data status broadcast terbaru dari Cloud Supabase agar sinkron antar-perangkat
+  if (window.dataService && typeof window.dataService.syncWhatsAppSentCloud === 'function') {
+    window.dataService.syncWhatsAppSentCloud().then(() => {
+      renderWhatsAppBroadcastList();
+    }).catch(() => {});
+  }
 }
 
 function closeWhatsAppBroadcastModal() {
@@ -15086,8 +15101,14 @@ function renderFinanceView() {
   let countBelum = 0;
 
   let sudahT1 = 0;
+  let sudahT1_cash = 0;
+  let sudahT1_transfer = 0;
   let sudahT2 = 0;
+  let sudahT2_cash = 0;
+  let sudahT2_transfer = 0;
   let sudahT3 = 0;
+  let sudahT3_cash = 0;
+  let sudahT3_transfer = 0;
 
   list.forEach(p => {
     const fee = calculateParticipantFee(p);
@@ -15129,14 +15150,25 @@ function renderFinanceView() {
         countBelum++;
       }
 
-      // Distribute paid to termin 1, 2, 3
+      // Distribute paid to termin 1, 2, 3 (Cash vs Transfer breakdown)
       if (instList.length > 0) {
         instList.forEach(t => {
           const tNum = Number(t.termin || 1);
           const amt = Number(t.amount || 0);
-          if (tNum === 1) sudahT1 += amt;
-          else if (tNum === 2) sudahT2 += amt;
-          else sudahT3 += amt;
+          const isC = /cash|tunai|kontan/i.test(t.method || '');
+          if (tNum === 1) {
+            sudahT1 += amt;
+            if (isC) sudahT1_cash += amt;
+            else sudahT1_transfer += amt;
+          } else if (tNum === 2) {
+            sudahT2 += amt;
+            if (isC) sudahT2_cash += amt;
+            else sudahT2_transfer += amt;
+          } else {
+            sudahT3 += amt;
+            if (isC) sudahT3_cash += amt;
+            else sudahT3_transfer += amt;
+          }
         });
       } else if (paid > 0) {
         const pT1 = Math.min(paid, Math.round(fee * 0.32));
@@ -15146,6 +15178,9 @@ function renderFinanceView() {
         sudahT1 += pT1;
         sudahT2 += pT2;
         sudahT3 += pT3;
+        sudahT1_transfer += pT1;
+        sudahT2_transfer += pT2;
+        sudahT3_transfer += pT3;
       }
     }
   });
@@ -15202,6 +15237,8 @@ function renderFinanceView() {
   // Termin 1
   setElemText('termin1Target', `Rp ${targetT1.toLocaleString('id-ID')}`);
   setElemText('termin1Sudah', `Rp ${sudahT1.toLocaleString('id-ID')}`);
+  setElemText('termin1Cash', `Rp ${sudahT1_cash.toLocaleString('id-ID')}`);
+  setElemText('termin1Transfer', `Rp ${sudahT1_transfer.toLocaleString('id-ID')}`);
   setElemText('termin1Belum', `Rp ${belumT1.toLocaleString('id-ID')}`);
   setElemText('termin1Pct', `${pctT1}%`);
   setElemWidth('termin1ProgressFill', `${pctT1}%`);
@@ -15209,6 +15246,8 @@ function renderFinanceView() {
   // Termin 2
   setElemText('termin2Target', `Rp ${targetT2.toLocaleString('id-ID')}`);
   setElemText('termin2Sudah', `Rp ${sudahT2.toLocaleString('id-ID')}`);
+  setElemText('termin2Cash', `Rp ${sudahT2_cash.toLocaleString('id-ID')}`);
+  setElemText('termin2Transfer', `Rp ${sudahT2_transfer.toLocaleString('id-ID')}`);
   setElemText('termin2Belum', `Rp ${belumT2.toLocaleString('id-ID')}`);
   setElemText('termin2Pct', `${pctT2}%`);
   setElemWidth('termin2ProgressFill', `${pctT2}%`);
@@ -15216,16 +15255,25 @@ function renderFinanceView() {
   // Pelunasan
   setElemText('termin3Target', `Rp ${targetT3.toLocaleString('id-ID')}`);
   setElemText('termin3Sudah', `Rp ${sudahT3.toLocaleString('id-ID')}`);
+  setElemText('termin3Cash', `Rp ${sudahT3_cash.toLocaleString('id-ID')}`);
+  setElemText('termin3Transfer', `Rp ${sudahT3_transfer.toLocaleString('id-ID')}`);
   setElemText('termin3Belum', `Rp ${belumT3.toLocaleString('id-ID')}`);
   setElemText('termin3Pct', `${pctT3}%`);
   setElemWidth('termin3ProgressFill', `${pctT3}%`);
 
-  // Total Row
+  // Total Row & Top Card Breakdown
+  const totalCash = sudahT1_cash + sudahT2_cash + sudahT3_cash;
+  const totalTransfer = sudahT1_transfer + sudahT2_transfer + sudahT3_transfer;
   setElemText('terminTotalTarget', `Rp ${totalTagihan.toLocaleString('id-ID')}`);
   setElemText('terminTotalSudah', `Rp ${totalMasuk.toLocaleString('id-ID')}`);
+  setElemText('terminTotalCash', `Rp ${totalCash.toLocaleString('id-ID')}`);
+  setElemText('terminTotalTransfer', `Rp ${totalTransfer.toLocaleString('id-ID')}`);
   setElemText('terminTotalBelum', `Rp ${totalPiutang.toLocaleString('id-ID')}`);
   setElemText('terminTotalPct', `${pctMasuk}%`);
   setElemWidth('terminTotalProgressFill', `${pctMasuk}%`);
+
+  setElemText('finStatTotalCash', `Rp ${totalCash.toLocaleString('id-ID')}`);
+  setElemText('finStatTotalTransfer', `Rp ${totalTransfer.toLocaleString('id-ID')}`);
 
   // 4. Render Table
   renderFinanceTable();
@@ -15338,6 +15386,7 @@ function renderFinanceTable() {
   const query = (document.getElementById('financeSearchInput')?.value || '').toLowerCase().trim();
   const rombonganVal = document.getElementById('finFilterRombongan')?.value || 'all';
   const kategoriVal = document.getElementById('finFilterKategori')?.value || 'all';
+  const metodeVal = document.getElementById('finFilterMetode')?.value || 'all';
   const terminVal = document.getElementById('finFilterTermin')?.value || 'all';
   const statusVal = document.getElementById('finFilterStatus')?.value || currentFinanceFilter || 'all';
 
@@ -15361,6 +15410,25 @@ function renderFinanceTable() {
       if (!(age >= 5 && age <= 15)) return false;
     } else if (kategoriVal === 'dewasa') {
       if (age > 0 && age <= 15) return false;
+    }
+
+    // Filter Metode Pembayaran (Cash vs Transfer)
+    if (metodeVal !== 'all') {
+      let inst = [];
+      try {
+        inst = Array.isArray(p.payment_installments) ? p.payment_installments : JSON.parse(p.payment_installments || '[]');
+      } catch (e) {}
+      if (metodeVal === 'cash') {
+        const hasCash = inst.some(t => /cash|tunai|kontan/i.test(t.method || ''));
+        if (!hasCash) return false;
+      } else if (metodeVal === 'transfer') {
+        const hasTf = inst.some(t => !(/cash|tunai|kontan/i.test(t.method || '')));
+        if (!hasTf && paid > 0 && inst.length === 0) {
+          // default transfer
+        } else if (!hasTf) {
+          return false;
+        }
+      }
     }
 
     // Termin Filter
@@ -15525,7 +15593,16 @@ function renderFinanceTable() {
           <div style="font-size: 11px; color: #64748b;">${p.wilayah || '-'}</div>
         </td>
         <td style="font-weight: 800; color: #1e293b;">Rp ${fee.toLocaleString('id-ID')}</td>
-        <td style="font-weight: 800; color: #059669;">Rp ${paid.toLocaleString('id-ID')}</td>
+        <td style="font-weight: 800; color: #059669;">
+          Rp ${paid.toLocaleString('id-ID')}
+          ${paid > 0 && instList.length > 0 ? (
+            instList.some(x => /cash|tunai|kontan/i.test(x.method || ''))
+              ? (instList.some(x => !(/cash|tunai|kontan/i.test(x.method || '')))
+                  ? '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px;"><i class="fa-solid fa-money-bill-wave"></i> Cash + TF</div>'
+                  : '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px;"><i class="fa-solid fa-money-bill-wave"></i> Cash</div>')
+              : '<div style="font-size: 10px; font-weight: 600; color: #0284c7; margin-top: 2px;"><i class="fa-solid fa-building-columns"></i> Transfer</div>'
+          ) : ''}
+        </td>
         <td style="font-weight: 800; color: #dc2626;">Rp ${remaining.toLocaleString('id-ID')}</td>
         <td>${statusBadge}</td>
         <td style="text-align: center;">${verifyColHtml}</td>
