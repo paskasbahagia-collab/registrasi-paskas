@@ -15579,13 +15579,13 @@ function renderFinanceTable() {
 
     return `
       <tr>
-        <td style="font-weight: 700; color: #64748b;">${idx + 1}</td>
-        <td>
-          <span style="font-family: monospace; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">
+        <td class="col-fit" style="font-weight: 700; color: #64748b; text-align: center; white-space: nowrap;">${idx + 1}</td>
+        <td class="col-fit" style="text-align: center; white-space: nowrap;">
+          <span style="font-family: monospace; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 7px; border-radius: 4px;">
             ${p.registration_code || '-'}
           </span>
         </td>
-        <td>
+        <td class="col-flex" style="white-space: normal; word-break: break-word;">
           <div style="font-weight: 800; color: #0f172a; font-size: 13.5px;">${p.full_name || '-'}</div>
           <div style="font-size: 11px; color: #64748b;">Kategori: ${p.age ? (p.age < 5 ? 'Balita' : (p.age <= 15 ? 'Anak' : 'Dewasa')) : 'Dewasa'} (${p.age || '16+'} thn)</div>
           
@@ -15623,25 +15623,30 @@ function renderFinanceTable() {
             </div>
           </div>
         </td>
-        <td>
+        <td class="col-flex" style="white-space: normal; word-break: break-word;">
           <div style="font-weight: 700; color: #1e293b; font-size: 13px;">${p.group_name || 'Mandiri'}</div>
           <div style="font-size: 11px; color: #64748b;">${p.wilayah || '-'}</div>
         </td>
-        <td style="font-weight: 800; color: #1e293b;">Rp ${fee.toLocaleString('id-ID')}</td>
-        <td style="font-weight: 800; color: #059669;">
+        <td class="col-fit" style="font-weight: 800; color: #1e293b; text-align: right; white-space: nowrap;">Rp ${fee.toLocaleString('id-ID')}</td>
+        <td class="col-fit" style="font-weight: 800; color: #059669; text-align: right; white-space: nowrap;">
           Rp ${paid.toLocaleString('id-ID')}
           ${paid > 0 && instList.length > 0 ? (
             instList.some(x => /cash|tunai|kontan/i.test(x.method || ''))
               ? (instList.some(x => !(/cash|tunai|kontan/i.test(x.method || '')))
-                  ? '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px;"><i class="fa-solid fa-money-bill-wave"></i> Cash + TF</div>'
-                  : '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px;"><i class="fa-solid fa-money-bill-wave"></i> Cash</div>')
-              : '<div style="font-size: 10px; font-weight: 600; color: #0284c7; margin-top: 2px;"><i class="fa-solid fa-building-columns"></i> Transfer</div>'
+                  ? '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px; text-align: right;"><i class="fa-solid fa-money-bill-wave"></i> Cash + TF</div>'
+                  : '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px; text-align: right;"><i class="fa-solid fa-money-bill-wave"></i> Cash</div>')
+              : '<div style="font-size: 10px; font-weight: 600; color: #0284c7; margin-top: 2px; text-align: right;"><i class="fa-solid fa-building-columns"></i> Transfer</div>'
           ) : ''}
+          ${latestNote ? `
+            <div style="font-size: 10.5px; font-weight: 500; color: #475569; margin-top: 4px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; white-space: pre-wrap; word-break: break-word; line-height: 1.35; text-align: left; max-width: 220px;" title="${escapeHtml(latestNote)}">
+              <i class="fa-regular fa-note-sticky" style="color: #64748b; margin-right: 3px;"></i>${escapeHtml(latestNote)}
+            </div>
+          ` : ''}
         </td>
-        <td style="font-weight: 800; color: #dc2626;">Rp ${remaining.toLocaleString('id-ID')}</td>
-        <td>${statusBadge}</td>
-        <td style="text-align: center;">${verifyColHtml}</td>
-        <td class="sticky-action-col" style="text-align: center;">
+        <td class="col-fit" style="font-weight: 800; color: #dc2626; text-align: right; white-space: nowrap;">Rp ${remaining.toLocaleString('id-ID')}</td>
+        <td class="col-fit" style="text-align: center; white-space: nowrap;">${statusBadge}</td>
+        <td class="col-fit" style="text-align: center; white-space: nowrap;">${verifyColHtml}</td>
+        <td class="sticky-action-col col-fit" style="text-align: center; white-space: nowrap;">
           ${remaining <= 0 ? `
             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap;">
               ${isVerified ? `

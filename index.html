@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=123.0">
+  <link rel="stylesheet" href="css/style.css?v=124.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -2650,16 +2650,16 @@
               <table class="data-table" id="financeTable">
                 <thead>
                   <tr>
-                    <th style="width: 45px;">No</th>
-                    <th style="width: 90px;">No Tiket</th>
-                    <th style="min-width: 170px;">Nama &amp; Kategori</th>
-                    <th style="min-width: 130px;">Rombongan</th>
-                    <th style="width: 120px;">Tagihan</th>
-                    <th style="width: 120px;">Terbayar</th>
-                    <th style="width: 120px;">Sisa</th>
-                    <th style="width: 110px;">Status</th>
-                    <th style="width: 145px; text-align: center;">Verifikasi</th>
-                    <th class="sticky-action-col" style="min-width: 165px; text-align: center;">Aksi Pembayaran</th>
+                    <th class="col-fit" style="width: 1%; white-space: nowrap; text-align: center;">No</th>
+                    <th class="col-fit" style="width: 1%; white-space: nowrap; text-align: center;">No Tiket</th>
+                    <th class="col-flex" style="min-width: 170px;">Nama &amp; Kategori</th>
+                    <th class="col-flex" style="min-width: 120px;">Rombongan</th>
+                    <th class="col-fit" style="width: 1%; white-space: nowrap; text-align: right;">Tagihan</th>
+                    <th class="col-fit" style="width: 1%; white-space: nowrap; text-align: right;">Terbayar</th>
+                    <th class="col-fit" style="width: 1%; white-space: nowrap; text-align: right;">Sisa</th>
+                    <th class="col-fit" style="width: 1%; white-space: nowrap; text-align: center;">Status</th>
+                    <th class="col-fit" style="width: 1%; white-space: nowrap; text-align: center;">Verifikasi</th>
+                    <th class="sticky-action-col col-fit" style="width: 1%; white-space: nowrap; text-align: center;">Aksi Pembayaran</th>
                   </tr>
                 </thead>
                 <tbody id="financeTableBody">
@@ -6433,7 +6433,7 @@ CREATE TABLE IF NOT EXISTS registrations (
           <label style="display: block; font-size: 12.5px; font-weight: 700; color: #183f2b; margin-bottom: 6px;">
             Catatan / Keterangan (Opsional):
           </label>
-          <input type="text" id="quickPayNotesInput" class="form-control" placeholder="Contoh: Bukti transfer via bank / titip bendahara..." style="font-size: 13px;">
+          <textarea id="quickPayNotesInput" class="form-control" rows="2" placeholder="Contoh: Bukti transfer via bank / titip bendahara..." style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13px; min-height: 65px; padding: 10px 14px; line-height: 1.5; box-sizing: border-box; resize: vertical; white-space: pre-wrap; font-family: inherit; width: 100%;"></textarea>
         </div>
 
         <!-- Tombol Aksi -->
@@ -6560,7 +6560,11 @@ CREATE TABLE IF NOT EXISTS registrations (
               </button>
             </div>
           </div>
-          <input type="text" id="payModalNotesInput" class="form-control" placeholder="Contoh: Bukti transfer via bank..." style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; min-height: 46px; height: 46px; padding: 10px 14px; line-height: normal; box-sizing: border-box;">
+          <textarea id="payModalNotesInput" class="form-control" rows="3" placeholder="Tuliskan catatan atau rincian pembayaran di sini (bisa tekan Enter untuk paragraf baru / penomoran)..." style="background: #ffffff !important; color: #0f172a !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px; font-size: 13.5px; min-height: 85px; padding: 10px 14px; line-height: 1.55; box-sizing: border-box; resize: vertical; white-space: pre-wrap; font-family: inherit; width: 100%;"></textarea>
+          <div style="font-size: 11px; color: #64748b; margin-top: 4px; display: flex; align-items: center; gap: 5px;">
+            <i class="fa-solid fa-align-left" style="color: #94a3b8;"></i>
+            <span>Dapat memuat teks multi-baris / paragraf dengan nyaman tanpa mengubah data tersimpan.</span>
+          </div>
           <div id="payModalProofStatusInfo" style="font-size: 11.5px; color: #64748b; margin-top: 6px; display: flex; align-items: center; justify-content: space-between;">
             <span id="payModalProofFileName"><i class="fa-regular fa-file-image"></i> Belum ada dokumen pembayaran yang diupload</span>
             <button type="button" id="payModalRemoveProofBtn" onclick="clearSelectedPaymentProof('record')" style="display: none; background: none; border: none; color: #dc2626; font-weight: 700; font-size: 11px; cursor: pointer; padding: 0;">
@@ -6612,7 +6616,7 @@ CREATE TABLE IF NOT EXISTS registrations (
         </div>
         <div>
           <span style="color: #64748b; display: block; font-size: 11px; font-weight: 700;">KETERANGAN / METODE:</span>
-          <strong id="proofViewerNotes" style="color: #1e293b; font-size: 13px;">-</strong>
+          <div id="proofViewerNotes" style="color: #1e293b; font-size: 13px; font-weight: 700; white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin-top: 2px;">-</div>
         </div>
         <a id="proofViewerOpenNewTab" href="#" target="_blank" rel="noopener" style="background: #ffffff; border: 1px solid #cbd5e1; color: #0284c7; font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
           <i class="fa-solid fa-up-right-from-square"></i> Buka Penuh
@@ -6652,6 +6656,6 @@ CREATE TABLE IF NOT EXISTS registrations (
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
   <script src="js/supabase-config.js?v=137.0"></script>
-  <script src="js/app.js?v=176.0"></script>
+  <script src="js/app.js?v=177.0"></script>
 </body>
 </html>
