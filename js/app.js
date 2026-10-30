@@ -7979,7 +7979,7 @@ async function submitEditAttendee(e) {
 // ===================================================================
 // PUSAT BROADCAST WHATSAPP & PENGIRIMAN UNDANGAN GRUP WA
 // ===================================================================
-const DEFAULT_WA_GROUP_LINK = 'https://chat.whatsapp.com/D0PK0ouycVOCAnmTg68FF8';
+const DEFAULT_WA_GROUP_LINK = 'https://chat.whatsapp.com/LUxyZpvFUQ13DzoajCflRK?s=cl&p=a&mlu=4&ilr=4&iam=2';
 
 const DEFAULT_WA_BROADCAST_TEMPLATE = 
 `Assalamu'alaikum Warahmatullahi Wabarakatuh,
@@ -7989,7 +7989,7 @@ Bapak/Ibu/Sahabat Fillah *{nama}*{rombongan},
 Alhamdulillah, pendaftaran antum/antunna di *Silaturahmi Akbar PASKAS BAHAGIA* (No. Tiket: *{kode}*) telah resmi tercatat di sistem panitia.
 
 Agar koordinasi penjemputan, pembagian kamar, seragam, dan jadwal kegiatan berjalan lancar, kami mengundang antum/antunna untuk langsung bergabung ke Grup WhatsApp Resmi Peserta melalui tautan berikut:
-👉 {link_grup}
+👉 https://chat.whatsapp.com/LUxyZpvFUQ13DzoajCflRK?s=cl&p=a&mlu=4&ilr=4&iam=2
 
 Sampai jumpa di PASKAS Bahagia. Semoga Allah SWT memudahkan setiap langkah perjalanan kita dan mempertemukan kita dalam keberkahan.
 
@@ -8036,7 +8036,8 @@ function formatWhatsAppInviteMessage(attendee, customTemplate = null) {
     .replace(/{nama}/g, name)
     .replace(/{kode}/g, code)
     .replace(/{rombongan}/g, group)
-    .replace(/{link_grup}/g, waGroupLink);
+    .replace(/{link_grup}/g, waGroupLink)
+    .replace(/https:\/\/chat\.whatsapp\.com\/D0PK0ouycVOCAnmTg68FF8[^\s]*/g, waGroupLink);
 }
 
 function sendWhatsAppInvite(id, isFromBroadcastModal = false) {
@@ -8082,10 +8083,12 @@ function openWhatsAppBroadcastModal() {
   const modal = document.getElementById('modalWhatsAppBroadcast');
   if (!modal) return;
 
-  // Inisialisasi teks template jika kosong
+  // Inisialisasi teks template jika kosong atau jika masih memuat template lama / placeholder {link_grup}
   const txtArea = document.getElementById('waBroadcastTemplateText');
-  if (txtArea && !txtArea.value.trim()) {
-    txtArea.value = DEFAULT_WA_BROADCAST_TEMPLATE;
+  if (txtArea) {
+    if (!txtArea.value.trim() || txtArea.value.includes('D0PK0ouycVOCAnmTg68FF8') || txtArea.value.includes('{link_grup}')) {
+      txtArea.value = DEFAULT_WA_BROADCAST_TEMPLATE;
+    }
   }
 
   // Populate filter wilayah
