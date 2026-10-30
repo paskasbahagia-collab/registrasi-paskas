@@ -13552,10 +13552,8 @@ input:checked + .slider:before {
 
 
 /* Modal Pembayaran & Pelunasan: Input Terang, Elegan & Selaras */
-#modalRecordPayment .form-control,
 #modalRecordPayment input.form-control,
 #modalRecordPayment select.form-control,
-#modalQuickPayConfirm .form-control,
 #modalQuickPayConfirm input.form-control,
 #modalQuickPayConfirm select.form-control {
   background: #ffffff !important;
@@ -13571,6 +13569,23 @@ input:checked + .slider:before {
   box-sizing: border-box !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   display: block !important;
+}
+
+#modalRecordPayment textarea.form-control {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  border-radius: 0 0 10px 10px !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  height: auto !important;
+  min-height: 190px !important;
+  padding: 14px 16px !important;
+  line-height: 1.65 !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  display: block !important;
+  resize: vertical !important;
 }
 
 #modalRecordPayment select.form-control,
