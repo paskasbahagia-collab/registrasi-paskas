@@ -151,10 +151,6 @@
             <i class="fa-solid fa-user-plus"></i>
             <span>Registrasi</span>
           </button>
-          <button class="nav-link" onclick="openPublicTicketSearch()" title="Cek Tiket &amp; Status Pendaftaran Anda">
-            <i class="fa-solid fa-ticket"></i>
-            <span>Cek Tiket</span>
-          </button>
           <button class="nav-link admin-only" data-page="rekap" onclick="navigateTo('rekap')">
             <i class="fa-solid fa-chart-pie"></i>
             <span>Rekap Data</span>
@@ -192,9 +188,6 @@
       </button>
       <button class="mobile-link" data-page="registration" onclick="navigateTo('registration'); toggleMobileNav();">
         <i class="fa-solid fa-user-plus"></i> Registrasi Peserta
-      </button>
-      <button class="mobile-link" onclick="openPublicTicketSearch(); toggleMobileNav();">
-        <i class="fa-solid fa-ticket"></i> Cek Tiket Peserta
       </button>
       <button class="mobile-link admin-only" data-page="rekap" onclick="navigateTo('rekap'); toggleMobileNav();">
         <i class="fa-solid fa-chart-pie"></i> Rekap Data Peserta
@@ -284,10 +277,6 @@
               <button class="btn btn-primary btn-glow" onclick="navigateTo('registration')">
                 <i class="fa-solid fa-ticket"></i>
                 <span>Daftar Sekarang</span>
-              </button>
-              <button type="button" class="btn btn-glass-gold" onclick="openPublicTicketSearch()" style="display: inline-flex;">
-                <i class="fa-solid fa-magnifying-glass text-gold"></i>
-                <span>Cek Tiket Saya</span>
               </button>
               <button type="button" class="btn btn-glass-gold" id="heroAnnouncementBtn" onclick="openHeroAnnouncement()" style="display: none;">
                 <i class="fa-solid fa-bullhorn text-gold"></i>
@@ -6777,6 +6766,6 @@ CREATE TABLE IF NOT EXISTS registrations (
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
   <script src="js/supabase-config.js?v=138.0"></script>
-  <script src="js/app.js?v=183.0"></script>
+  <script src="js/app.js?v=184.0"></script>
 </body>
 </html>
