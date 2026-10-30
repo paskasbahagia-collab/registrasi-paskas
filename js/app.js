@@ -12849,12 +12849,27 @@ function renderFormattedNarrationHTML(rawText) {
   }).join('');
 }
 
+function normalizePaymentNoteLines(text) {
+  if (!text) return '';
+  let s = String(text);
+  // 1. Tangani jika penomoran menempel langsung tanpa spasi (cth: NAMA1. PKB-416)
+  s = s.replace(/([^\n\d])(\d{1,3}[\.)]\s+)/g, '$1\n$2');
+  // 2. Tangani penomoran dengan spasi inline (cth: Saiful Mochamad 2. PKB-417)
+  s = s.replace(/([^\n])\s+(\d{1,3}[\.)]\s+)/g, '$1\n$2');
+  // 3. Tangani poin bullet inline (cth: Item 1 • Item 2)
+  s = s.replace(/([^\n])\s+([•\-\*]\s+)/g, '$1\n$2');
+  return s;
+}
+
 function renderFormattedPaymentNotes(rawText) {
   if (!rawText || !rawText.trim()) {
     return `<div style="color: #94a3b8; font-style: italic; font-size: 12.5px; padding: 4px 0;"><i class="fa-regular fa-comment-dots" style="margin-right: 6px;"></i>Tidak ada catatan khusus yang dilampirkan pada pembayaran ini.</div>`;
   }
   
-  const paras = rawText.split(/\r?\n\s*\r?\n/).filter(p => p.trim());
+  // Normalisasi baris agar penomoran inline atau poin otomatis terpecah rapi per baris
+  const normalizedText = normalizePaymentNoteLines(rawText);
+  
+  const paras = normalizedText.split(/\r?\n\s*\r?\n/).filter(p => p.trim());
   return paras.map(para => {
     const lines = para.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
@@ -12879,22 +12894,22 @@ function renderFormattedPaymentNotes(rawText) {
       // Check if line is a bullet item: starts with •, -, *, or . followed by space
       const bulletMatch = l.match(/^([-•*]|\.)\s+(.+)$/);
       if (bulletMatch) {
-        return `<div style="display: flex; align-items: baseline; gap: 8px; margin: 3px 0 3px 4px;">
+        return `<div style="display: flex; align-items: baseline; gap: 8px; margin: 3px 0; padding: 3px 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #f1f5f9;">
           <i class="fa-solid fa-circle-check" style="font-size: 11.5px; color: #10b981; flex-shrink: 0; transform: translateY(1px);"></i>
-          <span style="color: #1e293b; font-size: 13px; line-height: 1.55;">${bulletMatch[2]}</span>
+          <span style="color: #0f172a; font-size: 13px; font-weight: 600; line-height: 1.55;">${bulletMatch[2]}</span>
         </div>`;
       }
 
       // Check if line is numbered item: e.g. 1. or 1)
       const numMatch = l.match(/^(\d+[\.)])\s+(.+)$/);
       if (numMatch) {
-        return `<div style="display: flex; align-items: baseline; gap: 8px; margin: 3px 0 3px 4px;">
-          <span style="font-weight: 800; color: #0284c7; font-size: 12px; min-width: 18px;">${numMatch[1]}</span>
-          <span style="color: #1e293b; font-size: 13px; line-height: 1.55;">${numMatch[2]}</span>
+        return `<div style="display: flex; align-items: baseline; gap: 8px; margin: 3px 0; padding: 3px 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #f1f5f9;">
+          <span style="font-weight: 900; color: #0284c7; background: #e0f2fe; border: 1px solid #bae6fd; font-size: 11.5px; min-width: 24px; padding: 1px 5px; border-radius: 4px; text-align: center;">${numMatch[1]}</span>
+          <span style="color: #0f172a; font-size: 13px; font-weight: 600; line-height: 1.55;">${numMatch[2]}</span>
         </div>`;
       }
 
-      return `<div style="line-height: 1.6; color: #1e293b; font-size: 13px;">${l}</div>`;
+      return `<div style="line-height: 1.6; color: #1e293b; font-size: 13px; font-weight: 700; margin: 4px 0 6px 0;">${l}</div>`;
     });
 
     return `<div style="margin-bottom: 8px;">${formattedLines.join('')}</div>`;
@@ -16099,8 +16114,8 @@ function renderPayModalInstallmentsList(p, instList) {
             `}
           </div>
           ${t.notes ? `
-            <div style="font-size: 11.5px; color: #475569; margin-top: 4px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #f1f5f9;">
-              <i class="fa-regular fa-note-sticky" style="color: #94a3b8; margin-right: 4px;"></i>${escapeHtml(t.notes)}
+            <div style="font-size: 12px; color: #334155; margin-top: 6px; line-height: 1.5; background: #f8fafc; padding: 6px 10px; border-radius: 6px; border: 1px solid #f1f5f9;">
+              ${renderFormattedPaymentNotes(t.notes)}
             </div>
           ` : ''}
           <div style="font-size: 10px; color: #94a3b8; margin-top: 3px;">
@@ -16773,28 +16788,64 @@ function showPaymentProofModalContent(p, url) {
     notesEl.textContent = lastInst?.method || (p?.payment_method || 'Transfer');
   }
 
-  // Gabungkan dan format catatan pembayaran (nyaman dibaca, mendukung paragraf & poin dari Gambar 1)
-  let combinedNotes = '';
-  if (instList.length > 0) {
-    const notesWithContent = instList.filter(item => (item.notes && item.notes.trim()));
-    if (notesWithContent.length > 1) {
-      combinedNotes = notesWithContent.map((item, i) => {
-        const tName = item.termin ? `Termin ${item.termin}` : `Cicilan ${i+1}`;
-        const amtStr = item.amount ? ` (Rp ${Number(item.amount).toLocaleString('id-ID')} • ${item.method || 'Transfer'})` : '';
-        return `**${tName}${amtStr}**\n${item.notes}`;
-      }).join('\n\n');
-    } else if (notesWithContent.length === 1) {
-      combinedNotes = notesWithContent[0].notes;
-    } else {
-      combinedNotes = lastInst?.notes || '';
-    }
-  } else {
-    combinedNotes = p?.notes || '';
-  }
-
+  // Tampilkan catatan rincian pembayaran dalam bentuk kartu termin yang rapi, terstruktur & nyaman dibaca (sesuai Gambar 1 & 2)
   const formattedNotesContainer = document.getElementById('proofViewerFormattedNotes');
   if (formattedNotesContainer) {
-    formattedNotesContainer.innerHTML = renderFormattedPaymentNotes(combinedNotes);
+    if (instList && instList.length > 0) {
+      formattedNotesContainer.innerHTML = instList.map((item, i) => {
+        const tTermin = item.termin || (i + 1);
+        const tAmount = Number(item.amount || 0);
+        const isVer = item.verification_status === 'verified';
+        const formattedNotes = renderFormattedPaymentNotes(item.notes || '');
+
+        return `
+          <div style="background: #ffffff; border: 1.5px solid ${isVer ? '#a7f3d0' : '#cbd5e1'}; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-size: 11px; font-weight: 800; background: #0f172a; color: #ffffff; padding: 2px 8px; border-radius: 5px;">
+                  Termin ${tTermin}
+                </span>
+                <span style="font-size: 14px; font-weight: 900; color: #059669;">
+                  Rp ${tAmount.toLocaleString('id-ID')}
+                </span>
+                <span style="font-size: 11px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 2px 7px; border-radius: 4px;">
+                  ${item.method || 'Transfer'}
+                </span>
+              </div>
+              <div>
+                ${isVer ? `
+                  <span style="font-size: 11px; font-weight: 800; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 3px;" title="Terverifikasi sah oleh bendahara">
+                    <i class="fa-solid fa-circle-check"></i> Terverifikasi
+                  </span>
+                ` : `
+                  <span style="font-size: 11px; font-weight: 800; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 3px;" title="Menunggu verifikasi mutasi rekening">
+                    <i class="fa-solid fa-hourglass-half"></i> Belum Diverifikasi
+                  </span>
+                `}
+              </div>
+            </div>
+            
+            <div style="background: #f8fafc; border-radius: 8px; padding: 8px 10px; border: 1px solid #f1f5f9;">
+              ${formattedNotes}
+            </div>
+
+            ${item.paid_at ? `
+              <div style="font-size: 10.5px; color: #94a3b8; margin-top: 6px; display: flex; align-items: center; gap: 4px;">
+                <i class="fa-regular fa-clock"></i> Tercatat: ${new Date(item.paid_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    } else {
+      formattedNotesContainer.innerHTML = `
+        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+          <div style="background: #f8fafc; border-radius: 8px; padding: 8px 10px; border: 1px solid #f1f5f9;">
+            ${renderFormattedPaymentNotes(p?.notes || '')}
+          </div>
+        </div>
+      `;
+    }
   }
 
   const notesCountBadge = document.getElementById('proofViewerNotesCount');

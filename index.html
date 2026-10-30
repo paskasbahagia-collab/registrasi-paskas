@@ -6655,7 +6655,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   <!-- MODAL: LIHAT DOKUMEN BUKTI & VERIFIKASI PEMBAYARAN      -->
   <!-- ======================================================= -->
   <div class="modal-backdrop" id="modalViewPaymentProof">
-    <div class="modal-auth-green-card" style="max-width: 560px; text-align: left; background: #ffffff; color: #1e293b; padding: 24px; border-radius: 16px; border: 1.5px solid #e2dac9; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+    <div class="modal-auth-green-card" style="max-width: 660px; width: 95vw; max-height: 94vh; overflow-y: auto; text-align: left; background: #ffffff; color: #1e293b; padding: 24px; border-radius: 16px; border: 1.5px solid #e2dac9; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
       <button type="button" class="modal-auth-close-btn" onclick="closePaymentProofViewer()" title="Tutup" style="color: #64748b;">
         <i class="fa-solid fa-xmark"></i>
       </button>
@@ -6695,7 +6695,7 @@ CREATE TABLE IF NOT EXISTS registrations (
             Info Pembayaran
           </span>
         </div>
-        <div id="proofViewerFormattedNotes" style="font-size: 13.5px; color: #1e293b; line-height: 1.6; max-height: 180px; overflow-y: auto; padding-right: 4px;">
+        <div id="proofViewerFormattedNotes" style="font-size: 13.5px; color: #1e293b; line-height: 1.6; max-height: 280px; overflow-y: auto; padding-right: 6px;">
           <!-- Diisi via renderFormattedPaymentNotes -->
         </div>
       </div>
@@ -6733,6 +6733,6 @@ CREATE TABLE IF NOT EXISTS registrations (
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
   <script src="js/supabase-config.js?v=138.0"></script>
-  <script src="js/app.js?v=180.0"></script>
+  <script src="js/app.js?v=181.0"></script>
 </body>
 </html>
