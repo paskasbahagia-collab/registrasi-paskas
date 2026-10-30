@@ -1774,6 +1774,64 @@ function navigateTo(pageId) {
   }
 
   if (pageId === 'registration') {
+    if (window.location.hash !== '#registration') {
+      try { history.replaceState(null, '', '#registration'); } catch (e) {}
+    }
+  }
+
+  if (['rekap', 'presensi', 'keuangan'].includes(pageId)) {
+    if (window.location.hash !== `#${pageId}`) {
+      try { history.replaceState(null, '', `#${pageId}`); } catch (e) {}
+    }
+  }
+
+  // Update nav links
+  document.querySelectorAll('.nav-link').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === pageId);
+  });
+
+  // Update btn-icon with data-page
+  document.querySelectorAll('.btn-icon[data-page]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === pageId);
+  });
+
+  // Update mobile nav links
+  document.querySelectorAll('.mobile-link').forEach(btn => {
+    const page = btn.dataset.page;
+    if (page) {
+      btn.classList.toggle('active', page === pageId);
+    } else {
+      const text = btn.textContent.toLowerCase();
+      btn.classList.toggle('active', text.includes(pageId) || (pageId === 'registration' && text.includes('registrasi')));
+    }
+  });
+
+  // Switch page view immediately so content shows right away without black screen
+  document.querySelectorAll('.page-view').forEach(view => {
+    view.classList.remove('active');
+  });
+
+  const targetView = document.getElementById(`page-${pageId}`);
+  if (targetView) {
+    targetView.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Toggle theme class for settings page
+  document.body.classList.toggle('page-settings-active', pageId === 'settings');
+
+  // Toggle class for panitia operational area (Rekap, Presensi, Keuangan, Settings)
+  const isPanitiaArea = ['settings', 'rekap', 'presensi', 'keuangan'].includes(pageId);
+  document.body.classList.toggle('in-panitia-area', isPanitiaArea && isAdminLoggedIn);
+
+  document.body.classList.remove('role-admin', 'role-keuangan', 'role-presensi');
+  if (isAdminLoggedIn && currentAuthRole) {
+    document.body.classList.add(`role-${currentAuthRole}`);
+  }
+  applyRoleNavVisibility();
+
+  // If going to registration page, reset to show start button initially
+  if (pageId === 'registration') {
     populateWilayahDropdowns();
     const successContainer = document.getElementById('regSuccessViewContainer');
     if (successContainer) successContainer.style.display = 'none';
@@ -1785,11 +1843,11 @@ function navigateTo(pageId) {
     const promptBox = document.getElementById('regTypePromptBox');
     const formCard = document.getElementById('regFormCardContainer');
     const closedBox = document.getElementById('regClosedPromptBox');
-    const bypassBanner = document.getElementById('adminBypassBanner');
 
     if (hangingGallery) hangingGallery.style.display = '';
     if (floatingBar) floatingBar.style.display = '';
 
+    const bypassBanner = document.getElementById('adminBypassBanner');
     if (window.isAdminBypassRegistration || (typeof isAdminLoggedIn !== 'undefined' && isAdminLoggedIn)) {
       // KUNCI DIBUKA UNTUK PANITIA / ADMIN (BEBAS MASUK & MELEGALKAN INPUT PESERTA)
       if (closedBox) closedBox.style.display = 'none';
@@ -6699,10 +6757,10 @@ async function triggerSuccessDownloadAllTickets() {
 function finishSuccessRegistration() {
   if (window.isAdminBypassRegistration) {
     window.isAdminBypassRegistration = false;
-    const bypassBanner = document.getElementById('adminBypassBanner');
-    if (bypassBanner) bypassBanner.style.display = 'none';
+    const banner = document.getElementById('adminBypassBanner');
+    if (banner) banner.style.display = 'none';
     navigateTo('rekap');
-    showToast('Alhamdulillah! Peserta berhasil didaftarkan dan langsung tersinkron ke Rekap Data.', 'success');
+    showToast('Alhamdulillah! Peserta berhasil didaftarkan dan langsung masuk ke Rekap Data.', 'success');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
@@ -16658,6 +16716,7 @@ function openAdminAddParticipant() {
   navigateTo('registration');
 }
 window.openAdminAddParticipant = openAdminAddParticipant;
+window.openModalTambahPesertaKhusus = openAdminAddParticipant;
 
 function exitAdminBypassRegistration() {
   window.isAdminBypassRegistration = false;
