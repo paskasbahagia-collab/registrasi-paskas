@@ -13486,22 +13486,17 @@ input:checked + .slider:before {
   word-break: break-word;
 }
 
-#financeTable th.sticky-action-col,
-#financeTable td.sticky-action-col {
-  position: sticky;
-  right: 0;
-  background: #ffffff;
-  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.06);
-  z-index: 2;
+/* Kolom Aksi Pembayaran Normal & Bersih (Tanpa Floating/Sticky Box Putih yang Memotong Tulisan) */
+#financeTable th.col-action,
+#financeTable td.col-action {
+  position: static !important;
+  box-shadow: none !important;
   white-space: nowrap !important;
+  text-align: center;
 }
-#financeTable th.sticky-action-col {
+#financeTable th.col-action {
   background: #183f2b !important;
   color: #ffffff !important;
-  z-index: 3;
-}
-#financeTable tbody tr:hover td.sticky-action-col {
-  background: #f8fafc !important;
 }
 
 @media (max-width: 1280px) {
@@ -13704,12 +13699,7 @@ input:checked + .slider:before {
     padding: 8px 10px !important;
   }
   /* Matikan sticky column di HP agar tidak menumpuk/menabrak kolom nama & data peserta */
-  #financeTable th.sticky-action-col,
-  #financeTable td.sticky-action-col {
-    position: static !important;
-    box-shadow: none !important;
-    right: auto !important;
-  }
+  
   /* Sembunyikan tombol duplikat di dalam sel nama agar tabel HP sangat rapi */
   .fin-mobile-action-pill {
     display: none !important;

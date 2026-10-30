@@ -16002,7 +16002,7 @@ function renderFinanceTable() {
         <td class="col-rem" style="font-weight: 800; color: #dc2626; text-align: right; white-space: nowrap;">Rp ${remaining.toLocaleString('id-ID')}</td>
         <td class="col-status" style="text-align: center; white-space: nowrap;">${statusBadge}</td>
         <td class="col-verify" style="text-align: center; white-space: nowrap;">${verifyColHtml}</td>
-        <td class="col-action sticky-action-col" style="text-align: center; white-space: nowrap;">
+        <td class="col-action" style="text-align: center; white-space: nowrap;">
           ${remaining <= 0 ? `
             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex-wrap: wrap;">
               ${isVerified ? `
