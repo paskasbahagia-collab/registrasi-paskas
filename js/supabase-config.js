@@ -689,6 +689,64 @@ class PaskasDataService {
         if (rawFin) finSync = JSON.parse(rawFin) || {};
       } catch (e) {}
 
+      // Tarik juga sync keuangan & presensi TERBARU dari Cloud Supabase (app_settings)
+      // agar perubahan status bayar / upload bukti dari perangkat lain langsung tampil tanpa delay
+      let fetchedSyncRows = null;
+      if (this.isSupabaseConnected && this.supabaseClient) {
+        try {
+          const { data: syncRows } = await this.supabaseClient
+            .from('app_settings')
+            .select('setting_key, setting_value')
+            .in('setting_key', ['paskas_finance_sync', 'paskas_attendance_sync']);
+          if (Array.isArray(syncRows)) {
+            fetchedSyncRows = syncRows;
+          }
+        } catch (syncErr) {
+          console.warn('Realtime fetch sync rows from Supabase SDK:', syncErr);
+        }
+      }
+
+      if (!fetchedSyncRows) {
+        try {
+          const creds = this.getCredentials();
+          if (creds.url && creds.key) {
+            const cleanUrl = creds.url.replace(/\/+$/, '');
+            const resp = await fetch(`${cleanUrl}/rest/v1/app_settings?setting_key=in.(paskas_finance_sync,paskas_attendance_sync)&select=setting_key,setting_value`, {
+              headers: {
+                'apikey': creds.key,
+                'Authorization': `Bearer ${creds.key}`
+              }
+            });
+            if (resp.ok) {
+              const rows = await resp.json();
+              if (Array.isArray(rows)) {
+                fetchedSyncRows = rows;
+              }
+            }
+          }
+        } catch (restErr) {
+          console.warn('Fallback REST fetch sync rows error:', restErr);
+        }
+      }
+
+      if (Array.isArray(fetchedSyncRows)) {
+        fetchedSyncRows.forEach(row => {
+          if (row.setting_key === 'paskas_finance_sync' && row.setting_value) {
+            try {
+              const cloudFin = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
+              finSync = { ...finSync, ...cloudFin };
+              safeStorage.setItem('paskas_finance_sync', JSON.stringify(finSync));
+            } catch (e) {}
+          } else if (row.setting_key === 'paskas_attendance_sync' && row.setting_value) {
+            try {
+              const cloudAtt = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
+              attSync = { ...attSync, ...cloudAtt };
+              safeStorage.setItem('paskas_attendance_sync', JSON.stringify(attSync));
+            } catch (e) {}
+          }
+        });
+      }
+
       cloudList = cloudList.map(item => {
         const sid = String(item.id);
         let merged = { ...item };
@@ -1444,9 +1502,27 @@ class PaskasDataService {
   async syncAttendanceCloudBackup(id, updates) {
     try {
       let syncMap = {};
+      if (this.isSupabaseConnected && this.supabaseClient) {
+        try {
+          const { data: row } = await this.supabaseClient
+            .from('app_settings')
+            .select('setting_value')
+            .eq('setting_key', 'paskas_attendance_sync')
+            .single();
+          if (row && row.setting_value) {
+            syncMap = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
+          }
+        } catch (e) {}
+      }
+      if (!syncMap || typeof syncMap !== 'object') syncMap = {};
       const raw = safeStorage.getItem('paskas_attendance_sync');
       if (raw) {
-        try { syncMap = JSON.parse(raw); } catch (e) {}
+        try {
+          const localMap = JSON.parse(raw);
+          if (localMap && typeof localMap === 'object') {
+            syncMap = { ...localMap, ...syncMap };
+          }
+        } catch (e) {}
       }
       syncMap[id] = { ...(syncMap[id] || {}), ...updates, updated_at: new Date().toISOString() };
       await this.saveCloudSetting('paskas_attendance_sync', syncMap);
@@ -1679,9 +1755,27 @@ class PaskasDataService {
   async syncFinanceCloudBackup(id, updates) {
     try {
       let syncMap = {};
+      if (this.isSupabaseConnected && this.supabaseClient) {
+        try {
+          const { data: row } = await this.supabaseClient
+            .from('app_settings')
+            .select('setting_value')
+            .eq('setting_key', 'paskas_finance_sync')
+            .single();
+          if (row && row.setting_value) {
+            syncMap = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
+          }
+        } catch (e) {}
+      }
+      if (!syncMap || typeof syncMap !== 'object') syncMap = {};
       const raw = safeStorage.getItem('paskas_finance_sync');
       if (raw) {
-        try { syncMap = JSON.parse(raw); } catch (e) {}
+        try {
+          const localMap = JSON.parse(raw);
+          if (localMap && typeof localMap === 'object') {
+            syncMap = { ...localMap, ...syncMap };
+          }
+        } catch (e) {}
       }
       syncMap[id] = { ...(syncMap[id] || {}), ...updates, updated_at: new Date().toISOString() };
       await this.saveCloudSetting('paskas_finance_sync', syncMap);
