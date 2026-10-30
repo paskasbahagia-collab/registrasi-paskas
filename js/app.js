@@ -5259,19 +5259,24 @@ let currentTicketBatch = [];
 let currentTicketIndex = 0;
 
 function getValidTicketTemplateUrl(val) {
-  if (!val) return 'images/boarding-pass-canva.png';
+  if (typeof window !== 'undefined' && window.DEFAULT_CANVA_TEMPLATE_B64) {
+    if (!val || val === 'images/boarding-pass-canva.png' || String(val).includes('[object') || String(val).includes('boarding-pass-canva.png')) {
+      return window.DEFAULT_CANVA_TEMPLATE_B64;
+    }
+  }
+  if (!val) return (typeof window !== 'undefined' && window.DEFAULT_CANVA_TEMPLATE_B64) || 'images/boarding-pass-canva.png';
   if (typeof val === 'object' && val !== null) {
     if (val.dataUrl && typeof val.dataUrl === 'string') return val.dataUrl;
-    return 'images/boarding-pass-canva.png';
+    return (typeof window !== 'undefined' && window.DEFAULT_CANVA_TEMPLATE_B64) || 'images/boarding-pass-canva.png';
   }
   if (typeof val === 'string') {
     const s = val.trim();
-    if (!s || s === '[object Object]' || s.includes('[object')) {
-      return 'images/boarding-pass-canva.png';
+    if (!s || s === '[object Object]' || s.includes('[object') || s.includes('boarding-pass-canva.png')) {
+      return (typeof window !== 'undefined' && window.DEFAULT_CANVA_TEMPLATE_B64) || 'images/boarding-pass-canva.png';
     }
     return s;
   }
-  return 'images/boarding-pass-canva.png';
+  return (typeof window !== 'undefined' && window.DEFAULT_CANVA_TEMPLATE_B64) || 'images/boarding-pass-canva.png';
 }
 
 function renderActiveTicket(record) {
@@ -5540,133 +5545,246 @@ function switchGroupTicketMember(indexVal) {
 }
 
 /**
- * Menangkap elemen tiket menjadi canvas secara instan dan ringan (mencegah freeze browser)
+ * Engine Direct 2D Canvas: Render tiket boarding pass langsung ke HTML5 Canvas tanpa dependensi external
+ * Bebas CORS, tanpa timeout, anti tainted canvas, hasil HD Retina (scale 2 / 1720x556)
  */
-async function captureTicketElementAsCanvas(ticketSourceEl) {
-  if (!ticketSourceEl || typeof html2canvas !== 'function') {
-    throw new Error('Elemen tiket atau library html2canvas belum siap.');
-  }
+async function generateDirectTicketCanvas(record) {
+  const rec = record || currentTicketRecord || {};
+  const width = 860;
+  const height = 278;
+  const scale = 2;
 
-  // 1. Sanitasi tag img kosong agar html2canvas tidak mencoba fetch halaman web
-  const imgs = ticketSourceEl.querySelectorAll('img');
-  imgs.forEach(img => {
-    const rawSrc = img.getAttribute('src');
-    if (!rawSrc || rawSrc.trim() === '' || img.style.display === 'none') {
-      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-    }
+  const canvas = document.createElement('canvas');
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  // 1. Gambar latar belakang Canva template
+  const bgDataUrl = getValidTicketTemplateUrl();
+  const bgImg = new Image();
+  bgImg.src = bgDataUrl;
+  await new Promise((resolve) => {
+    if (bgImg.complete && bgImg.naturalWidth > 0) return resolve();
+    bgImg.onload = resolve;
+    bgImg.onerror = resolve;
   });
 
-  // 2. Cek apakah elemen saat ini sedang tampak langsung di viewport (seperti di modal yang terbuka)
-  const isDirectlyVisible = ticketSourceEl.offsetWidth > 100 && ticketSourceEl.offsetHeight > 50;
-
-  let targetToCapture = ticketSourceEl;
-  let tempWrapper = null;
-
-  if (!isDirectlyVisible) {
-    // Jika tiket berada di dalam container display:none (misal in-page success),
-    // tempatkan klon tepat di (top:0, left:0) dengan opacity rendah (JANGAN -9999px agar kanvas tidak bengkak puluhan ribu piksel)
-    tempWrapper = document.createElement('div');
-    tempWrapper.style.position = 'fixed';
-    tempWrapper.style.top = '0';
-    tempWrapper.style.left = '0';
-    tempWrapper.style.width = '860px';
-    tempWrapper.style.height = '278px';
-    tempWrapper.style.zIndex = '-9999';
-    tempWrapper.style.opacity = '0.01';
-    tempWrapper.style.pointerEvents = 'none';
-    tempWrapper.style.overflow = 'hidden';
-
-    const cloned = ticketSourceEl.cloneNode(true);
-    cloned.style.display = 'block';
-    cloned.style.margin = '0';
-    cloned.style.transform = 'none';
-
-    tempWrapper.appendChild(cloned);
-    document.body.appendChild(tempWrapper);
-    targetToCapture = cloned;
-
-    await new Promise(r => setTimeout(r, 40));
+  if (bgImg.naturalWidth > 0) {
+    ctx.drawImage(bgImg, 0, 0, width, height);
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
   }
 
-  try {
-    const renderPromise = html2canvas(targetToCapture, {
-      scale: 2,
-      width: 860,
-      height: 278,
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: '#ffffff',
-      logging: false,
-      imageTimeout: 2500,
-      scrollX: 0,
-      scrollY: 0
-    });
+  // 2. Data teks
+  const pName = (rec.full_name || rec.name || '-').toUpperCase();
+  const returnDate = formatTicketDate(rec.departure_date || rec.return_date || '2026-11-14');
+  const returnTime = rec.departure_time || '16:00';
 
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Waktu pembuatan gambar tiket melebihi batas (timeout). Silakan coba lagi.')), 6000);
-    });
+  // Charcoal box values
+  const isAllocActive = typeof isRoomGroupAllocationEnabled === 'function' ? isRoomGroupAllocationEnabled() : false;
+  const ageVal = parseInt(rec.age, 10);
+  const isChild = rec.is_child || (!isNaN(ageVal) && ageVal > 0 && ageVal < 15);
+  let grpVal = '-';
+  if (isAllocActive && !isChild) {
+    grpVal = (rec.group_code && rec.group_code !== '-') ? String(rec.group_code).toUpperCase() : (rec.group_name && rec.group_name !== '-' ? String(rec.group_name).toUpperCase() : '-');
+  }
+  let roomVal = '-';
+  if (isAllocActive) {
+    roomVal = rec.room_number || rec.kamar || (isChild ? 'Ikut Ortu' : '-');
+  }
+  const cityVal = (rec.daerah || rec.wilayah || 'KLATEN').toUpperCase();
+  const genderChar = (typeof isFemaleGender === 'function' && isFemaleGender(rec.gender)) ? 'P' : 'L';
 
-    const canvas = await Promise.race([renderPromise, timeoutPromise]);
+  // Stub values
+  const rawNik = String(rec.registration_code || rec.nik || '001');
+  const match = rawNik.match(/(\d+)/g);
+  let stubNik = '001';
+  if (match && match.length > 0) {
+    const lastDigits = match[match.length - 1];
+    stubNik = String(lastDigits).slice(-3).padStart(3, '0');
+  }
 
-    if (!canvas || canvas.width < 50 || canvas.height < 50) {
-      throw new Error('Gagal merender gambar tiket (dimensi kanvas tidak valid).');
-    }
+  // 3. Render Teks ke Canvas
+  ctx.textBaseline = 'top';
 
-    return canvas;
-  } finally {
-    if (tempWrapper && tempWrapper.parentNode) {
-      tempWrapper.parentNode.removeChild(tempWrapper);
+  // A. Passenger Name (Main Section)
+  ctx.fillStyle = '#000000';
+  ctx.font = '900 18px "Outfit", "Plus Jakarta Sans", Arial, sans-serif';
+  ctx.fillText(pName, 89, 89.5);
+
+  // B. Schedule Row: Tanggal Pulang & Jam Datang/Pulang
+  ctx.font = '900 14.5px "Outfit", "Plus Jakarta Sans", Arial, sans-serif';
+  ctx.fillText(returnDate, 89, 127.3);
+  ctx.fillText(returnTime, 209, 127.3);
+
+  // C. Charcoal Box Values (Color: #ffffff)
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 14px "Outfit", "Plus Jakarta Sans", Arial, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(grpVal, 99, 178);
+  ctx.fillText(roomVal, 193, 178);
+  ctx.fillText(cityVal, 99, 217);
+  ctx.fillText(genderChar, 204, 217);
+
+  // D. Right Stub Section
+  ctx.fillStyle = '#000000';
+  ctx.font = '900 14px "Outfit", "Plus Jakarta Sans", Arial, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(pName, 645, 75.6);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 11px "Outfit", "Plus Jakarta Sans", Arial, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(stubNik, 647, 137);
+
+  ctx.font = '800 10.5px "Outfit", "Plus Jakarta Sans", Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(grpVal, 732, 137);
+
+  ctx.textAlign = 'right';
+  ctx.fillText(roomVal, 818, 137);
+
+  return canvas;
+}
+
+/**
+ * Menangkap elemen tiket menjadi canvas secara instan dan ringan (Dual-Engine: html2canvas + Direct 2D Fallback)
+ */
+async function captureTicketElementAsCanvas(ticketSourceEl, record = null) {
+  const rec = record || currentTicketRecord || {};
+
+  // 1. Coba html2canvas jika library siap
+  if (typeof html2canvas === 'function' && ticketSourceEl) {
+    let tempWrapper = null;
+    try {
+      // Sanitasi tag img
+      const imgs = ticketSourceEl.querySelectorAll('img');
+      imgs.forEach(img => {
+        const rawSrc = img.getAttribute('src');
+        if (!rawSrc || rawSrc.trim() === '' || img.style.display === 'none' || img.id === 'ticketBpPlaneImg') {
+          img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        }
+      });
+
+      tempWrapper = document.createElement('div');
+      tempWrapper.style.position = 'fixed';
+      tempWrapper.style.top = '0';
+      tempWrapper.style.left = '0';
+      tempWrapper.style.width = '860px';
+      tempWrapper.style.height = '278px';
+      tempWrapper.style.zIndex = '-9999';
+      tempWrapper.style.opacity = '0.01';
+      tempWrapper.style.pointerEvents = 'none';
+      tempWrapper.style.overflow = 'hidden';
+
+      const cloned = ticketSourceEl.cloneNode(true);
+      cloned.style.position = 'absolute';
+      cloned.style.top = '0';
+      cloned.style.left = '0';
+      cloned.style.width = '860px';
+      cloned.style.height = '278px';
+      cloned.style.margin = '0';
+      cloned.style.transform = 'none';
+
+      // Pastikan background menggunakan data URI bebas CORS
+      const bgData = getValidTicketTemplateUrl();
+      if (bgData) cloned.style.backgroundImage = `url('${bgData}')`;
+
+      tempWrapper.appendChild(cloned);
+      document.body.appendChild(tempWrapper);
+
+      await new Promise(r => setTimeout(r, 40));
+
+      const renderPromise = html2canvas(cloned, {
+        scale: 2,
+        width: 860,
+        height: 278,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        logging: false,
+        imageTimeout: 3500
+      });
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('html2canvas_timeout')), 4000);
+      });
+
+      const canvas = await Promise.race([renderPromise, timeoutPromise]);
+      if (canvas && canvas.width >= 100 && canvas.height >= 50) {
+        return canvas;
+      }
+    } catch (e) {
+      console.warn('html2canvas skipped, menggunakan Direct 2D Engine:', e.message || e);
+    } finally {
+      if (tempWrapper && tempWrapper.parentNode) {
+        tempWrapper.parentNode.removeChild(tempWrapper);
+      }
     }
   }
+
+  // 2. Direct 2D Canvas Engine (100% cepat, bebas CORS, tanpa timeout)
+  return await generateDirectTicketCanvas(rec);
 }
 
 /**
  * Mengunduh canvas sebagai file PNG aman menggunakan Binary Blob (Mencegah file 0 Byte)
  */
 async function downloadCanvasAsPng(canvas, fileName) {
-  try {
-    let blob = null;
-    if (canvas && typeof canvas.toBlob === 'function') {
-      blob = await new Promise((resolve) => {
-        try {
-          canvas.toBlob(resolve, 'image/png');
-        } catch (e) {
-          resolve(null);
-        }
-      });
-    }
+  if (!canvas) throw new Error('Kanvas gambar tiket kosong.');
 
-    if (blob && blob.size > 500) {
-      const url = URL.createObjectURL(blob);
+  return new Promise(async (resolve, reject) => {
+    try {
+      // 1. Coba konversi via toBlob (paling optimal di mobile & desktop)
+      let blob = null;
+      if (typeof canvas.toBlob === 'function') {
+        blob = await new Promise((res) => {
+          try {
+            canvas.toBlob(res, 'image/png');
+          } catch (e) {
+            res(null);
+          }
+        });
+      }
+
+      if (blob && blob.size > 500) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          if (a.parentNode) a.parentNode.removeChild(a);
+          URL.revokeObjectURL(url);
+          resolve();
+        }, 2000);
+        return;
+      }
+
+      // 2. Fallback Data URL jika toBlob tidak didukung
+      const dataUri = canvas.toDataURL('image/png');
+      if (!dataUri || dataUri.length < 500) {
+        throw new Error('Data gambar tiket tidak valid.');
+      }
       const a = document.createElement('a');
-      a.href = url;
+      a.style.display = 'none';
+      a.href = dataUri;
       a.download = fileName;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => {
         if (a.parentNode) a.parentNode.removeChild(a);
-        URL.revokeObjectURL(url);
+        resolve();
       }, 1000);
-      return;
+    } catch (err) {
+      console.error('Error saat download file tiket:', err);
+      reject(err);
     }
-
-    // Fallback dataURL
-    const uri = canvas.toDataURL('image/png');
-    if (!uri || uri.length < 500) {
-      throw new Error('File gambar tiket kosong (0 byte).');
-    }
-    const a = document.createElement('a');
-    a.href = uri;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      if (a.parentNode) a.parentNode.removeChild(a);
-    }, 1000);
-  } catch (err) {
-    console.error('Error saat download file tiket:', err);
-    throw err;
-  }
+  });
 }
 
 async function downloadTicketImage() {
@@ -5677,12 +5795,6 @@ async function downloadTicketImage() {
 
   const ticketCard = document.getElementById('printableTicket');
   if (!ticketCard) return;
-
-  if (typeof html2canvas !== 'function') {
-    showToast('Library html2canvas belum termuat. Membuka jendela cetak...', 'info');
-    window.print();
-    return;
-  }
 
   const btns = [
     document.getElementById('btnDownloadTicketPng'),
@@ -5699,14 +5811,14 @@ async function downloadTicketImage() {
   await new Promise(r => setTimeout(r, 40));
 
   try {
-    const canvas = await captureTicketElementAsCanvas(ticketCard);
+    const canvas = await captureTicketElementAsCanvas(ticketCard, currentTicketRecord);
 
     const regCode = (currentTicketRecord.registration_code || 'TIKET').replace(/[^a-zA-Z0-9_-]/g, '_');
     const cleanName = (currentTicketRecord.full_name || 'Peserta').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
     const fileName = `E-Tiket_${regCode}_${cleanName}.png`;
 
     await downloadCanvasAsPng(canvas, fileName);
-    showToast(`E-Tiket untuk "${currentTicketRecord.full_name}" berhasil diunduh (PNG)!`, 'success');
+    showToast(`Alhamdulillah! E-Tiket untuk "${currentTicketRecord.full_name}" berhasil diunduh (PNG)!`, 'success');
   } catch (err) {
     console.error('Error downloading ticket image:', err);
     showToast('Kendala saat mengunduh gambar tiket: ' + err.message, 'error');
@@ -5743,9 +5855,8 @@ async function downloadAllGroupTicketsOneByOne() {
       await new Promise(r => setTimeout(r, 200));
 
       const ticketCard = document.getElementById('printableTicket');
-      const canvas = await captureTicketElementAsCanvas(ticketCard);
-
       const member = currentTicketBatch[i];
+      const canvas = await captureTicketElementAsCanvas(ticketCard, member);
       const regCode = (member.registration_code || `TIKET-${i+1}`).replace(/[^a-zA-Z0-9_-]/g, '_');
       const cleanName = (member.full_name || `Peserta_${i+1}`).trim().replace(/[^a-zA-Z0-9_-]/g, '_');
       const fileName = `E-Tiket_${regCode}_${cleanName}.png`;
@@ -6580,9 +6691,8 @@ async function triggerSuccessDownloadAllTickets() {
 
       const ticketCard = document.getElementById('printableTicket');
       if (ticketCard) {
-        const canvas = await captureTicketElementAsCanvas(ticketCard);
-
         const member = activeSuccessBatch[i];
+        const canvas = await captureTicketElementAsCanvas(ticketCard, member);
         const regCode = (member.registration_code || `PKB_${i+1}`).replace(/[^a-zA-Z0-9_-]/g, '_');
         const cleanName = (member.full_name || `Peserta_${i+1}`).trim().replace(/[^a-zA-Z0-9_-]/g, '_');
         const fileName = `E-Tiket_${regCode}_${cleanName}.png`;
