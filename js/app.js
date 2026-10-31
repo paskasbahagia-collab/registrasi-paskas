@@ -17504,6 +17504,172 @@ let frontdeskKontingenIndex = 0;
 let frontdeskActiveIndividuRecord = null;
 let frontdeskIsMasterTableVisible = false;
 
+let modalKontingenCurrentFilter = 'all'; // 'all' | 'pending' | 'complete'
+let modalKontingenSearchQuery = '';
+
+function openFrontdeskKontingenModal() {
+  const modal = document.getElementById('modalFdKontingenPicker');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  const searchInput = document.getElementById('fdModalKontingenSearch');
+  if (searchInput) {
+    searchInput.value = '';
+    setTimeout(() => searchInput.focus(), 80);
+  }
+  const clearBtn = document.getElementById('fdModalKontingenClearBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
+  modalKontingenSearchQuery = '';
+  modalKontingenCurrentFilter = 'all';
+  updateModalKontingenTabUI();
+  renderModalKontingenList();
+}
+
+function closeFrontdeskKontingenModal() {
+  const modal = document.getElementById('modalFdKontingenPicker');
+  if (modal) modal.style.display = 'none';
+}
+
+function setModalKontingenFilter(filterKey) {
+  modalKontingenCurrentFilter = filterKey;
+  updateModalKontingenTabUI();
+  renderModalKontingenList();
+}
+
+function updateModalKontingenTabUI() {
+  const tAll = document.getElementById('tabPickerAll');
+  const tPending = document.getElementById('tabPickerPending');
+  const tComplete = document.getElementById('tabPickerComplete');
+  if (tAll) tAll.classList.toggle('active', modalKontingenCurrentFilter === 'all');
+  if (tPending) tPending.classList.toggle('active', modalKontingenCurrentFilter === 'pending');
+  if (tComplete) tComplete.classList.toggle('active', modalKontingenCurrentFilter === 'complete');
+}
+
+function onFilterModalKontingen(query) {
+  modalKontingenSearchQuery = (query || '').trim().toLowerCase();
+  const clearBtn = document.getElementById('fdModalKontingenClearBtn');
+  if (clearBtn) clearBtn.style.display = modalKontingenSearchQuery ? 'block' : 'none';
+  renderModalKontingenList();
+}
+
+function clearModalKontingenSearch() {
+  const searchInput = document.getElementById('fdModalKontingenSearch');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.focus();
+  }
+  const clearBtn = document.getElementById('fdModalKontingenClearBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
+  modalKontingenSearchQuery = '';
+  renderModalKontingenList();
+}
+
+function selectModalKontingen(groupName) {
+  onSelectFrontdeskKontingen(groupName);
+  closeFrontdeskKontingenModal();
+}
+
+function renderModalKontingenList() {
+  const container = document.getElementById('fdModalKontingenList');
+  if (!container) return;
+
+  const list = allRegistrations || [];
+  const kontingenMap = new Map();
+  list.forEach(p => {
+    if (p.registration_type === 'rombongan' || (p.group_name && p.group_name.trim() !== '' && p.group_name.trim() !== '-')) {
+      const gName = (p.group_name || 'Rombongan Lain').trim();
+      if (!kontingenMap.has(gName)) {
+        kontingenMap.set(gName, { total: 0, attended: 0, pending: 0, wilayah: p.wilayah || '', members: [] });
+      }
+      const item = kontingenMap.get(gName);
+      item.total++;
+      item.members.push(p);
+      const st = p.attendance_status || 'registered';
+      if (st === 'attended' || st === 'attended_late') {
+        item.attended++;
+      } else {
+        item.pending++;
+      }
+    }
+  });
+
+  const allGroups = Array.from(kontingenMap.entries()).map(([name, info]) => ({
+    name,
+    ...info,
+    isComplete: info.attended === info.total && info.total > 0
+  })).sort((a, b) => a.name.localeCompare(b.name, 'id'));
+
+  const countAll = allGroups.length;
+  const countComplete = allGroups.filter(g => g.isComplete).length;
+  const countPending = countAll - countComplete;
+
+  const elAll = document.getElementById('countPickerAll');
+  const elPending = document.getElementById('countPickerPending');
+  const elComplete = document.getElementById('countPickerComplete');
+  const elBadge = document.getElementById('fdKontingenBadgeCount');
+
+  if (elAll) elAll.textContent = countAll;
+  if (elPending) elPending.textContent = countPending;
+  if (elComplete) elComplete.textContent = countComplete;
+  if (elBadge) elBadge.textContent = `${countAll} Kafilah`;
+
+  // Filter berdasarkan search query dan tab
+  let filtered = allGroups;
+  if (modalKontingenCurrentFilter === 'pending') {
+    filtered = filtered.filter(g => !g.isComplete);
+  } else if (modalKontingenCurrentFilter === 'complete') {
+    filtered = filtered.filter(g => g.isComplete);
+  }
+
+  if (modalKontingenSearchQuery) {
+    filtered = filtered.filter(g => {
+      return g.name.toLowerCase().includes(modalKontingenSearchQuery) ||
+             (g.wilayah && g.wilayah.toLowerCase().includes(modalKontingenSearchQuery));
+    });
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 34px 16px; color: #94a3b8;">
+        <i class="fa-solid fa-magnifying-glass" style="font-size: 28px; margin-bottom: 8px; color: #cbd5e1;"></i>
+        <p style="font-size: 13.5px; margin: 0; font-weight: 700; color: #64748b;">Kafilah tidak ditemukan</p>
+        <small style="font-size: 12px;">Coba gunakan kata kunci lain.</small>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(g => {
+    const isSelected = g.name === frontdeskActiveKontingenName;
+    let tagHtml = '';
+    if (g.isComplete) {
+      tagHtml = `<span class="fd-picker-status-tag complete"><i class="fa-solid fa-circle-check"></i> Lengkap (${g.attended}/${g.total})</span>`;
+    } else if (g.attended > 0) {
+      tagHtml = `<span class="fd-picker-status-tag partial"><i class="fa-solid fa-clock"></i> ${g.attended}/${g.total} Hadir</span>`;
+    } else {
+      tagHtml = `<span class="fd-picker-status-tag empty"><i class="fa-solid fa-hourglass"></i> Belum Tiba (${g.total})</span>`;
+    }
+
+    return `
+      <div class="fd-picker-item-card ${isSelected ? 'selected' : ''}" onclick="selectModalKontingen('${escapeHtml(g.name).replace(/'/g, "\\'")}')">
+        <div class="fd-picker-item-left">
+          <div class="fd-picker-item-title">
+            <i class="fa-solid fa-layer-group" style="color: #d97706; font-size: 13px;"></i>
+            <span>${escapeHtml(g.name)}</span>
+            ${isSelected ? '<span style="font-size: 10px; background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; font-weight: 800;">AKTIF</span>' : ''}
+          </div>
+          <div class="fd-picker-item-desc">
+            <span><i class="fa-solid fa-users" style="color: #64748b;"></i> <strong>${g.total} Jiwa Terdaftar</strong></span>
+            ${g.wilayah ? `<span>&bull; Wilayah: ${escapeHtml(g.wilayah)}</span>` : ''}
+          </div>
+        </div>
+        <div class="fd-picker-item-right">
+          ${tagHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 function initFrontdeskPresensi() {
   const list = allRegistrations || [];
   
@@ -17527,56 +17693,35 @@ function initFrontdeskPresensi() {
     }
   });
 
-  const selectKontingen = document.getElementById('fdSelectKontingen');
-  if (selectKontingen) {
-    const currentVal = selectKontingen.value || frontdeskActiveKontingenName;
-    const sortedGroups = Array.from(kontingenMap.keys()).sort((a, b) => a.localeCompare(b, 'id'));
-    
-    selectKontingen.innerHTML = '<option value="">-- Pilih Kontingen / Kafilah Rombongan --</option>' + 
-      sortedGroups.map(g => {
-        const info = kontingenMap.get(g);
-        const isComplete = info.attended === info.total && info.total > 0;
-        const icon = isComplete ? '✅' : (info.attended > 0 ? '🟡' : '⏳');
-        return `<option value="${escapeHtml(g)}" ${g === currentVal ? 'selected' : ''}>
-          ${icon} ${escapeHtml(g)} (${info.total} Peserta: ${info.attended} Hadir • ${info.pending} Belum)
-        </option>`;
-      }).join('');
+  const totalKafilah = kontingenMap.size;
+  const badgeCount = document.getElementById('fdKontingenBadgeCount');
+  if (badgeCount) badgeCount.textContent = `${totalKafilah} Kafilah`;
 
-    if (currentVal && kontingenMap.has(currentVal)) {
-      frontdeskActiveKontingenName = currentVal;
-      frontdeskKontingenMembers = kontingenMap.get(currentVal).members;
-      if (frontdeskKontingenIndex >= frontdeskKontingenMembers.length) {
-        frontdeskKontingenIndex = 0;
-      }
-      if (frontdeskActiveMode === 'kontingen' && frontdeskKontingenMembers.length > 0) {
-        renderFrontdeskVerificationCard(frontdeskKontingenMembers[frontdeskKontingenIndex], true);
-        updateFrontdeskKontingenBadge();
-      }
+  // Update label kontingen terpilih
+  const triggerLabel = document.getElementById('fdKontingenSelectedLabel');
+  if (frontdeskActiveKontingenName && kontingenMap.has(frontdeskActiveKontingenName)) {
+    const info = kontingenMap.get(frontdeskActiveKontingenName);
+    frontdeskKontingenMembers = info.members;
+    if (frontdeskKontingenIndex >= frontdeskKontingenMembers.length) {
+      frontdeskKontingenIndex = 0;
     }
+    if (triggerLabel) {
+      triggerLabel.innerHTML = `<strong>${escapeHtml(frontdeskActiveKontingenName)}</strong> <span style="font-size: 12.5px; color: #166534; font-weight: 700;">(${info.total} Jiwa: ${info.attended} Hadir • ${info.pending} Belum)</span>`;
+    }
+    if (frontdeskActiveMode === 'kontingen' && frontdeskKontingenMembers.length > 0) {
+      renderFrontdeskVerificationCard(frontdeskKontingenMembers[frontdeskKontingenIndex], true);
+      updateFrontdeskKontingenBadge();
+    }
+  } else {
+    if (triggerLabel) triggerLabel.textContent = 'Klik untuk memilih kontingen / rombongan...';
   }
 
-  // 2. Kumpulkan daftar Peserta Individu / Mandiri
-  const selectIndividu = document.getElementById('fdSelectIndividu');
-  if (selectIndividu) {
-    const individuList = list.filter(p => p.registration_type !== 'rombongan' && (!p.group_name || p.group_name.trim() === '' || p.group_name.trim() === '-'))
-      .sort((a, b) => (a.registration_code || '').localeCompare(b.registration_code || '', undefined, { numeric: true }));
-
-    const currentIndId = selectIndividu.value;
-    selectIndividu.innerHTML = '<option value="">-- Pilih dari Daftar Peserta Individu --</option>' + 
-      individuList.map(p => {
-        const st = p.attendance_status || 'registered';
-        const isAtt = st === 'attended' || st === 'attended_late';
-        return `<option value="${p.id}" ${String(p.id) === String(currentIndId) ? 'selected' : ''}>
-          ${isAtt ? '✅' : '⏳'} ${escapeHtml(p.registration_code || 'ID')} - ${escapeHtml(p.full_name)} (${p.gender === 'Laki-laki' ? 'L' : 'P'}, ${p.age || '-'} th) [${isAtt ? 'Hadir' : 'Belum Tiba'}]
-        </option>`;
-      }).join('');
-
-    if (frontdeskActiveIndividuRecord && frontdeskActiveMode === 'individu') {
-      const freshInd = list.find(x => Number(x.id) === Number(frontdeskActiveIndividuRecord.id));
-      if (freshInd) {
-        frontdeskActiveIndividuRecord = freshInd;
-        renderFrontdeskVerificationCard(freshInd, false);
-      }
+  // Update individu record jika sedang aktif
+  if (frontdeskActiveIndividuRecord && frontdeskActiveMode === 'individu') {
+    const freshInd = list.find(x => Number(x.id) === Number(frontdeskActiveIndividuRecord.id));
+    if (freshInd) {
+      frontdeskActiveIndividuRecord = freshInd;
+      renderFrontdeskVerificationCard(freshInd, false);
     }
   }
 }
@@ -17619,7 +17764,7 @@ function togglePresensiMasterTable() {
   if (section) {
     section.style.display = frontdeskIsMasterTableVisible ? 'block' : 'none';
     if (frontdeskIsMasterTableVisible) {
-      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      section.scrollIntoView({ behavior: 'smooth' });
     }
   }
 
@@ -17631,6 +17776,7 @@ function togglePresensiMasterTable() {
 }
 
 function onSelectFrontdeskKontingen(groupName) {
+  const triggerLabel = document.getElementById('fdKontingenSelectedLabel');
   if (!groupName) {
     frontdeskActiveKontingenName = '';
     frontdeskKontingenMembers = [];
@@ -17638,6 +17784,7 @@ function onSelectFrontdeskKontingen(groupName) {
     showFrontdeskEmptyState();
     const badge = document.getElementById('fdKontingenSummaryBadge');
     if (badge) badge.style.display = 'none';
+    if (triggerLabel) triggerLabel.textContent = 'Klik untuk memilih kontingen / rombongan...';
     return;
   }
 
@@ -17650,10 +17797,15 @@ function onSelectFrontdeskKontingen(groupName) {
   frontdeskKontingenIndex = 0;
 
   if (members.length > 0) {
+    const attended = members.filter(m => m.attendance_status === 'attended' || m.attendance_status === 'attended_late').length;
+    if (triggerLabel) {
+      triggerLabel.innerHTML = `<strong>${escapeHtml(groupName)}</strong> <span style="font-size: 12.5px; color: #166534; font-weight: 700;">(${members.length} Jiwa: ${attended} Hadir • ${members.length - attended} Belum)</span>`;
+    }
     renderFrontdeskVerificationCard(members[0], true);
     updateFrontdeskKontingenBadge();
   } else {
     showFrontdeskEmptyState();
+    if (triggerLabel) triggerLabel.textContent = `${groupName} (Kosong)`;
   }
 }
 
@@ -17701,20 +17853,65 @@ function onSelectFrontdeskIndividu(id) {
 
 function onFrontdeskIndividuSearchInput(q) {
   const query = (q || '').trim().toLowerCase();
-  if (!query) return;
+  const resultsContainer = document.getElementById('fdIndividuSearchResults');
+  if (!query) {
+    if (resultsContainer) resultsContainer.style.display = 'none';
+    return;
+  }
 
   const list = allRegistrations || [];
-  const matched = list.find(p => {
+  const matches = list.filter(p => {
     const code = (p.registration_code || '').toLowerCase();
     const name = (p.full_name || '').toLowerCase();
-    return code === query || code.replace(/[^0-9]/g, '') === query.replace(/[^0-9]/g, '') || name.includes(query);
+    return code.includes(query) || code.replace(/[^0-9]/g, '') === query.replace(/[^0-9]/g, '') || name.includes(query);
   });
 
-  if (matched) {
-    frontdeskActiveIndividuRecord = matched;
-    renderFrontdeskVerificationCard(matched, false);
-    const select = document.getElementById('fdSelectIndividu');
-    if (select) select.value = matched.id;
+  if (resultsContainer) {
+    if (matches.length === 0) {
+      resultsContainer.style.display = 'block';
+      resultsContainer.innerHTML = `
+        <div style="padding: 12px; text-align: center; color: #64748b; font-size: 12.5px;">
+          Peserta tidak ditemukan untuk "<strong>${escapeHtml(q)}</strong>"
+        </div>
+      `;
+    } else {
+      resultsContainer.style.display = 'block';
+      resultsContainer.innerHTML = matches.slice(0, 8).map(p => {
+        const st = p.attendance_status || 'registered';
+        const isAtt = st === 'attended' || st === 'attended_late';
+        return `
+          <div class="fd-live-search-item" onclick="selectFrontdeskIndividuFromLiveSearch(${p.id})">
+            <div>
+              <strong style="color: #0369a1; font-family: monospace;">${escapeHtml(p.registration_code || '-')}</strong> - 
+              <strong style="color: #0f172a;">${escapeHtml(p.full_name)}</strong>
+              <small style="color: #64748b; margin-left: 6px;">(${p.gender === 'Laki-laki' ? 'L' : 'P'}, ${p.age || '-'} th)</small>
+            </div>
+            <div>
+              ${isAtt ? '<span class="badge-attended" style="font-size: 11px; padding: 2px 8px;">✅ Hadir</span>' : '<span class="badge-pending" style="font-size: 11px; padding: 2px 8px;">⏳ Belum Tiba</span>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  const exactMatch = list.find(p => (p.registration_code || '').toLowerCase() === query);
+  if (exactMatch) {
+    frontdeskActiveIndividuRecord = exactMatch;
+    renderFrontdeskVerificationCard(exactMatch, false);
+    if (resultsContainer) resultsContainer.style.display = 'none';
+  }
+}
+
+function selectFrontdeskIndividuFromLiveSearch(id) {
+  const p = (allRegistrations || []).find(x => Number(x.id) === Number(id));
+  if (p) {
+    frontdeskActiveIndividuRecord = p;
+    renderFrontdeskVerificationCard(p, false);
+    const searchInput = document.getElementById('fdSearchIndividuInput');
+    if (searchInput) searchInput.value = `${p.registration_code || ''} - ${p.full_name || ''}`;
+    const resultsContainer = document.getElementById('fdIndividuSearchResults');
+    if (resultsContainer) resultsContainer.style.display = 'none';
   }
 }
 
@@ -17958,3 +18155,11 @@ async function frontdeskCheckInCurrent(id) {
     }
   }
 }
+
+window.openFrontdeskKontingenModal = openFrontdeskKontingenModal;
+window.closeFrontdeskKontingenModal = closeFrontdeskKontingenModal;
+window.setModalKontingenFilter = setModalKontingenFilter;
+window.onFilterModalKontingen = onFilterModalKontingen;
+window.clearModalKontingenSearch = clearModalKontingenSearch;
+window.selectModalKontingen = selectModalKontingen;
+window.selectFrontdeskIndividuFromLiveSearch = selectFrontdeskIndividuFromLiveSearch;
