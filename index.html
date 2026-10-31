@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=191.0">
+  <link rel="stylesheet" href="css/style.css?v=192.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -2308,14 +2308,14 @@
                 <input type="text" id="presensiSearchInput" class="form-control" style="padding-left: 40px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 14px; color: #0f172a !important; font-weight: 600;" placeholder="Cari nomor tiket (PKB-xxx), nama jemaah, rombongan, atau wilayah..." oninput="filterPresensiData()">
               </div>
               
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="presensiFilterTabs">
-                <button type="button" class="btn btn-sm btn-outline-filter active" onclick="setPresensiFilter('all', this)">Semua (<span id="presTabAll">0</span>)</button>
-                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('attended', this)">✅ Tepat Waktu (<span id="presTabOnTime">0</span>)</button>
-                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('attended_late', this)">⚠️ Hadir Telat (<span id="presTabLate">0</span>)</button>
-                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('registered', this)">⏳ Belum Tiba (<span id="presTabPending">0</span>)</button>
-                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('departed', this)">🛫 Pulang (<span id="presTabDeparted">0</span>)</button>
-                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('cancelled', this)">❌ Batal (<span id="presTabCancelled">0</span>)</button>
-                <button type="button" class="btn btn-sm" onclick="resetAllPresenceData()" title="Reset semua status kehadiran peserta kembali ke Belum Tiba" style="background: #fff1f2; color: #e11d48; border: 1.5px solid #fecdd3; font-weight: 800; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;" id="presensiFilterTabs">
+                <button type="button" class="btn btn-sm btn-outline-filter active" onclick="setPresensiFilter('all', this)">Semua <span class="filter-count-badge" id="presTabAll">0</span></button>
+                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('attended', this)">✅ Tepat Waktu <span class="filter-count-badge" id="presTabOnTime">0</span></button>
+                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('attended_late', this)">⚠️ Hadir Telat <span class="filter-count-badge" id="presTabLate">0</span></button>
+                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('registered', this)">⏳ Belum Tiba <span class="filter-count-badge" id="presTabPending">0</span></button>
+                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('departed', this)">🛫 Pulang <span class="filter-count-badge" id="presTabDeparted">0</span></button>
+                <button type="button" class="btn btn-sm btn-outline-filter" onclick="setPresensiFilter('cancelled', this)">❌ Batal <span class="filter-count-badge" id="presTabCancelled">0</span></button>
+                <button type="button" class="btn btn-sm" onclick="resetAllPresenceData()" title="Reset semua status kehadiran peserta kembali ke Belum Tiba" style="background: #fff1f2; color: #e11d48; border: 1.5px solid #fecdd3; font-weight: 800; padding: 6px 14px; border-radius: 999px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
                   <i class="fa-solid fa-rotate-left"></i> Reset Presensi
                 </button>
               </div>
@@ -6879,6 +6879,6 @@ CREATE TABLE IF NOT EXISTS registrations (
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
   <script src="js/supabase-config.js?v=191.0"></script>
-  <script src="js/app.js?v=191.0"></script>
+  <script src="js/app.js?v=192.0"></script>
 </body>
 </html>

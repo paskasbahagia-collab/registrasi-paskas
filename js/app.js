@@ -17763,25 +17763,45 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
   let sliderHtml = '';
   if (isGroup && frontdeskKontingenMembers && frontdeskKontingenMembers.length > 0) {
     const totalMem = frontdeskKontingenMembers.length;
+    const attendedCount = frontdeskKontingenMembers.filter(m => m.attendance_status === 'attended' || m.attendance_status === 'attended_late').length;
+
+    // Dropdown opsi untuk melompat cepat ke anggota mana saja
+    const memberOptions = frontdeskKontingenMembers.map((m, mIdx) => {
+      const mSt = m.attendance_status || 'registered';
+      const mIsAtt = mSt === 'attended' || mSt === 'attended_late';
+      const icon = mIsAtt ? '✅' : '⏳';
+      return `<option value="${mIdx}" ${mIdx === frontdeskKontingenIndex ? 'selected' : ''}>
+        ${icon} ${mIdx + 1}. ${escapeHtml(m.full_name)} (${escapeHtml(m.registration_code || '-')}) - ${mIsAtt ? 'Hadir' : 'Belum Tiba'}
+      </option>`;
+    }).join('');
+
     sliderHtml = `
       <div class="fd-group-nav-slider">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-          <button type="button" class="btn-group-nav-arrow" onclick="stepFrontdeskKontingen(-1)" ${frontdeskKontingenIndex === 0 ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''}>
-            <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+        <div class="fd-nav-top-controls">
+          <button type="button" class="btn-group-nav-arrow" onclick="stepFrontdeskKontingen(-1)" ${frontdeskKontingenIndex === 0 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-left"></i> <span>Sebelumnya</span>
           </button>
           
-          <div style="text-align: center; flex: 1; min-width: 180px;">
-            <span style="font-size: 13.5px; font-weight: 800; color: #fbbf24;">
-              Peserta ${frontdeskKontingenIndex + 1} dari ${totalMem} di Kontingen [${escapeHtml(frontdeskActiveKontingenName)}]
-            </span>
+          <div style="text-align: center; flex: 1; min-width: 220px; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="font-size: 13.5px; font-weight: 800; color: #fbbf24; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-users"></i>
+              <span>Peserta ${frontdeskKontingenIndex + 1} dari ${totalMem} (${attendedCount} Hadir)</span>
+            </div>
+            <select class="fd-member-quick-select" onchange="switchFrontdeskKontingenMember(Number(this.value))" title="Pilih langsung nama anggota rombongan">
+              ${memberOptions}
+            </select>
           </div>
 
-          <button type="button" class="btn-group-nav-arrow" onclick="stepFrontdeskKontingen(1)" ${frontdeskKontingenIndex >= totalMem - 1 ? 'disabled style="opacity: 0.45; cursor: not-allowed;"' : ''}>
-            Berikutnya <i class="fa-solid fa-chevron-right"></i>
+          <button type="button" class="btn-group-nav-arrow" onclick="stepFrontdeskKontingen(1)" ${frontdeskKontingenIndex >= totalMem - 1 ? 'disabled' : ''}>
+            <span>Berikutnya</span> <i class="fa-solid fa-chevron-right"></i>
           </button>
         </div>
 
         <!-- Attendance Strip: Langsung Tahu Siapa Saja yang Sudah vs Belum Hadir di Kontingen Ini -->
+        <div style="font-size: 11px; font-weight: 700; color: #e2e8f0; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 12px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+          <span><i class="fa-solid fa-list-check" style="color: #fbbf24;"></i> Strip Kehadiran Kafilah [${escapeHtml(frontdeskActiveKontingenName)}]:</span>
+          <span style="color: #86efac; font-weight: 800;">${attendedCount}/${totalMem} Telah Hadir</span>
+        </div>
         <div class="fd-attendance-strip">
           ${frontdeskKontingenMembers.map((m, mIdx) => {
             const mSt = m.attendance_status || 'registered';
@@ -17803,23 +17823,37 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
   cardBox.innerHTML = `
     ${sliderHtml}
 
+    <div class="fd-credential-header-bar">
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <div class="fd-ticket-code-pill">
+          <i class="fa-solid fa-ticket"></i> ${escapeHtml(p.registration_code || '-')}
+        </div>
+        <div class="fd-group-pill">
+          <i class="fa-solid fa-users"></i> ${escapeHtml(p.group_name || 'Mandiri')}
+        </div>
+      </div>
+      <div>
+        ${isAttended ? `
+          <div class="fd-status-pill attended">
+            <i class="fa-solid fa-circle-check"></i> TELAH HADIR ${timeStr ? '(' + timeStr + ')' : ''}
+          </div>
+        ` : `
+          <div class="fd-status-pill pending">
+            <i class="fa-solid fa-clock"></i> MENUNGGU CHECK-IN
+          </div>
+        `}
+      </div>
+    </div>
+
     <div class="fd-card-inner">
       <!-- Kolom Kiri: Foto Besar & Badge Status -->
       <div class="fd-card-left">
         <div class="fd-photo-wrap ${isAttended ? 'attended' : 'pending'}">
           ${photoUrl ? `<img src="${photoUrl}" alt="${escapeHtml(p.full_name)}" class="fd-photo-img">` : `<div class="fd-photo-placeholder">${initial}</div>`}
         </div>
-
-        <div class="fd-ticket-code-badge">
-          <i class="fa-solid fa-ticket"></i> ${escapeHtml(p.registration_code || '-')}
-        </div>
-
-        <div>
-          ${st === 'attended' ? `<span class="badge-attended" style="font-size: 11.5px; padding: 4px 10px;"><i class="fa-solid fa-circle-check"></i> Hadir Tepat</span>` : 
-            (st === 'attended_late' ? `<span class="badge-attended-late" style="font-size: 11.5px; padding: 4px 10px;"><i class="fa-solid fa-triangle-exclamation"></i> Hadir Telat</span>` : 
-            (st === 'departed' ? `<span class="badge-departed" style="font-size: 11.5px; padding: 4px 10px;"><i class="fa-solid fa-plane-departure"></i> Pulang</span>` : 
-            `<span class="badge-pending" style="font-size: 11.5px; padding: 4px 10px;"><i class="fa-solid fa-clock"></i> Belum Tiba</span>`))}
-        </div>
+        <span style="font-size: 11.5px; font-weight: 800; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 999px; border: 1px solid #e2e8f0;">
+          ${p.is_child ? '<i class="fa-solid fa-child" style="color:#f59e0b;"></i> Anak-anak' : '<i class="fa-solid fa-user-tie" style="color:#047857;"></i> Peserta Dewasa'}
+        </span>
       </div>
 
       <!-- Kolom Kanan: Data Diri & Logistik Meja Depan -->
@@ -17829,15 +17863,14 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
         <div class="fd-participant-meta">
           <span>${p.gender === 'Laki-laki' ? '<i class="fa-solid fa-mars" style="color: #0284c7;"></i> Laki-laki' : '<i class="fa-solid fa-venus" style="color: #ec4899;"></i> Perempuan'}</span>
           <span>&bull; Usia: <strong>${p.age ? p.age + ' Tahun' : 'Dewasa'}</strong></span>
-          <span>&bull; Rombongan: <strong>${escapeHtml(p.group_name || 'Mandiri')}</strong></span>
-          <span>(${escapeHtml(p.wilayah || 'Pusat')}${p.daerah ? ' / ' + escapeHtml(p.daerah) : ''})</span>
+          <span>&bull; Wilayah: <strong>${escapeHtml(p.wilayah || 'Pusat')}${p.daerah ? ' / ' + escapeHtml(p.daerah) : ''}</strong></span>
         </div>
 
-        <!-- 3 Grid Logistik Meja Depan: Seragam, Pembayaran, Kesehatan -->
+        <!-- 3 Grid Logistik Meja Depan: Seragam, Pembayaran, Posko Medis -->
         <div class="fd-logistics-grid">
           <!-- Box 1: Seragam -->
           <div class="fd-logistic-box">
-            <div class="fd-logistic-label"><i class="fa-solid fa-shirt"></i> Ukuran Seragam</div>
+            <div class="fd-logistic-label"><i class="fa-solid fa-shirt" style="color:#d97706;"></i> Ukuran Seragam</div>
             <div class="fd-logistic-val">
               <span class="badge-size-highlight">${escapeHtml(p.cloth_size || 'Standar')}</span>
             </div>
@@ -17845,7 +17878,7 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
 
           <!-- Box 2: Pembayaran -->
           <div class="fd-logistic-box">
-            <div class="fd-logistic-label"><i class="fa-solid fa-wallet"></i> Status Pembayaran</div>
+            <div class="fd-logistic-label"><i class="fa-solid fa-wallet" style="color:#0284c7;"></i> Status Pembayaran</div>
             <div class="fd-logistic-val">
               ${isFullyPaid ? `
                 <span style="color: #059669; font-weight: 800; font-size: 13px;">
@@ -17861,27 +17894,25 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
 
           <!-- Box 3: Posko Medis -->
           <div class="fd-logistic-box">
-            <div class="fd-logistic-label"><i class="fa-solid fa-notes-medical"></i> Catatan Medis</div>
+            <div class="fd-logistic-label"><i class="fa-solid fa-heart-pulse" style="color:#10b981;"></i> Catatan Medis</div>
             <div class="fd-logistic-val" style="font-size: 12px; font-weight: 700; ${hasHealthIssue ? 'color: #dc2626;' : 'color: #166534;'}">
-              ${hasHealthIssue ? `<i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(healthText)}` : `<i class="fa-solid fa-circle-check"></i> Sehat`}
+              ${hasHealthIssue ? `<i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(healthText)}` : `<i class="fa-solid fa-circle-check"></i> Alhamdulillah Sehat`}
             </div>
           </div>
         </div>
 
         <!-- Detail Transportasi / Kedatangan -->
-        <div style="background: #f1f5f9; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #475569; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <i class="fa-solid fa-plane-arrival" style="color: #0284c7;"></i>
-          <span>Kedatangan: <strong>${escapeHtml(p.arrival_date || '-')}</strong> (${escapeHtml(p.arrival_transport || 'Armada Mandiri')})</span>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 9px 14px; font-size: 12px; color: #475569; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span><i class="fa-solid fa-plane-arrival" style="color: #0284c7;"></i> Datang: <strong>${escapeHtml(p.arrival_date || '-')}</strong> <small>(${escapeHtml(p.arrival_transport || 'Armada Mandiri')})</small></span>
           <span style="color: #cbd5e1;">|</span>
-          <i class="fa-solid fa-plane-departure" style="color: #64748b;"></i>
-          <span>Kepulangan: <strong>${escapeHtml(p.departure_date || '-')}</strong> (${escapeHtml(p.departure_transport || 'Armada Mandiri')})</span>
+          <span><i class="fa-solid fa-plane-departure" style="color: #64748b;"></i> Pulang: <strong>${escapeHtml(p.departure_date || '-')}</strong> <small>(${escapeHtml(p.departure_transport || 'Armada Mandiri')})</small></span>
         </div>
 
         <!-- Baris Tombol Aksi Check-in Presensi Meja Depan -->
         <div>
           ${isPending ? `
             <button type="button" class="btn-fd-action-checkin" onclick="frontdeskCheckInCurrent(${p.id})">
-              <i class="fa-solid fa-circle-check" style="font-size: 22px;"></i> CEKLIS HADIR SEKARANG
+              <i class="fa-solid fa-circle-check" style="font-size: 22px;"></i> CEKLIS KEHADIRAN JEMAAH (1-KLIK)
             </button>
           ` : `
             <div class="fd-attended-status-bar">
@@ -17890,10 +17921,10 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
                 <span>Jemaah Telah Hadir (Jam Tiba: ${timeStr || 'OK'})</span>
               </div>
               <div style="display: flex; gap: 8px;">
-                <button type="button" class="btn btn-sm" onclick="doPresenceCheckOut(${p.id})" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer;">
+                <button type="button" class="btn btn-sm" onclick="doPresenceCheckOut(${p.id})" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 800; padding: 7px 14px; border-radius: 8px; cursor: pointer;">
                   <i class="fa-solid fa-plane-departure"></i> Ceklis Pulang
                 </button>
-                <button type="button" class="btn btn-sm" onclick="resetSinglePresence(${p.id})" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 800; padding: 6px 12px; border-radius: 8px; cursor: pointer;">
+                <button type="button" class="btn btn-sm" onclick="resetSinglePresence(${p.id})" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 800; padding: 7px 14px; border-radius: 8px; cursor: pointer;">
                   <i class="fa-solid fa-rotate-left"></i> Reset
                 </button>
               </div>
@@ -17902,8 +17933,8 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
         </div>
 
         ${(isGroup && frontdeskKontingenMembers && frontdeskKontingenIndex < frontdeskKontingenMembers.length - 1) ? `
-          <button type="button" onclick="stepFrontdeskKontingen(1)" style="margin-top: 10px; width: 100%; padding: 10px 14px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; font-weight: 800; font-size: 13px; color: #1e293b; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-            <span>Lanjut ke Anggota Rombongan Berikutnya</span> <i class="fa-solid fa-chevron-right"></i>
+          <button type="button" class="btn-fd-next-member" onclick="stepFrontdeskKontingen(1)">
+            <span>Lanjut ke Anggota Rombongan Berikutnya (${frontdeskKontingenIndex + 2}/${totalMem})</span> <i class="fa-solid fa-chevron-right"></i>
           </button>
         ` : ''}
 
