@@ -10205,56 +10205,222 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, ws1, 'Rekap Keseluruhan');
 
   // ===================================================================
-  // 2. HALAMAN KEDUA: KEDATANGAN & TRANSPORTASI (DIURUTKAN DARI TERBANYAK)
+  // HELPER PENGURUTAN & NORMALISASI DATA EXCEL
   // ===================================================================
-  const arrivalCounts = {};
-  sourceData.forEach(i => {
-    const m = (i.transport_arrival || 'Belum Ditentukan').trim();
-    arrivalCounts[m] = (arrivalCounts[m] || 0) + 1;
+  // Helper: Format DateTime untuk pengurutan kronologis terawal -> terakhir
+  function getSortableDateTime(dateStr, timeStr, fallbackTime = '12:00') {
+    const d = (dateStr || '').trim();
+    let t = (timeStr || '').trim();
+    t = t.replace('.', ':');
+    const match = t.match(/(\d{1,2}):(\d{2})/);
+    let timeNorm = fallbackTime;
+    if (match) {
+      const hh = match[1].padStart(2, '0');
+      const mm = match[2];
+      timeNorm = `${hh}:${mm}`;
+    } else if (!t) {
+      timeNorm = '99:99';
+    }
+    const dateNorm = d || '9999-99-99';
+    return `${dateNorm} ${timeNorm}`;
+  }
+
+  // Helper: Pengelompokan Moda Transportasi
+  function getTransportGroup(raw) {
+    if (!raw) return 'Belum Ditentukan';
+    const s = String(raw).trim();
+    if (/^pesawat/i.test(s)) return 'Pesawat Terbang';
+    if (/^kereta/i.test(s)) return 'Kereta Api';
+    if (/^kapal/i.test(s)) return 'Kapal Laut';
+    if (/^bus/i.test(s)) return 'Bus';
+    if (/travel|elf|hiace/i.test(s)) return 'Travel / Elf / HiAce';
+    if (/mobil pribadi/i.test(s)) return 'Mobil Pribadi';
+    if (/motor/i.test(s)) return 'Sepeda Motor';
+    return s || 'Belum Ditentukan';
+  }
+
+  const TRANSPORT_PRESET_ORDER = [
+    'Pesawat Terbang',
+    'Kereta Api',
+    'Bus',
+    'Travel / Elf / HiAce',
+    'Kapal Laut',
+    'Mobil Pribadi',
+    'Sepeda Motor',
+    'Belum Ditentukan'
+  ];
+
+  function getTransportSortRank(tName) {
+    const idx = TRANSPORT_PRESET_ORDER.indexOf(tName);
+    return idx !== -1 ? idx : 50;
+  }
+
+  // Helper: Normalisasi Ukuran Seragam Kaos
+  function normalizeClothSize(sz, age) {
+    if (age && parseInt(age, 10) <= 12) return '-';
+    if (!sz) return '-';
+    const c = String(sz).toUpperCase().trim();
+    if (c === '2XL') return 'XXL';
+    if (c === 'XXXL') return '3XL';
+    if (c === '-' || c === 'NONE' || c === 'TANPA KAOS') return '-';
+    return c;
+  }
+  const SIZE_DISPLAY_ORDER = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', 'XS', 'ANAK', '-'];
+  function getSizeSortRank(sz) {
+    const idx = SIZE_DISPLAY_ORDER.indexOf(sz);
+    return idx !== -1 ? idx : 50;
+  }
+
+  // Helper: Urutan Indikator Keanggotaan Paskas (Senior -> Madya -> Baru -> Junior)
+  function getMemberRank(level) {
+    const s = String(level || '').toLowerCase();
+    if (s.includes('senior')) return 1;
+    if (s.includes('madya')) return 2;
+    if (s.includes('baru')) return 3;
+    if (s.includes('junior')) return 4;
+    return 5;
+  }
+
+  // Helper: Biaya Peserta Aman
+  function getParticipantFeeSafe(p) {
+    if (typeof calculateParticipantFee === 'function') {
+      return calculateParticipantFee(p);
+    }
+    if (p.total_fee && Number(p.total_fee) > 0) return Number(p.total_fee);
+    const settings = window.dataService ? window.dataService.getSettings() : {};
+    const adultFee = Number(settings.adult_fee || 350000);
+    const childFee = Number(settings.child_fee || 100000);
+    const toddlerFee = Number(settings.toddler_fee || 50000);
+    const age = Number(p.age);
+    if (age > 0 && age < 5) return toddlerFee;
+    if (age >= 5 && age <= 15) return childFee;
+    return adultFee;
+  }
+
+  // ===================================================================
+  // 2. HALAMAN KEDUA: KEDATANGAN & TRANSPORTASI (DIPISAH PER MODA & DIURUTKAN DARI TERAWAL)
+  // ===================================================================
+  const arrivalGroups = new Map();
+  sourceData.forEach(item => {
+    const grp = getTransportGroup(item.transport_arrival);
+    if (!arrivalGroups.has(grp)) arrivalGroups.set(grp, []);
+    arrivalGroups.get(grp).push(item);
   });
 
-  const sortedArrival = [...sourceData].sort((a, b) => {
-    const cA = arrivalCounts[(a.transport_arrival || 'Belum Ditentukan').trim()] || 0;
-    const cB = arrivalCounts[(b.transport_arrival || 'Belum Ditentukan').trim()] || 0;
-    if (cB !== cA) return cB - cA; // Terbanyak ke tersedikit
-    const tCmp = (a.transport_arrival || '').localeCompare(b.transport_arrival || '');
-    if (tCmp !== 0) return tCmp;
-    const dCmp = (a.arrival_date || '').localeCompare(b.arrival_date || '');
-    if (dCmp !== 0) return dCmp;
-    const timeCmp = (a.arrival_time || '').localeCompare(b.arrival_time || '');
-    if (timeCmp !== 0) return timeCmp;
-    return (a.full_name || '').localeCompare(b.full_name || '');
+  const sortedArrivalGroups = Array.from(arrivalGroups.entries()).sort((a, b) => {
+    const rA = getTransportSortRank(a[0]);
+    const rB = getTransportSortRank(b[0]);
+    if (rA !== rB) return rA - rB;
+    return b[1].length - a[1].length;
   });
 
   const s2Headers = [
     'No', 'Moda Transportasi', 'Tgl Kedatangan', 'Jam Kedatangan', 'Nama Peserta', 
-    'Jenis Kelamin', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan Kedatangan'
+    'Jenis Kelamin', 'Usia', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan Kedatangan'
   ];
-  const s2Rows = [s2Headers];
-  sortedArrival.forEach((item, idx) => {
-    const roomInfo = item.building 
-      ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
-      : (item.room_name || item.room_number || '-');
-    s2Rows.push([
-      idx + 1,
-      sanitizeSpreadsheetValue(item.transport_arrival || 'Belum Ditentukan'),
-      sanitizeSpreadsheetValue(item.arrival_date || '-'),
-      sanitizeSpreadsheetValue(item.arrival_time || '-'),
-      sanitizeSpreadsheetValue(item.full_name),
-      sanitizeSpreadsheetValue(item.gender),
-      sanitizeSpreadsheetValue(item.wilayah),
-      sanitizeSpreadsheetValue(item.daerah || '-'),
-      sanitizeSpreadsheetValue(item.phone_number || '-'),
-      sanitizeSpreadsheetValue(roomInfo),
-      sanitizeSpreadsheetValue(item.notes || '-')
-    ]);
+  const s2Rows = [];
+  const s2HeaderIndexes = [];
+  const s2BannerIndexes = [];
+  const s2Merges = [];
+
+  // BAGIAN 1: RINGKASAN ARMADA KEDATANGAN
+  const rArrSumTitleIdx = s2Rows.length;
+  s2Rows.push(['RINGKASAN REKAPITULASI KEDATANGAN PESERTA PER MODA TRANSPORTASI', '', '', '', '']);
+  s2BannerIndexes.push({ rIdx: rArrSumTitleIdx, color: '1E3A8A' });
+  s2Merges.push({ s: { r: rArrSumTitleIdx, c: 0 }, e: { r: rArrSumTitleIdx, c: 4 } });
+
+  const rArrSumHeadIdx = s2Rows.length;
+  s2Rows.push(['No', 'Moda Transportasi', 'Total Peserta', 'Kedatangan Terawal', 'Kedatangan Terakhir']);
+  s2HeaderIndexes.push(rArrSumHeadIdx);
+
+  sortedArrivalGroups.forEach(([grpName, items], idx) => {
+    // Urutkan jadwal kedatangan terawal s/d terakhir
+    items.sort((a, b) => {
+      const dtA = getSortableDateTime(a.arrival_date, a.arrival_time, '10:00');
+      const dtB = getSortableDateTime(b.arrival_date, b.arrival_time, '10:00');
+      if (dtA !== dtB) return dtA.localeCompare(dtB);
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    });
+
+    const first = items[0];
+    const last = items[items.length - 1];
+    const firstStr = (first && first.arrival_date) ? `${first.arrival_date} ${first.arrival_time || '10:00'}` : '-';
+    const lastStr = (last && last.arrival_date) ? `${last.arrival_date} ${last.arrival_time || '10:00'}` : '-';
+
+    s2Rows.push([idx + 1, grpName, items.length, firstStr, lastStr]);
   });
+
+  const rArrSumTotalIdx = s2Rows.length;
+  s2Rows.push(['TOTAL KESELURUHAN PESERTA', '', sourceData.length, '', '']);
+  s2Merges.push({ s: { r: rArrSumTotalIdx, c: 0 }, e: { r: rArrSumTotalIdx, c: 1 } });
+
+  // Jeda baris pemisah antar bagian
+  s2Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
+  s2Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
+
+  // BAGIAN 2: DAFTAR PESERTA PER MODA TRANSPORTASI KEDATANGAN
+  sortedArrivalGroups.forEach(([grpName, items]) => {
+    const first = items[0];
+    const last = items[items.length - 1];
+    const timeRange = (first && first.arrival_date) ? `(Jadwal: ${first.arrival_date} s/d ${(last && last.arrival_date) || first.arrival_date})` : '';
+
+    const rBannerIdx = s2Rows.length;
+    s2Rows.push([
+      `MODA TRANSPORTASI: ${grpName.toUpperCase()} — TOTAL: ${items.length} PESERTA ${timeRange}`,
+      '', '', '', '', '', '', '', '', '', '', ''
+    ]);
+    s2BannerIndexes.push({ rIdx: rBannerIdx, color: '1D4ED8' });
+    s2Merges.push({ s: { r: rBannerIdx, c: 0 }, e: { r: rBannerIdx, c: s2Headers.length - 1 } });
+
+    const rHeadIdx = s2Rows.length;
+    s2Rows.push([...s2Headers]);
+    s2HeaderIndexes.push(rHeadIdx);
+
+    items.forEach((item, idx) => {
+      const roomInfo = item.building 
+        ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+        : (item.room_name || item.room_number || '-');
+      s2Rows.push([
+        idx + 1,
+        sanitizeSpreadsheetValue(item.transport_arrival || grpName),
+        sanitizeSpreadsheetValue(item.arrival_date || '-'),
+        sanitizeSpreadsheetValue(item.arrival_time || '-'),
+        sanitizeSpreadsheetValue(item.full_name),
+        sanitizeSpreadsheetValue(item.gender),
+        item.age ? `${item.age} Th` : '-',
+        sanitizeSpreadsheetValue(item.wilayah),
+        sanitizeSpreadsheetValue(item.daerah || '-'),
+        sanitizeSpreadsheetValue(item.phone_number || '-'),
+        sanitizeSpreadsheetValue(roomInfo),
+        sanitizeSpreadsheetValue(item.notes || '-')
+      ]);
+    });
+
+    s2Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
+  });
+
   const ws2 = XLSX.utils.aoa_to_sheet(s2Rows);
-  formatSheet(ws2, s2Rows, [0], '1D4ED8', (rIdx, cIdx) => {
-    if (cIdx === 1) { // Kolom Moda Transportasi bold & center
+  ws2['!merges'] = s2Merges;
+  formatSheet(ws2, s2Rows, s2HeaderIndexes, '1D4ED8', (rIdx, cIdx) => {
+    const banner = s2BannerIndexes.find(b => b.rIdx === rIdx);
+    if (banner) {
+      return {
+        fill: { fgColor: { rgb: banner.color } },
+        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      };
+    }
+    if (rIdx === rArrSumTotalIdx) {
+      return {
+        fill: { fgColor: { rgb: 'DBEAFE' } },
+        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1E40AF' } },
+        alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : 'center', vertical: 'center' }
+      };
+    }
+    if (cIdx === 1) {
       return createDataStyle(rIdx % 2 === 0, 'center', null, '1D4ED8', true);
     }
-    if (cIdx === 2 || cIdx === 3) {
+    if (cIdx === 2 || cIdx === 3 || cIdx === 6) {
       return createDataStyle(rIdx % 2 === 0, 'center');
     }
     return null;
@@ -10356,110 +10522,277 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, ws3, 'Ikhwan & Akhwat');
 
   // ===================================================================
-  // 4. HALAMAN KEEMPAT: REKAP BAJU (DIURUTKAN PER UKURAN)
+  // 4. HALAMAN KEEMPAT: REKAP BAJU (DIPISAH PER UKURAN: S SENDIRI, M, L, XL, DST)
   // ===================================================================
-  const sizeOrder = ['ANAK', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', 'XXXL', '3XL', '4XL', '5XL'];
-  function getSizeRank(s) {
-    if (!s) return 999;
-    const clean = String(s).toUpperCase().trim();
-    const idx = sizeOrder.findIndex(o => clean === o || clean.includes(o));
-    return idx >= 0 ? idx : 500;
-  }
+  const clothGroups = new Map();
+  sourceData.forEach(item => {
+    const sz = normalizeClothSize(item.cloth_size, item.age);
+    if (!clothGroups.has(sz)) clothGroups.set(sz, []);
+    clothGroups.get(sz).push(item);
+  });
 
-  const sortedBaju = [...sourceData].sort((a, b) => {
-    const rA = getSizeRank(a.cloth_size);
-    const rB = getSizeRank(b.cloth_size);
-    if (rA !== rB) return rA - rB;
-    const gCmp = (a.gender || '').localeCompare(b.gender || '');
-    if (gCmp !== 0) return gCmp;
-    return (a.full_name || '').localeCompare(b.full_name || '');
+  const sortedClothGroups = Array.from(clothGroups.entries()).sort((a, b) => {
+    return getSizeSortRank(a[0]) - getSizeSortRank(b[0]);
   });
 
   const s4Headers = [
     'No', 'Ukuran Baju', 'Nama Peserta', 'Jenis Kelamin', 'Usia', 
     'Kategori Usia', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan'
   ];
-  const s4Rows = [s4Headers];
-  sortedBaju.forEach((item, idx) => {
-    const isChildUnder12 = item.age && parseInt(item.age, 10) <= 12;
-    const clothVal = (isChildUnder12 || item.cloth_size === '-') ? '-' : (item.cloth_size || '-');
-    const roomInfo = item.building 
-      ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
-      : (item.room_name || item.room_number || '-');
-    s4Rows.push([
-      idx + 1,
-      sanitizeSpreadsheetValue(clothVal),
-      sanitizeSpreadsheetValue(item.full_name),
-      sanitizeSpreadsheetValue(item.gender),
-      item.age ? `${item.age} Th` : '-',
-      (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
-      sanitizeSpreadsheetValue(item.wilayah),
-      sanitizeSpreadsheetValue(item.daerah || '-'),
-      sanitizeSpreadsheetValue(item.phone_number || '-'),
-      sanitizeSpreadsheetValue(roomInfo),
-      sanitizeSpreadsheetValue(item.notes || '-')
-    ]);
+  const s4Rows = [];
+  const s4HeaderIndexes = [];
+  const s4BannerIndexes = [];
+  const s4Merges = [];
+
+  // BAGIAN 1: RINGKASAN TOTAL PEMESANAN SERAGAM KAOS
+  const rClothSumTitleIdx = s4Rows.length;
+  s4Rows.push(['RINGKASAN TOTAL PEMESANAN SERAGAM KAOS PASKAS BAHAGIA', '', '', '', '']);
+  s4BannerIndexes.push({ rIdx: rClothSumTitleIdx, color: '78350F' });
+  s4Merges.push({ s: { r: rClothSumTitleIdx, c: 0 }, e: { r: rClothSumTitleIdx, c: 4 } });
+
+  const rClothSumHeadIdx = s4Rows.length;
+  s4Rows.push(['No', 'Ukuran Seragam Kaos', 'Ikhwan (Laki-laki)', 'Akhwat (Perempuan)', 'Total Pesanan (Pcs)']);
+  s4HeaderIndexes.push(rClothSumHeadIdx);
+
+  let grandClothIkhwan = 0, grandClothAkhwat = 0, grandClothTotal = 0, grandChildNoCloth = 0;
+  let sizeRowNo = 1;
+
+  sortedClothGroups.forEach(([sz, items]) => {
+    let cIkh = 0, cAkh = 0;
+    items.forEach(i => {
+      const isFem = /perempuan|akhwat|^p$/i.test(String(i.gender || ''));
+      if (isFem) cAkh++;
+      else cIkh++;
+    });
+
+    if (sz === '-') {
+      grandChildNoCloth += items.length;
+    } else {
+      grandClothIkhwan += cIkh;
+      grandClothAkhwat += cAkh;
+      grandClothTotal += items.length;
+      s4Rows.push([sizeRowNo++, sz, cIkh, cAkh, items.length]);
+    }
   });
+
+  const rClothSumTotalIdx = s4Rows.length;
+  s4Rows.push(['TOTAL KEBUTUHAN SERAGAM KAOS', '', grandClothIkhwan, grandClothAkhwat, grandClothTotal]);
+  s4Merges.push({ s: { r: rClothSumTotalIdx, c: 0 }, e: { r: rClothSumTotalIdx, c: 1 } });
+
+  if (grandChildNoCloth > 0) {
+    const rClothChildNoteIdx = s4Rows.length;
+    s4Rows.push([`CATATAN: ${grandChildNoCloth} Peserta Anak (Usia ≤ 12 Tahun) Tanpa Seragam Kaos (Diberi Tanda -)`, '', '', '', '']);
+    s4Merges.push({ s: { r: rClothChildNoteIdx, c: 0 }, e: { r: rClothChildNoteIdx, c: 4 } });
+  }
+
+  // Jeda baris pemisah antar bagian
+  s4Rows.push(['', '', '', '', '', '', '', '', '', '', '']);
+  s4Rows.push(['', '', '', '', '', '', '', '', '', '', '']);
+
+  // BAGIAN 2: DAFTAR PESERTA PER UKURAN BAJU (S SENDIRI, M SENDIRI, L SENDIRI, DST)
+  sortedClothGroups.forEach(([sz, items]) => {
+    // Urutkan peserta dalam ukuran ini: Gender (Ikhwan dulu lalu Akhwat), lalu Nama A-Z
+    items.sort((a, b) => {
+      const gA = /perempuan|akhwat|^p$/i.test(String(a.gender || '')) ? 2 : 1;
+      const gB = /perempuan|akhwat|^p$/i.test(String(b.gender || '')) ? 2 : 1;
+      if (gA !== gB) return gA - gB;
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    });
+
+    let cIkh = 0, cAkh = 0;
+    items.forEach(i => {
+      if (/perempuan|akhwat|^p$/i.test(String(i.gender || ''))) cAkh++;
+      else cIkh++;
+    });
+
+    const isNoCloth = (sz === '-');
+    const bannerTitle = isNoCloth
+      ? `PESERTA TANPA SERAGAM KAOS (-) — KHUSUS ANAK USIA ≤ 12 TAHUN (TOTAL: ${items.length} PESERTA)`
+      : `UKURAN SERAGAM: ${sz} — TOTAL: ${items.length} POTONG (Ikhwan: ${cIkh} Pcs | Akhwat: ${cAkh} Pcs)`;
+
+    const rBannerIdx = s4Rows.length;
+    s4Rows.push([bannerTitle, '', '', '', '', '', '', '', '', '', '']);
+    s4BannerIndexes.push({ rIdx: rBannerIdx, color: isNoCloth ? '475569' : 'B45309' });
+    s4Merges.push({ s: { r: rBannerIdx, c: 0 }, e: { r: rBannerIdx, c: s4Headers.length - 1 } });
+
+    const rHeadIdx = s4Rows.length;
+    s4Rows.push([...s4Headers]);
+    s4HeaderIndexes.push(rHeadIdx);
+
+    items.forEach((item, idx) => {
+      const roomInfo = item.building 
+        ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+        : (item.room_name || item.room_number || '-');
+      s4Rows.push([
+        idx + 1,
+        sanitizeSpreadsheetValue(sz),
+        sanitizeSpreadsheetValue(item.full_name),
+        sanitizeSpreadsheetValue(item.gender),
+        item.age ? `${item.age} Th` : '-',
+        (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
+        sanitizeSpreadsheetValue(item.wilayah),
+        sanitizeSpreadsheetValue(item.daerah || '-'),
+        sanitizeSpreadsheetValue(item.phone_number || '-'),
+        sanitizeSpreadsheetValue(roomInfo),
+        sanitizeSpreadsheetValue(item.notes || '-')
+      ]);
+    });
+
+    s4Rows.push(['', '', '', '', '', '', '', '', '', '', '']);
+  });
+
   const ws4 = XLSX.utils.aoa_to_sheet(s4Rows);
-  formatSheet(ws4, s4Rows, [0], 'B45309', (rIdx, cIdx) => {
+  ws4['!merges'] = s4Merges;
+  formatSheet(ws4, s4Rows, s4HeaderIndexes, 'B45309', (rIdx, cIdx) => {
+    const banner = s4BannerIndexes.find(b => b.rIdx === rIdx);
+    if (banner) {
+      return {
+        fill: { fgColor: { rgb: banner.color } },
+        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      };
+    }
+    if (rIdx === rClothSumTotalIdx) {
+      return {
+        fill: { fgColor: { rgb: 'FEF3C7' } },
+        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '92400E' } },
+        alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : 'center', vertical: 'center' }
+      };
+    }
     if (cIdx === 1) { // Ukuran baju diberi warna font & rata tengah
       return createDataStyle(rIdx % 2 === 0, 'center', null, 'B45309', true);
+    }
+    if (cIdx === 2 || cIdx === 3 || cIdx === 4) {
+      return createDataStyle(rIdx % 2 === 0, 'center');
     }
     return null;
   });
   XLSX.utils.book_append_sheet(workbook, ws4, 'Rekap Baju');
 
   // ===================================================================
-  // 5. HALAMAN KELIMA: KEPULANGAN & TRANSPORTASI (DIURUTKAN DARI TERBANYAK)
+  // 5. HALAMAN KELIMA: KEPULANGAN & TRANSPORTASI (DIPISAH PER MODA & DIURUTKAN DARI TERAWAL)
   // ===================================================================
-  const departureCounts = {};
-  sourceData.forEach(i => {
-    const m = (i.transport_departure || 'Belum Ditentukan').trim();
-    departureCounts[m] = (departureCounts[m] || 0) + 1;
+  const departureGroups = new Map();
+  sourceData.forEach(item => {
+    const grp = getTransportGroup(item.transport_departure);
+    if (!departureGroups.has(grp)) departureGroups.set(grp, []);
+    departureGroups.get(grp).push(item);
   });
 
-  const sortedDeparture = [...sourceData].sort((a, b) => {
-    const cA = departureCounts[(a.transport_departure || 'Belum Ditentukan').trim()] || 0;
-    const cB = departureCounts[(b.transport_departure || 'Belum Ditentukan').trim()] || 0;
-    if (cB !== cA) return cB - cA; // Terbanyak ke tersedikit
-    const tCmp = (a.transport_departure || '').localeCompare(b.transport_departure || '');
-    if (tCmp !== 0) return tCmp;
-    const dCmp = (a.departure_date || '').localeCompare(b.departure_date || '');
-    if (dCmp !== 0) return dCmp;
-    const timeCmp = (a.departure_time || '').localeCompare(b.departure_time || '');
-    if (timeCmp !== 0) return timeCmp;
-    return (a.full_name || '').localeCompare(b.full_name || '');
+  const sortedDepartureGroups = Array.from(departureGroups.entries()).sort((a, b) => {
+    const rA = getTransportSortRank(a[0]);
+    const rB = getTransportSortRank(b[0]);
+    if (rA !== rB) return rA - rB;
+    return b[1].length - a[1].length;
   });
 
   const s5Headers = [
     'No', 'Moda Transportasi Pulang', 'Tgl Kepulangan', 'Jam Kepulangan', 'Nama Peserta', 
-    'Jenis Kelamin', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan Kepulangan'
+    'Jenis Kelamin', 'Usia', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan Kepulangan'
   ];
-  const s5Rows = [s5Headers];
-  sortedDeparture.forEach((item, idx) => {
-    const roomInfo = item.building 
-      ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
-      : (item.room_name || item.room_number || '-');
-    s5Rows.push([
-      idx + 1,
-      sanitizeSpreadsheetValue(item.transport_departure || 'Belum Ditentukan'),
-      sanitizeSpreadsheetValue(item.departure_date || '-'),
-      sanitizeSpreadsheetValue(item.departure_time || '-'),
-      sanitizeSpreadsheetValue(item.full_name),
-      sanitizeSpreadsheetValue(item.gender),
-      sanitizeSpreadsheetValue(item.wilayah),
-      sanitizeSpreadsheetValue(item.daerah || '-'),
-      sanitizeSpreadsheetValue(item.phone_number || '-'),
-      sanitizeSpreadsheetValue(roomInfo),
-      sanitizeSpreadsheetValue(item.notes || '-')
-    ]);
+  const s5Rows = [];
+  const s5HeaderIndexes = [];
+  const s5BannerIndexes = [];
+  const s5Merges = [];
+
+  // BAGIAN 1: RINGKASAN ARMADA KEPULANGAN
+  const rDepSumTitleIdx = s5Rows.length;
+  s5Rows.push(['RINGKASAN REKAPITULASI KEPULANGAN PESERTA PER MODA TRANSPORTASI', '', '', '', '']);
+  s5BannerIndexes.push({ rIdx: rDepSumTitleIdx, color: '312E81' });
+  s5Merges.push({ s: { r: rDepSumTitleIdx, c: 0 }, e: { r: rDepSumTitleIdx, c: 4 } });
+
+  const rDepSumHeadIdx = s5Rows.length;
+  s5Rows.push(['No', 'Moda Transportasi Pulang', 'Total Peserta', 'Kepulangan Terawal', 'Kepulangan Terakhir']);
+  s5HeaderIndexes.push(rDepSumHeadIdx);
+
+  sortedDepartureGroups.forEach(([grpName, items], idx) => {
+    // Urutkan jadwal kepulangan terawal s/d terakhir (siapa yang pulang duluan di atas)
+    items.sort((a, b) => {
+      const dtA = getSortableDateTime(a.departure_date, a.departure_time, '16:00');
+      const dtB = getSortableDateTime(b.departure_date, b.departure_time, '16:00');
+      if (dtA !== dtB) return dtA.localeCompare(dtB);
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    });
+
+    const first = items[0];
+    const last = items[items.length - 1];
+    const firstStr = (first && first.departure_date) ? `${first.departure_date} ${first.departure_time || '16:00'}` : '-';
+    const lastStr = (last && last.departure_date) ? `${last.departure_date} ${last.departure_time || '16:00'}` : '-';
+
+    s5Rows.push([idx + 1, grpName, items.length, firstStr, lastStr]);
   });
+
+  const rDepSumTotalIdx = s5Rows.length;
+  s5Rows.push(['TOTAL KESELURUHAN PESERTA', '', sourceData.length, '', '']);
+  s5Merges.push({ s: { r: rDepSumTotalIdx, c: 0 }, e: { r: rDepSumTotalIdx, c: 1 } });
+
+  // Jeda baris pemisah antar bagian
+  s5Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
+  s5Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
+
+  // BAGIAN 2: DAFTAR PESERTA PER MODA TRANSPORTASI KEPULANGAN
+  sortedDepartureGroups.forEach(([grpName, items]) => {
+    const first = items[0];
+    const last = items[items.length - 1];
+    const timeRange = (first && first.departure_date) ? `(Jadwal: ${first.departure_date} s/d ${(last && last.departure_date) || first.departure_date})` : '';
+
+    const rBannerIdx = s5Rows.length;
+    s5Rows.push([
+      `MODA TRANSPORTASI PULANG: ${grpName.toUpperCase()} — TOTAL: ${items.length} PESERTA ${timeRange}`,
+      '', '', '', '', '', '', '', '', '', '', ''
+    ]);
+    s5BannerIndexes.push({ rIdx: rBannerIdx, color: '4338CA' });
+    s5Merges.push({ s: { r: rBannerIdx, c: 0 }, e: { r: rBannerIdx, c: s5Headers.length - 1 } });
+
+    const rHeadIdx = s5Rows.length;
+    s5Rows.push([...s5Headers]);
+    s5HeaderIndexes.push(rHeadIdx);
+
+    items.forEach((item, idx) => {
+      const roomInfo = item.building 
+        ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+        : (item.room_name || item.room_number || '-');
+      s5Rows.push([
+        idx + 1,
+        sanitizeSpreadsheetValue(item.transport_departure || grpName),
+        sanitizeSpreadsheetValue(item.departure_date || '-'),
+        sanitizeSpreadsheetValue(item.departure_time || '-'),
+        sanitizeSpreadsheetValue(item.full_name),
+        sanitizeSpreadsheetValue(item.gender),
+        item.age ? `${item.age} Th` : '-',
+        sanitizeSpreadsheetValue(item.wilayah),
+        sanitizeSpreadsheetValue(item.daerah || '-'),
+        sanitizeSpreadsheetValue(item.phone_number || '-'),
+        sanitizeSpreadsheetValue(roomInfo),
+        sanitizeSpreadsheetValue(item.notes || '-')
+      ]);
+    });
+
+    s5Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
+  });
+
   const ws5 = XLSX.utils.aoa_to_sheet(s5Rows);
-  formatSheet(ws5, s5Rows, [0], '4338CA', (rIdx, cIdx) => {
+  ws5['!merges'] = s5Merges;
+  formatSheet(ws5, s5Rows, s5HeaderIndexes, '4338CA', (rIdx, cIdx) => {
+    const banner = s5BannerIndexes.find(b => b.rIdx === rIdx);
+    if (banner) {
+      return {
+        fill: { fgColor: { rgb: banner.color } },
+        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      };
+    }
+    if (rIdx === rDepSumTotalIdx) {
+      return {
+        fill: { fgColor: { rgb: 'E0E7FF' } },
+        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '3730A3' } },
+        alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : 'center', vertical: 'center' }
+      };
+    }
     if (cIdx === 1) { // Kolom Moda Transportasi Pulang bold & center
       return createDataStyle(rIdx % 2 === 0, 'center', null, '4338CA', true);
     }
-    if (cIdx === 2 || cIdx === 3) {
+    if (cIdx === 2 || cIdx === 3 || cIdx === 6) {
       return createDataStyle(rIdx % 2 === 0, 'center');
     }
     return null;
@@ -10590,15 +10923,19 @@ function exportToExcel() {
 
   sortedWilayahList.forEach(([wName, wItems]) => {
     // Urutkan data peserta dalam wilayah ini:
-    // 1. Daerah (kota/kabupaten)
-    // 2. Masa keanggotaan (Senior -> Madya -> Baru)
-    // 3. Nama peserta
+    // 1. Indikator Keanggotaan: Senior -> Madya -> Baru -> Junior
+    // 2. Tahun masa keanggotaan tertinggi duluan
+    // 3. Daerah (kota/kabupaten)
+    // 4. Nama peserta
     const sortedItems = [...wItems].sort((a, b) => {
-      const dCmp = (a.daerah || '').localeCompare(b.daerah || '');
-      if (dCmp !== 0) return dCmp;
       const catA = getPaskasCategory(a);
       const catB = getPaskasCategory(b);
-      if (catB.years !== catA.years) return catB.years - catA.years; // Senior di atas
+      const rankA = getMemberRank(catA.level);
+      const rankB = getMemberRank(catB.level);
+      if (rankA !== rankB) return rankA - rankB; // Senior (1) -> Madya (2) -> Baru (3) -> Junior (4)
+      if (catB.years !== catA.years) return catB.years - catA.years; // Lama keanggotaan tertinggi di atas
+      const dCmp = (a.daerah || '').localeCompare(b.daerah || '');
+      if (dCmp !== 0) return dCmp;
       return (a.full_name || '').localeCompare(b.full_name || '');
     });
 
@@ -10695,11 +11032,238 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, ws7, 'Rekapitulasi Wilayah');
 
   // ===================================================================
-  // UNDUH FILE WORKBOOK EXCEL LENGKAP 7 HALAMAN
+  // 8. HALAMAN KEDELAPAN: REKAP PEMBAYARAN (DIPISAH LUNAS, KURANG, BELUM BAYAR DALAM SATU SHEET)
+  // ===================================================================
+  const lunasList = [];
+  const kurangList = [];
+  const belumList = [];
+  const refundList = [];
+
+  let totFeeAll = 0, totPaidAll = 0, totRemAll = 0;
+  let totFeeLunas = 0, totPaidLunas = 0;
+  let totFeeKurang = 0, totPaidKurang = 0, totRemKurang = 0;
+  let totFeeBelum = 0, totRemBelum = 0;
+  let totFeeRefund = 0, totPaidRefund = 0;
+
+  sourceData.forEach(item => {
+    const fee = getParticipantFeeSafe(item);
+    const paid = Number(item.paid_amount || 0);
+    const remaining = Math.max(0, fee - paid);
+    const isCancelled = item.attendance_status === 'cancelled';
+    const isVerified = item.payment_verified === 'verified';
+
+    totFeeAll += fee;
+    totPaidAll += paid;
+    totRemAll += remaining;
+
+    if (isCancelled) {
+      totFeeRefund += fee;
+      totPaidRefund += paid;
+      refundList.push({ item, fee, paid, remaining, status: 'Dibatalkan (Refund)' });
+    } else if (remaining <= 0 && paid > 0) {
+      totFeeLunas += fee;
+      totPaidLunas += paid;
+      lunasList.push({ item, fee, paid, remaining: 0, status: isVerified ? 'Lunas' : 'Lunas (Menunggu Verifikasi)' });
+    } else if (paid > 0 && remaining > 0) {
+      totFeeKurang += fee;
+      totPaidKurang += paid;
+      totRemKurang += remaining;
+      kurangList.push({ item, fee, paid, remaining, status: isVerified ? 'Kurang (Cicilan)' : 'Kurang (Menunggu Verifikasi)' });
+    } else {
+      totFeeBelum += fee;
+      totRemBelum += fee;
+      belumList.push({ item, fee, paid: 0, remaining: fee, status: 'Belum Bayar' });
+    }
+  });
+
+  // Urutkan tiap kategori:
+  // Lunas: Berdasarkan Nama A-Z
+  lunasList.sort((a, b) => (a.item.full_name || '').localeCompare(b.item.full_name || ''));
+  // Kurang: Berdasarkan Sisa Piutang terbesar ke terkecil lalu Nama
+  kurangList.sort((a, b) => (b.remaining - a.remaining) || (a.item.full_name || '').localeCompare(b.item.full_name || ''));
+  // Belum Bayar: Berdasarkan Wilayah lalu Nama
+  belumList.sort((a, b) => (a.item.wilayah || '').localeCompare(b.item.wilayah || '') || (a.item.full_name || '').localeCompare(b.item.full_name || ''));
+  // Refund: Berdasarkan Nama
+  refundList.sort((a, b) => (a.item.full_name || '').localeCompare(b.item.full_name || ''));
+
+  const s8Headers = [
+    'No', 'No Tiket', 'Nama Peserta', 'Kategori Usia', 'Usia', 
+    'Jenis Kelamin', 'Wilayah', 'Rombongan', 'Total Biaya (Rp)', 'Total Terbayar (Rp)', 
+    'Sisa Piutang (Rp)', 'Status Presensi', 'No WhatsApp', 'Status Pembayaran', 'Catatan'
+  ];
+  const s8Rows = [];
+  const s8HeaderIndexes = [];
+  const s8BannerIndexes = [];
+  const s8SubtotalIndexes = [];
+  const s8Merges = [];
+
+  // BAGIAN 0: RINGKASAN REKAPITULASI PEMBAYARAN
+  const rPaySumTitleIdx = s8Rows.length;
+  s8Rows.push(['RINGKASAN STATUS KEUANGAN & PEMBAYARAN PESERTA PASKAS BAHAGIA', '', '', '', '', '', '']);
+  s8BannerIndexes.push({ rIdx: rPaySumTitleIdx, color: '064E3B' });
+  s8Merges.push({ s: { r: rPaySumTitleIdx, c: 0 }, e: { r: rPaySumTitleIdx, c: 6 } });
+
+  const rPaySumHeadIdx = s8Rows.length;
+  s8Rows.push(['No', 'Kategori Pembayaran', 'Jumlah Peserta', 'Total Kewajiban (Rp)', 'Total Terbayar (Rp)', 'Sisa Piutang (Rp)', 'Persentase Lunas']);
+  s8HeaderIndexes.push(rPaySumHeadIdx);
+
+  const pctLunas = totFeeLunas > 0 ? '100%' : '0%';
+  const pctKurang = totFeeKurang > 0 ? `${Math.round((totPaidKurang / totFeeKurang) * 100)}%` : '0%';
+  const pctAll = totFeeAll > 0 ? `${Math.round((totPaidAll / totFeeAll) * 100)}%` : '0%';
+
+  s8Rows.push([1, 'Lunas', lunasList.length, totFeeLunas, totPaidLunas, 0, pctLunas]);
+  s8Rows.push([2, 'Kurang / Cicilan', kurangList.length, totFeeKurang, totPaidKurang, totRemKurang, pctKurang]);
+  s8Rows.push([3, 'Belum Bayar', belumList.length, totFeeBelum, 0, totRemBelum, '0%']);
+  if (refundList.length > 0) {
+    s8Rows.push([4, 'Dibatalkan / Refund', refundList.length, totFeeRefund, totPaidRefund, 0, '-']);
+  }
+
+  const rPaySumTotalIdx = s8Rows.length;
+  s8Rows.push(['TOTAL KESELURUHAN', '', sourceData.length, totFeeAll, totPaidAll, totRemAll, pctAll]);
+  s8Merges.push({ s: { r: rPaySumTotalIdx, c: 0 }, e: { r: rPaySumTotalIdx, c: 1 } });
+
+  // Jeda baris pemisah antar tabel
+  s8Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+  s8Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+
+  // HELPER UNTUK MENGISI DAFTAR TABEL SUB-SEKSI PEMBAYARAN
+  function appendPaymentSubSection(titleText, bannerColor, list, subtotalLabel, totFee, totPaid, totRem) {
+    const rBanner = s8Rows.length;
+    s8Rows.push([titleText, '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    s8BannerIndexes.push({ rIdx: rBanner, color: bannerColor });
+    s8Merges.push({ s: { r: rBanner, c: 0 }, e: { r: rBanner, c: s8Headers.length - 1 } });
+
+    const rHead = s8Rows.length;
+    s8Rows.push([...s8Headers]);
+    s8HeaderIndexes.push(rHead);
+
+    list.forEach(({ item, fee, paid, remaining, status }, idx) => {
+      const isChild = item.age && parseInt(item.age, 10) < 15;
+      const kategori = (item.age && parseInt(item.age, 10) < 5) ? 'Balita' : (isChild ? 'Anak-anak' : 'Dewasa');
+      s8Rows.push([
+        idx + 1,
+        sanitizeSpreadsheetValue(item.registration_code),
+        sanitizeSpreadsheetValue(item.full_name),
+        kategori,
+        item.age ? `${item.age} Th` : '-',
+        sanitizeSpreadsheetValue(item.gender),
+        sanitizeSpreadsheetValue(item.wilayah),
+        sanitizeSpreadsheetValue(item.group_name || 'Mandiri'),
+        fee,
+        paid,
+        remaining,
+        sanitizeSpreadsheetValue(item.attendance_status || 'Belum Hadir'),
+        sanitizeSpreadsheetValue(item.phone_number || '-'),
+        status,
+        sanitizeSpreadsheetValue(item.notes || '-')
+      ]);
+    });
+
+    // Baris Subtotal
+    const rSub = s8Rows.length;
+    s8Rows.push([subtotalLabel, '', '', '', '', '', '', '', totFee, totPaid, totRem, '', '', '', '']);
+    s8SubtotalIndexes.push(rSub);
+    s8Merges.push({ s: { r: rSub, c: 0 }, e: { r: rSub, c: 7 } });
+
+    // Jeda 2 baris
+    s8Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    s8Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+  }
+
+  // 1. SEKSI LUNAS
+  appendPaymentSubSection(
+    `1. DAFTAR PESERTA LUNAS — TOTAL: ${lunasList.length} PESERTA (TOTAL TERBAYAR: Rp ${totPaidLunas.toLocaleString('id-ID')})`,
+    '047857',
+    lunasList,
+    `SUBTOTAL PESERTA LUNAS (${lunasList.length} Orang)`,
+    totFeeLunas,
+    totPaidLunas,
+    0
+  );
+
+  // 2. SEKSI KURANG BAYAR / CICILAN
+  appendPaymentSubSection(
+    `2. DAFTAR PESERTA KURANG BAYAR / CICILAN — TOTAL: ${kurangList.length} PESERTA (TERBAYAR: Rp ${totPaidKurang.toLocaleString('id-ID')} | SISA KURANG: Rp ${totRemKurang.toLocaleString('id-ID')})`,
+    'D97706',
+    kurangList,
+    `SUBTOTAL PESERTA KURANG BAYAR (${kurangList.length} Orang)`,
+    totFeeKurang,
+    totPaidKurang,
+    totRemKurang
+  );
+
+  // 3. SEKSI BELUM BAYAR
+  appendPaymentSubSection(
+    `3. DAFTAR PESERTA BELUM BAYAR — TOTAL: ${belumList.length} PESERTA (TOTAL PIUTANG: Rp ${totRemBelum.toLocaleString('id-ID')})`,
+    'DC2626',
+    belumList,
+    `SUBTOTAL PESERTA BELUM BAYAR (${belumList.length} Orang)`,
+    totFeeBelum,
+    0,
+    totRemBelum
+  );
+
+  // 4. SEKSI DIBATALKAN / REFUND (JIKA ADA)
+  if (refundList.length > 0) {
+    appendPaymentSubSection(
+      `4. DAFTAR PESERTA DIBATALKAN / REFUND — TOTAL: ${refundList.length} PESERTA`,
+      '475569',
+      refundList,
+      `SUBTOTAL PESERTA DIBATALKAN (${refundList.length} Orang)`,
+      totFeeRefund,
+      totPaidRefund,
+      0
+    );
+  }
+
+  const ws8 = XLSX.utils.aoa_to_sheet(s8Rows);
+  ws8['!merges'] = s8Merges;
+  formatSheet(ws8, s8Rows, s8HeaderIndexes, '047857', (rIdx, cIdx) => {
+    const banner = s8BannerIndexes.find(b => b.rIdx === rIdx);
+    if (banner) {
+      return {
+        fill: { fgColor: { rgb: banner.color } },
+        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      };
+    }
+    if (rIdx === rPaySumTotalIdx) {
+      return {
+        fill: { fgColor: { rgb: 'D1FAE5' } },
+        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '065F46' } },
+        alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : 'center', vertical: 'center' }
+      };
+    }
+    if (s8SubtotalIndexes.includes(rIdx)) {
+      return {
+        fill: { fgColor: { rgb: 'F1F5F9' } },
+        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '0F172A' } },
+        alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : (cIdx >= 8 && cIdx <= 10 ? 'right' : 'center'), vertical: 'center' },
+        border: {
+          top: { style: 'thin', color: { rgb: '94A3B8' } },
+          bottom: { style: 'double', color: { rgb: '475569' } },
+          left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+          right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+        }
+      };
+    }
+    // Kolom Biaya / Angka
+    if (cIdx >= 8 && cIdx <= 10) {
+      return createDataStyle(rIdx % 2 === 0, 'right');
+    }
+    if (cIdx === 1 || cIdx === 4 || cIdx === 5 || cIdx === 11 || cIdx === 13) {
+      return createDataStyle(rIdx % 2 === 0, 'center');
+    }
+    return null;
+  });
+  XLSX.utils.book_append_sheet(workbook, ws8, 'Rekap Pembayaran');
+
+  // ===================================================================
+  // UNDUH FILE WORKBOOK EXCEL LENGKAP 8 HALAMAN
   // ===================================================================
   const dateStr = new Date().toISOString().split('T')[0];
   XLSX.writeFile(workbook, `Rekap_Peserta_Paskas_Bahagia_${dateStr}.xlsx`);
-  showToast('File Excel 7 halaman (termasuk Rekapitulasi Wilayah) berhasil diunduh!', 'success');
+  showToast('File Excel 8 halaman lengkap (termasuk Rekap Pembayaran & Rekapitulasi Wilayah) berhasil diunduh!', 'success');
 }
 
 function exportToCSV() {
