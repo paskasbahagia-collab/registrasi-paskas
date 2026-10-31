@@ -2785,8 +2785,8 @@ function handleIndividuAgeChange() {
     if (guardianRow) guardianRow.style.display = 'none';
   }
 
-  // Khusus Seragam Kaos: Peserta di bawah usia 12 tahun tidak mendapatkan seragam kaos
-  const isUnder12 = !isNaN(age) && age > 0 && age < 12;
+  // Khusus Seragam Kaos: Peserta usia 12 tahun ke bawah tidak mendapatkan seragam kaos
+  const isUnder12 = !isNaN(age) && age > 0 && age <= 12;
   const radioGrid = document.getElementById('indSizeRadioGrid');
   const childClothNotice = document.getElementById('indChildClothNotice');
   const badgeNote = document.getElementById('indClothBadgeNote');
@@ -2803,7 +2803,7 @@ function handleIndividuAgeChange() {
       radioGrid.style.pointerEvents = 'none';
     }
     if (childClothNotice) childClothNotice.style.display = 'block';
-    if (badgeNote) badgeNote.textContent = 'Khusus Usia ≥ 12 Thn';
+    if (badgeNote) badgeNote.textContent = 'Khusus Usia > 12 Thn';
     if (reqStar) reqStar.style.display = 'none';
   } else {
     clothRadios.forEach(r => {
@@ -3078,7 +3078,7 @@ function validateIndividuStep(step) {
   if (step === 3) {
     const rawAge = document.getElementById('ind_age')?.value;
     const parsedAge = parseInt(rawAge || '0', 10);
-    const isUnder12 = !isNaN(parsedAge) && parsedAge > 0 && parsedAge < 12;
+    const isUnder12 = !isNaN(parsedAge) && parsedAge > 0 && parsedAge <= 12;
 
     if (!isUnder12) {
       const clothEl = document.querySelector('input[name="ind_clothSize"]:checked');
@@ -3228,7 +3228,7 @@ function renderIndividuStepPreview() {
   const transportDeparture = (rawDeparture === 'Lainnya' && otherDeparture) ? `Lainnya (${otherDeparture})` : rawDeparture;
 
   const rawClothEl = document.querySelector('input[name="ind_clothSize"]:checked');
-  const clothSize = (age > 0 && age < 12) ? '-' : (rawClothEl ? rawClothEl.value : 'L');
+  const clothSize = (age > 0 && age <= 12) ? '-' : (rawClothEl ? rawClothEl.value : 'L');
   const medical = document.getElementById('ind_medical')?.value.trim() || 'Tidak Ada (Sehat)';
 
   container.innerHTML = `
@@ -3966,7 +3966,7 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
     const transportDeparture = (rawDeparture === 'Lainnya' && otherDeparture) ? `Lainnya: ${otherDeparture}` : rawDeparture;
 
     const rawClothEl = document.querySelector('input[name="ind_clothSize"]:checked');
-    const clothSize = (age > 0 && age < 12) ? '-' : (rawClothEl ? rawClothEl.value : 'L');
+    const clothSize = (age > 0 && age <= 12) ? '-' : (rawClothEl ? rawClothEl.value : 'L');
     const medical = document.getElementById('ind_medical')?.value.trim() || 'Tidak Ada (Sehat)';
 
     // CEK DATA DUPLIKAT SECARA RAMAH (DAPAT KONFIRMASI DAFTARKAN ORANG LAIN)
@@ -4328,7 +4328,7 @@ function handleKelompokPreview(e) {
     const genderRadio = card.querySelector('input[type="radio"]:checked');
     const gender = genderSelect ? genderSelect.value : (genderRadio ? genderRadio.value : 'Laki-laki');
     const rawCloth = card.querySelector('.grp-member-cloth')?.value || 'L';
-    const cloth = (age > 0 && age < 12) ? '-' : (rawCloth === '-' ? 'L' : rawCloth);
+    const cloth = (age > 0 && age <= 12) ? '-' : (rawCloth === '-' ? 'L' : rawCloth);
     const med = card.querySelector('.grp-member-med')?.value.trim() || '';
     const phone = card.querySelector('.grp-member-phone')?.value.trim() || primaryLeaderPhone;
 
@@ -4951,20 +4951,20 @@ function syncAllGroupGuardians() {
       if (select) select.value = '';
     }
 
-    // Kunci ukuran baju jika peserta anak usia di bawah 12 tahun
+    // Kunci ukuran baju jika peserta anak usia 12 tahun ke bawah
     const clothSelect = r.querySelector('.grp-member-cloth');
     if (clothSelect) {
       let noneOpt = clothSelect.querySelector('option[value="-"]');
       if (!noneOpt) {
         noneOpt = document.createElement('option');
         noneOpt.value = '-';
-        noneOpt.textContent = '- (Anak <12 th)';
+        noneOpt.textContent = '- (Anak ≤12 th)';
         clothSelect.insertBefore(noneOpt, clothSelect.firstChild);
       }
-      if (age > 0 && age < 12) {
+      if (age > 0 && age <= 12) {
         clothSelect.value = '-';
         clothSelect.disabled = true;
-        clothSelect.title = 'Peserta anak usia di bawah 12 tahun tidak mendapatkan seragam kaos';
+        clothSelect.title = 'Peserta anak usia 12 tahun ke bawah tidak mendapatkan seragam kaos';
         clothSelect.style.background = '#334155';
         clothSelect.style.color = '#94a3b8';
         clothSelect.style.cursor = 'not-allowed';
@@ -5059,15 +5059,15 @@ function addGroupMemberCard(opts = {}) {
       </select>
     </td>
     <td>
-      <select class="form-control form-control-sm grp-member-cloth" ${initialAge > 0 && initialAge < 12 ? 'disabled style="background: #334155; color: #94a3b8; cursor: not-allowed;" title="Peserta anak di bawah 12 tahun tidak mendapatkan seragam kaos"' : ''}>
-        <option value="-" ${initialCloth === '-' || (initialAge > 0 && initialAge < 12) ? 'selected' : ''}>- (Anak &lt;12 th)</option>
-        <option value="S" ${initialCloth === 'S' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>S</option>
-        <option value="M" ${initialCloth === 'M' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>M</option>
-        <option value="L" ${initialCloth === 'L' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>L</option>
-        <option value="XL" ${initialCloth === 'XL' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>XL</option>
-        <option value="XXL" ${initialCloth === 'XXL' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>XXL</option>
-        <option value="3XL" ${initialCloth === '3XL' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>3XL</option>
-        <option value="4XL" ${initialCloth === '4XL' && !(initialAge > 0 && initialAge < 12) ? 'selected' : ''}>4XL</option>
+      <select class="form-control form-control-sm grp-member-cloth" ${initialAge > 0 && initialAge <= 12 ? 'disabled style="background: #334155; color: #94a3b8; cursor: not-allowed;" title="Peserta anak 12 tahun ke bawah tidak mendapatkan seragam kaos"' : ''}>
+        <option value="-" ${initialCloth === '-' || (initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>- (Anak &le;12 th)</option>
+        <option value="S" ${initialCloth === 'S' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>S</option>
+        <option value="M" ${initialCloth === 'M' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>M</option>
+        <option value="L" ${initialCloth === 'L' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>L</option>
+        <option value="XL" ${initialCloth === 'XL' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>XL</option>
+        <option value="XXL" ${initialCloth === 'XXL' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>XXL</option>
+        <option value="3XL" ${initialCloth === '3XL' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>3XL</option>
+        <option value="4XL" ${initialCloth === '4XL' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>4XL</option>
       </select>
     </td>
     <td>
@@ -7448,7 +7448,7 @@ function updateSummaryMetrics() {
     }
   }
 
-  // Top Cloth Size & Kebutuhan Kaos Riil (Mengecualikan Anak < 12 Tahun yang tidak dapat kaos)
+  // Top Cloth Size & Kebutuhan Kaos Riil (Mengecualikan Anak <= 12 Tahun yang tidak dapat kaos)
   const VALID_CLOTH_SIZES = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
   const clothCounts = {};
   let totalClothPcs = 0;
@@ -7456,7 +7456,7 @@ function updateSummaryMetrics() {
 
   allRegistrations.forEach(r => {
     const sz = (r.cloth_size || '').trim();
-    const isChild = (r.age && r.age > 0 && r.age < 12) || sz === '-' || !sz;
+    const isChild = (r.age && r.age > 0 && r.age <= 12) || sz === '-' || !sz;
     if (isChild || sz === '-') {
       childWithoutCloth++;
     } else if (VALID_CLOTH_SIZES.includes(sz)) {
@@ -7585,7 +7585,7 @@ function updateSummaryMetrics() {
   if (elTotalCloth) elTotalCloth.textContent = `${totalClothPcs} Potong`;
   if (elTotalClothDesc) {
     elTotalClothDesc.textContent = childWithoutCloth > 0 
-      ? `${childWithoutCloth} Anak <12 Thn (Tanpa Kaos)` 
+      ? `${childWithoutCloth} Anak ≤12 Thn (Tanpa Kaos)` 
       : '100% data ukuran lengkap';
   }
 
@@ -7734,7 +7734,7 @@ function renderRekapTable() {
 
     const ageVal = item.age ? parseInt(item.age, 10) : null;
     const isChild = ageVal !== null && ageVal < 15;
-    const isChildUnder12 = (ageVal !== null && !isNaN(ageVal) && ageVal > 0 && ageVal < 12);
+    const isChildUnder12 = (ageVal !== null && !isNaN(ageVal) && ageVal > 0 && ageVal <= 12);
     const ageDisplay = ageVal !== null 
       ? (isChild 
           ? `<span class="badge-age-child" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #b45309; border-radius: 999px; font-size: 11px; font-weight: 800;"><i class="fa-solid fa-child"></i> ${ageVal} th</span>`
@@ -7743,6 +7743,7 @@ function renderRekapTable() {
 
     const photoSrc = [item.photo_url, item.photo_data].find(p => typeof p === 'string' && p.trim() !== '') || '';
     const safeFullName = String(item.full_name || '');
+    const clothDisplay = (isChildUnder12 || item.cloth_size === '-') ? '-' : (item.cloth_size || '-');
     return `
       <tr>
         <td style="color: #475569; font-weight: 700; text-align: center;">${rowNo}</td>
@@ -7772,7 +7773,7 @@ function renderRekapTable() {
         <td><span style="color: #1e293b; font-weight: 600;">${escapeHtml(item.arrival_date)}</span> <br><small style="color: #64748b;">${escapeHtml(item.arrival_time || '10:00')}</small></td>
         <td><span style="color: #1e293b; font-weight: 600;">${escapeHtml(item.departure_date)}</span> <br><small style="color: #64748b;">${escapeHtml(item.departure_time || '16:00')}</small></td>
         <td><span style="color: #1e293b; font-weight: 600;">${escapeHtml(item.transport_arrival)}</span></td>
-        <td><span class="badge-size">${item.cloth_size}</span></td>
+        <td><span class="badge-size">${clothDisplay}</span></td>
         <td>
           ${isSpecialMed 
             ? `<span class="badge-medical-alert" title="${item.medical_history}"><i class="fa-solid fa-triangle-exclamation"></i> ${truncateText(item.medical_history, 20)}</span>`
@@ -7788,7 +7789,7 @@ function renderRekapTable() {
               <i class="fa-solid fa-user-pen"></i>
             </button>
             ${isChildUnder12
-              ? `<button class="btn-table-action" disabled title="Peserta anak di bawah 12 tahun (tidak dikirimi WA agar tidak dobel ke nomor orang tua)" style="color: #94a3b8; opacity: 0.35; cursor: not-allowed;">
+              ? `<button class="btn-table-action" disabled title="Peserta anak 12 tahun ke bawah (tidak dikirimi WA agar tidak dobel ke nomor orang tua)" style="color: #94a3b8; opacity: 0.35; cursor: not-allowed;">
                   <i class="fa-brands fa-whatsapp"></i>
                 </button>`
               : `<button class="btn-table-action" onclick="sendWhatsAppInvite('${item.id}')" title="Kirim Undangan WhatsApp ke ${(item.full_name || '').replace(/'/g, "\\'")}" style="color: #10b981;">
@@ -8064,7 +8065,7 @@ function viewAttendeeDetail(id) {
       </div>
       <div class="ticket-item">
         <span class="item-label">Ukuran Baju Seragam</span>
-        <strong class="item-val">${attendee.cloth_size}</strong>
+        <strong class="item-val">${(attendee.age && parseInt(attendee.age, 10) <= 12) || attendee.cloth_size === '-' ? '- (Anak ≤ 12 th)' : (attendee.cloth_size || '-')}</strong>
       </div>
       <div class="ticket-item">
         <span class="item-label">Jadwal Kedatangan</span>
@@ -8339,7 +8340,7 @@ async function submitEditAttendee(e) {
     const phone = (document.getElementById('editAttPhone')?.value || '').trim();
     const emergencyPhone = (document.getElementById('editAttEmergencyPhone')?.value || '').trim();
 
-    const clothSize = document.getElementById('editAttClothSize')?.value || 'L';
+    const clothSize = (age !== null && age > 0 && age <= 12) ? '-' : (document.getElementById('editAttClothSize')?.value || 'L');
     const arrivalDate = document.getElementById('editAttArrivalDate')?.value || '';
     const arrivalTime = document.getElementById('editAttArrivalTime')?.value || '10:00';
     const transportArrival = document.getElementById('editAttTransportArrival')?.value || 'Pesawat';
@@ -8510,10 +8511,10 @@ function sendWhatsAppInvite(id, isFromBroadcastModal = false) {
     return;
   }
 
-  // Pencegahan untuk anak di bawah 12 tahun agar pesan tidak dobel terkirim ke orang tua
+  // Pencegahan untuk anak usia 12 tahun ke bawah agar pesan tidak dobel terkirim ke orang tua
   const ageNum = parseInt(attendee.age, 10);
-  if (!isNaN(ageNum) && ageNum > 0 && ageNum < 12) {
-    showToast(`Peserta anak di bawah 12 tahun (${attendee.full_name}) tidak dikirimi WhatsApp tersendiri agar tidak dobel ke nomor orang tua.`, 'info');
+  if (!isNaN(ageNum) && ageNum > 0 && ageNum <= 12) {
+    showToast(`Peserta anak usia 12 tahun ke bawah (${attendee.full_name}) tidak dikirimi WhatsApp tersendiri agar tidak dobel ke nomor orang tua.`, 'info');
     return;
   }
 
@@ -8614,7 +8615,7 @@ function renderWhatsAppBroadcastList() {
 
   list.forEach(p => {
     const ageNum = parseInt(p.age, 10);
-    const isChildUnder12 = (!isNaN(ageNum) && ageNum > 0 && ageNum < 12);
+    const isChildUnder12 = (!isNaN(ageNum) && ageNum > 0 && ageNum <= 12);
     if (isChildUnder12) {
       childCount++;
     } else {
@@ -8635,7 +8636,7 @@ function renderWhatsAppBroadcastList() {
 
   const filtered = list.filter(p => {
     const ageNum = parseInt(p.age, 10);
-    const isChildUnder12 = (!isNaN(ageNum) && ageNum > 0 && ageNum < 12);
+    const isChildUnder12 = (!isNaN(ageNum) && ageNum > 0 && ageNum <= 12);
     const isSent = !!sentMap[String(p.id)];
 
     if (statusFilter === 'pending') {
@@ -8670,7 +8671,7 @@ function renderWhatsAppBroadcastList() {
 
   tbody.innerHTML = filtered.map((p, idx) => {
     const ageNum = parseInt(p.age, 10);
-    const isChildUnder12 = (!isNaN(ageNum) && ageNum > 0 && ageNum < 12);
+    const isChildUnder12 = (!isNaN(ageNum) && ageNum > 0 && ageNum <= 12);
     const isSent = !!sentMap[String(p.id)];
     const sentTime = isSent ? new Date(sentMap[String(p.id)]).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
     const cleanPhone = (p.phone_number || '').replace(/[^0-9]/g, '');
@@ -8679,8 +8680,8 @@ function renderWhatsAppBroadcastList() {
     let actionBtn = '';
 
     if (isChildUnder12) {
-      statusBadge = `<span style="background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; white-space: nowrap;"><i class="fa-solid fa-child"></i> Anak &lt; 12 Th (Dilewati)</span>`;
-      actionBtn = `<button type="button" disabled title="Peserta anak di bawah 12 tahun dilewati agar pesan tidak terkirim dua kali ke nomor orang tua" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(51, 65, 85, 0.5); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: not-allowed; opacity: 0.6;">
+      statusBadge = `<span style="background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; white-space: nowrap;"><i class="fa-solid fa-child"></i> Anak &le; 12 Th (Dilewati)</span>`;
+      actionBtn = `<button type="button" disabled title="Peserta anak 12 tahun ke bawah dilewati agar pesan tidak terkirim dua kali ke nomor orang tua" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(51, 65, 85, 0.5); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: not-allowed; opacity: 0.6;">
         <i class="fa-solid fa-child"></i> Dilewati
       </button>`;
     } else {
@@ -8697,7 +8698,7 @@ function renderWhatsAppBroadcastList() {
         <td style="padding: 10px 14px; text-align: center; color: #64748b;">${idx + 1}</td>
         <td style="padding: 10px 14px;">
           <strong style="color: #ffffff; display: block; font-size: 13.5px;">${escapeHtml(p.full_name || '-')}</strong>
-          <span style="font-size: 11.5px; color: #38bdf8;">${escapeHtml(p.registration_code || '')} &bull; ${p.gender || '-'} (${p.age || '-'} th)${isChildUnder12 ? ' &bull; <span style="color: #fbbf24; font-weight: 700;">[Anak &lt;12 Th]</span>' : ''}</span>
+          <span style="font-size: 11.5px; color: #38bdf8;">${escapeHtml(p.registration_code || '')} &bull; ${p.gender || '-'} (${p.age || '-'} th)${isChildUnder12 ? ' &bull; <span style="color: #fbbf24; font-weight: 700;">[Anak &le;12 Th]</span>' : ''}</span>
         </td>
         <td style="padding: 10px 14px;">
           <span style="color: #cbd5e1; font-size: 12.5px;">${escapeHtml(p.group_name || 'Mandiri')}</span>
@@ -8818,11 +8819,11 @@ function renderCharts() {
   allRegistrations.forEach(r => {
     const isFemale = (r.gender === 'Perempuan' || (r.gender && r.gender.toLowerCase().includes('perempuan')) || (r.gender && r.gender.toLowerCase().includes('akhwat')));
     const sz = (r.cloth_size || '').trim();
-    const isChild = (r.age && r.age > 0 && r.age < 12) || sz === '-' || !sz;
+    const isChild = (r.age && r.age > 0 && r.age <= 12) || sz === '-' || !sz;
 
     if (isChild || sz === '-') {
       totalChildNoCloth++;
-      return; // Anak di bawah 12 tahun tidak membutuhkan seragam kaos
+      return; // Anak usia 12 tahun ke bawah tidak membutuhkan seragam kaos
     }
 
     if (SIZES.includes(sz)) {
@@ -9056,7 +9057,7 @@ function renderCharts() {
         </div>
         ${totalChildNoCloth > 0 ? `
           <div style="margin-top: 8px; font-size: 11.5px; font-weight: 600; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px;">
-            <i class="fa-solid fa-child" style="color: #d97706;"></i> ${totalChildNoCloth} Peserta Anak (&lt; 12 thn) tidak mendapatkan seragam kaos
+            <i class="fa-solid fa-child" style="color: #d97706;"></i> ${totalChildNoCloth} Peserta Anak (&le; 12 thn) tidak mendapatkan seragam kaos
           </div>
         ` : ''}
       </div>
@@ -9935,8 +9936,11 @@ function copyClothOrderSummary() {
 
   allRegistrations.forEach(r => {
     const isFemale = (r.gender === 'Perempuan' || (r.gender && r.gender.toLowerCase().includes('perempuan')) || (r.gender && r.gender.toLowerCase().includes('akhwat')));
-    const sz = r.cloth_size;
-    if (clothIkhwanCounts[sz] !== undefined) {
+    const sz = (r.cloth_size || '').trim();
+    const isChild = (r.age && r.age > 0 && r.age <= 12) || sz === '-' || !sz;
+    if (isChild || sz === '-') return;
+
+    if (SIZES.includes(sz)) {
       if (isFemale) {
         clothAkhwatCounts[sz]++;
         totalAkhwat++;
@@ -9944,13 +9948,10 @@ function copyClothOrderSummary() {
         clothIkhwanCounts[sz]++;
         totalIkhwan++;
       }
-    } else {
-      if (isFemale) totalAkhwat++;
-      else totalIkhwan++;
     }
   });
 
-  const totalOverall = allRegistrations.length;
+  const totalOverall = totalIkhwan + totalAkhwat;
 
   let text = `*REKAP PEMESANAN SERAGAM PASKAS BAHAGIA*\n`;
   text += `📅 Tanggal Rekap: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}\n`;
@@ -10380,12 +10381,14 @@ function exportToExcel() {
   ];
   const s4Rows = [s4Headers];
   sortedBaju.forEach((item, idx) => {
+    const isChildUnder12 = item.age && parseInt(item.age, 10) <= 12;
+    const clothVal = (isChildUnder12 || item.cloth_size === '-') ? '-' : (item.cloth_size || '-');
     const roomInfo = item.building 
       ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
       : (item.room_name || item.room_number || '-');
     s4Rows.push([
       idx + 1,
-      sanitizeSpreadsheetValue(item.cloth_size || '-'),
+      sanitizeSpreadsheetValue(clothVal),
       sanitizeSpreadsheetValue(item.full_name),
       sanitizeSpreadsheetValue(item.gender),
       item.age ? `${item.age} Th` : '-',
@@ -15206,7 +15209,7 @@ function renderPresensiTable() {
             ${avatarHtml}
             <div>
               <div style="font-weight: 800; color: #0f172a; font-size: 13.5px;">${p.full_name || '-'}</div>
-              <div style="font-size: 11.5px; color: #64748b;">${genderIcon} ${p.age ? p.age + ' thn' : 'Dewasa'} &bull; Seragam: <strong>${p.cloth_size || '-'}</strong></div>
+              <div style="font-size: 11.5px; color: #64748b;">${genderIcon} ${p.age ? p.age + ' thn' : 'Dewasa'} &bull; Seragam: <strong>${(p.age && parseInt(p.age, 10) <= 12) || p.cloth_size === '-' ? '-' : (p.cloth_size || '-')}</strong></div>
             </div>
           </div>
         </td>
@@ -15291,7 +15294,7 @@ function openPresensiDetailModal(id) {
   document.getElementById('detModalGroup').textContent = p.group_name || 'Mandiri';
   document.getElementById('detModalWilayah').textContent = p.wilayah || '-';
   document.getElementById('detModalCategory').textContent = `${p.gender || '-'} (${p.age ? p.age + ' thn' : 'Dewasa'})`;
-  document.getElementById('detModalCloth').textContent = p.cloth_size || '-';
+  document.getElementById('detModalCloth').textContent = ((p.age && parseInt(p.age, 10) <= 12) || p.cloth_size === '-') ? '-' : (p.cloth_size || '-');
   document.getElementById('detModalRoom').textContent = (p.building || '-') + ' / ' + (p.room_number || '-');
   document.getElementById('detModalPhone').textContent = p.phone_number || '-';
   document.getElementById('detModalMedical').textContent = p.medical_history || 'Tidak Ada';
@@ -18221,7 +18224,7 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
           <div class="fd-logistic-box">
             <div class="fd-logistic-label"><i class="fa-solid fa-shirt" style="color:#d97706;"></i> Ukuran Seragam</div>
             <div class="fd-logistic-val">
-              <span class="badge-size-highlight">${escapeHtml(p.cloth_size || 'Standar')}</span>
+              <span class="badge-size-highlight">${(p.age && parseInt(p.age, 10) <= 12) || p.cloth_size === '-' ? '-' : escapeHtml(p.cloth_size || '-')}</span>
             </div>
           </div>
 
