@@ -15302,3 +15302,31 @@ input:checked + .slider:before {
     max-height: 85vh !important;
   }
 }
+
+/* Hide Ugly Windows Native Scrollbar on Filter Tabs and Attendance Strip */
+.fd-picker-filter-tabs,
+.fd-attendance-strip {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.fd-picker-filter-tabs::-webkit-scrollbar,
+.fd-attendance-strip::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.fd-picker-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.fd-picker-modal-body::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 4px;
+}
+.fd-picker-modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.fd-picker-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

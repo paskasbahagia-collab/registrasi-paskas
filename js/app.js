@@ -17564,8 +17564,18 @@ function clearModalKontingenSearch() {
 }
 
 function selectModalKontingen(groupName) {
-  onSelectFrontdeskKontingen(groupName);
   closeFrontdeskKontingenModal();
+  setTimeout(() => {
+    onSelectFrontdeskKontingen(groupName);
+  }, 10);
+}
+
+function selectModalKontingenByIndex(idx) {
+  const list = window.currentModalGroups || [];
+  const g = list[idx];
+  if (g && g.name) {
+    selectModalKontingen(g.name);
+  }
 }
 
 function renderModalKontingenList() {
@@ -17638,7 +17648,8 @@ function renderModalKontingenList() {
     return;
   }
 
-  container.innerHTML = filtered.map(g => {
+  window.currentModalGroups = filtered;
+  container.innerHTML = filtered.map((g, gIdx) => {
     const isSelected = g.name === frontdeskActiveKontingenName;
     let tagHtml = '';
     if (g.isComplete) {
@@ -17650,7 +17661,7 @@ function renderModalKontingenList() {
     }
 
     return `
-      <div class="fd-picker-item-card ${isSelected ? 'selected' : ''}" onclick="selectModalKontingen('${escapeHtml(g.name).replace(/'/g, "\\'")}')">
+      <div class="fd-picker-item-card ${isSelected ? 'selected' : ''}" onclick="selectModalKontingenByIndex(${gIdx})">
         <div class="fd-picker-item-left">
           <div class="fd-picker-item-title">
             <i class="fa-solid fa-layer-group" style="color: #d97706; font-size: 13px;"></i>
@@ -17927,6 +17938,8 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
   const cardBox = document.getElementById('fdCardBox');
   if (!p || !cardBox) return;
 
+  const totalMem = (frontdeskKontingenMembers && frontdeskKontingenMembers.length) || 0;
+
   if (empty) empty.style.display = 'none';
   cardBox.style.display = 'block';
 
@@ -17950,7 +17963,7 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
   const isFullyPaid = (paid > 0 && remaining <= 0 && isVerified);
 
   // Health Note Alert
-  const healthText = (p.health_notes || '').trim();
+  const healthText = (p.medical_history || p.health_notes || '').trim();
   const hasHealthIssue = healthText && !/^(tidak\s*ada|sehat|nihil|-)$/i.test(healthText);
 
   // Foto
@@ -18163,3 +18176,5 @@ window.onFilterModalKontingen = onFilterModalKontingen;
 window.clearModalKontingenSearch = clearModalKontingenSearch;
 window.selectModalKontingen = selectModalKontingen;
 window.selectFrontdeskIndividuFromLiveSearch = selectFrontdeskIndividuFromLiveSearch;
+
+window.selectModalKontingenByIndex = selectModalKontingenByIndex;
