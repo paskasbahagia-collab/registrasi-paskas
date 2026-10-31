@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=196.0">
+  <link rel="stylesheet" href="css/style.css?v=197.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -150,10 +150,6 @@
           <button class="nav-link" data-page="registration" onclick="navigateTo('registration')">
             <i class="fa-solid fa-user-plus"></i>
             <span>Registrasi</span>
-          </button>
-          <button class="nav-link" onclick="openPublicTicketSearch()" title="Cek Tiket &amp; Status Pendaftaran Anda">
-            <i class="fa-solid fa-ticket"></i>
-            <span>Cek Tiket</span>
           </button>
           <button class="nav-link admin-only" data-page="rekap" onclick="navigateTo('rekap')">
             <i class="fa-solid fa-chart-pie"></i>
@@ -192,9 +188,6 @@
       </button>
       <button class="mobile-link" data-page="registration" onclick="navigateTo('registration'); toggleMobileNav();">
         <i class="fa-solid fa-user-plus"></i> Registrasi Peserta
-      </button>
-      <button class="mobile-link" onclick="openPublicTicketSearch(); toggleMobileNav();" style="color: #fbbf24; font-weight: 700;">
-        <i class="fa-solid fa-ticket"></i> Cek Tiket Peserta
       </button>
       <button class="mobile-link admin-only" data-page="rekap" onclick="navigateTo('rekap'); toggleMobileNav();">
         <i class="fa-solid fa-chart-pie"></i> Rekap Data Peserta
@@ -6928,8 +6921,8 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
-  <script src="js/supabase-config.js?v=196.0"></script>
-  <script src="js/app.js?v=196.0"></script>
+  <script src="js/supabase-config.js?v=197.0"></script>
+  <script src="js/app.js?v=197.0"></script>
 
     <!-- ===================================================== -->
     <!-- MODAL IN-APP PILIH KONTINGEN (MENGGANTIKAN POPUP OS) -->
