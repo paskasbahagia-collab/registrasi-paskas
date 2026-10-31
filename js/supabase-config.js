@@ -30,8 +30,8 @@ var safeStorage = (typeof window !== 'undefined' && window.safeStorage) ? window
 
 // Default Settings Awal
 const DEFAULT_SETTINGS = {
-  registration_deadline: '2026-12-31T23:59:59',
-  is_registration_open: 'true',
+  registration_deadline: '2026-10-30T18:59:59',
+  is_registration_open: 'false',
   is_room_group_enabled: 'true',
   closed_badge: 'Status: Pendaftaran Ditutup',
   closed_title: 'Mohon Maaf, Pendaftaran Telah Resmi Ditutup',
@@ -146,7 +146,7 @@ class PaskasDataService {
     this.ensureSupabaseClient();
     try {
       safeStorage.removeItem(STORAGE_KEYS.DELETED_CODES);
-    } catch (e) {}
+    } catch (e) { }
 
     // Inisialisasi data lokal jika masih kosong atau bersihkan data dummy demo / test lama
     const existing = safeStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
@@ -374,7 +374,7 @@ class PaskasDataService {
     this.ensureSupabaseClient();
     if (!this.isSupabaseConnected || !this.supabaseClient) return null;
     if (this._realtimeChannel) {
-      try { this.supabaseClient.removeChannel(this._realtimeChannel); } catch (e) {}
+      try { this.supabaseClient.removeChannel(this._realtimeChannel); } catch (e) { }
       this._realtimeChannel = null;
     }
 
@@ -498,7 +498,7 @@ class PaskasDataService {
 
       // Utamakan bucket 'paskas bahagia' yang sudah ada di Supabase
       const bucketName = 'paskas bahagia';
-      
+
       // Pasang timeout 3.5 detik agar pendaftaran peserta tidak macet / lambat saat sinyal lemah
       const uploadWithTimeout = Promise.race([
         this.supabaseClient.storage.from(bucketName).upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: false }),
@@ -687,11 +687,11 @@ class PaskasDataService {
       try {
         const rawAtt = safeStorage.getItem('paskas_attendance_sync');
         if (rawAtt) attSync = JSON.parse(rawAtt) || {};
-      } catch (e) {}
+      } catch (e) { }
       try {
         const rawFin = safeStorage.getItem('paskas_finance_sync');
         if (rawFin) finSync = JSON.parse(rawFin) || {};
-      } catch (e) {}
+      } catch (e) { }
 
       // Tarik juga sync keuangan & presensi TERBARU dari Cloud Supabase (app_settings)
       // agar perubahan status bayar / upload bukti dari perangkat lain langsung tampil tanpa delay
@@ -740,13 +740,13 @@ class PaskasDataService {
               const cloudFin = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
               finSync = { ...finSync, ...cloudFin };
               safeStorage.setItem('paskas_finance_sync', JSON.stringify(finSync));
-            } catch (e) {}
+            } catch (e) { }
           } else if (row.setting_key === 'paskas_attendance_sync' && row.setting_value) {
             try {
               const cloudAtt = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
               attSync = { ...attSync, ...cloudAtt };
               safeStorage.setItem('paskas_attendance_sync', JSON.stringify(attSync));
-            } catch (e) {}
+            } catch (e) { }
           }
         });
       }
@@ -787,7 +787,7 @@ class PaskasDataService {
           .order('id', { ascending: false })
           .limit(60);
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Sequence query timeout')), 2500));
-        
+
         const { data } = await Promise.race([queryPromise, timeoutPromise]);
         if (data && Array.isArray(data)) {
           data.forEach(r => {
@@ -855,8 +855,8 @@ class PaskasDataService {
             .select();
 
           if (error) {
-            const isDup = error.code === '23505' || 
-                          (error.message && (error.message.includes('unique') || error.message.includes('duplicate')));
+            const isDup = error.code === '23505' ||
+              (error.message && (error.message.includes('unique') || error.message.includes('duplicate')));
             if (isDup) {
               console.warn(`Tabrakan nomor registrasi (${newRecord.registration_code}). Mencoba alokasi nomor baru (percobaan ${attempt + 1})...`);
               lastErr = error;
@@ -890,8 +890,8 @@ class PaskasDataService {
           }
         } catch (attemptErr) {
           lastErr = attemptErr;
-          const isDup = attemptErr?.code === '23505' || 
-                        (attemptErr?.message && (attemptErr.message.includes('unique') || attemptErr.message.includes('duplicate')));
+          const isDup = attemptErr?.code === '23505' ||
+            (attemptErr?.message && (attemptErr.message.includes('unique') || attemptErr.message.includes('duplicate')));
           if (isDup && attempt < 3) {
             continue;
           }
@@ -1023,8 +1023,8 @@ class PaskasDataService {
             .select();
 
           if (error) {
-            const isDup = error.code === '23505' || 
-                          (error.message && (error.message.includes('unique') || error.message.includes('duplicate')));
+            const isDup = error.code === '23505' ||
+              (error.message && (error.message.includes('unique') || error.message.includes('duplicate')));
             if (isDup) {
               console.warn(`Tabrakan kode batch rombongan terdeteksi. Mencoba penomoran baru (percobaan ${attempt + 1})...`);
               lastErr = error;
@@ -1069,8 +1069,8 @@ class PaskasDataService {
           }
         } catch (bErr) {
           lastErr = bErr;
-          const isDup = bErr?.code === '23505' || 
-                        (bErr?.message && (bErr.message.includes('unique') || bErr.message.includes('duplicate')));
+          const isDup = bErr?.code === '23505' ||
+            (bErr?.message && (bErr.message.includes('unique') || bErr.message.includes('duplicate')));
           if (isDup && attempt < 2) continue;
           break;
         }
@@ -1473,7 +1473,7 @@ class PaskasDataService {
       let syncMap = {};
       const raw = safeStorage.getItem('paskas_attendance_sync');
       if (raw) {
-        try { syncMap = JSON.parse(raw); } catch (e) {}
+        try { syncMap = JSON.parse(raw); } catch (e) { }
       }
       delete syncMap[id];
       delete syncMap[String(id)];
@@ -1528,7 +1528,7 @@ class PaskasDataService {
           if (row && row.setting_value) {
             syncMap = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       if (!syncMap || typeof syncMap !== 'object') syncMap = {};
       const raw = safeStorage.getItem('paskas_attendance_sync');
@@ -1538,7 +1538,7 @@ class PaskasDataService {
           if (localMap && typeof localMap === 'object') {
             syncMap = { ...localMap, ...syncMap };
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       syncMap[id] = { ...(syncMap[id] || {}), ...updates, updated_at: new Date().toISOString() };
       await this.saveCloudSetting('paskas_attendance_sync', syncMap);
@@ -1762,7 +1762,7 @@ class PaskasDataService {
     if (item.payment_installments) {
       try {
         installments = Array.isArray(item.payment_installments) ? item.payment_installments : JSON.parse(item.payment_installments || '[]');
-      } catch (e) {}
+      } catch (e) { }
     }
     installments = installments.map(inst => ({ ...inst, verification_status: 'verified' }));
     const paidAmount = installments.length > 0
@@ -1828,7 +1828,7 @@ class PaskasDataService {
       let syncMap = {};
       const raw = safeStorage.getItem('paskas_finance_sync');
       if (raw) {
-        try { syncMap = JSON.parse(raw); } catch (e) {}
+        try { syncMap = JSON.parse(raw); } catch (e) { }
       }
       delete syncMap[id];
       delete syncMap[String(id)];
@@ -1906,7 +1906,7 @@ class PaskasDataService {
           if (row && row.setting_value) {
             syncMap = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       if (!syncMap || typeof syncMap !== 'object') syncMap = {};
       const raw = safeStorage.getItem('paskas_finance_sync');
@@ -1916,7 +1916,7 @@ class PaskasDataService {
           if (localMap && typeof localMap === 'object') {
             syncMap = { ...localMap, ...syncMap };
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       syncMap[id] = { ...(syncMap[id] || {}), ...updates, updated_at: new Date().toISOString() };
       await this.saveCloudSetting('paskas_finance_sync', syncMap);
@@ -1938,7 +1938,7 @@ class PaskasDataService {
           if (row && row.setting_value) {
             syncMap = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       if (!syncMap || typeof syncMap !== 'object') syncMap = {};
       const raw = safeStorage.getItem('paskas_wa_broadcast_sent');
@@ -1948,7 +1948,7 @@ class PaskasDataService {
           if (localMap && typeof localMap === 'object') {
             syncMap = { ...localMap, ...syncMap };
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       if (id) {
         syncMap[String(id)] = new Date().toISOString();
@@ -1970,9 +1970,9 @@ class PaskasDataService {
    * ===================================================================
    */
   getAdminPasswordHash() {
-    return safeStorage.getItem('paskas_admin_password') || 
-           (this.getSettings() && this.getSettings().paskas_admin_password) || 
-           '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'; // Default: admin123
+    return safeStorage.getItem('paskas_admin_password') ||
+      (this.getSettings() && this.getSettings().paskas_admin_password) ||
+      '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'; // Default: admin123
   }
 
   async verifyAdminPassword(entered) {
@@ -1984,8 +1984,8 @@ class PaskasDataService {
     if (typeof window !== 'undefined' && typeof window.hashSHA256 === 'function') {
       enteredHash = await window.hashSHA256(clean);
     }
-    if (enteredHash.toLowerCase() === stored.toLowerCase() || 
-        enteredHash.toLowerCase() === '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9') {
+    if (enteredHash.toLowerCase() === stored.toLowerCase() ||
+      enteredHash.toLowerCase() === '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9') {
       return true;
     }
     if (stored === clean) {
@@ -2010,9 +2010,9 @@ class PaskasDataService {
   }
 
   getTreasurerPasswordHash() {
-    return safeStorage.getItem('paskas_treasurer_password') || 
-           (this.getSettings() && this.getSettings().paskas_treasurer_password) || 
-           'dff9cd137cab8b96431ccd81f8bb433fc71f0329eefb54bd4380b3fc3a9fc5d1'; // Default: bendahara123
+    return safeStorage.getItem('paskas_treasurer_password') ||
+      (this.getSettings() && this.getSettings().paskas_treasurer_password) ||
+      'dff9cd137cab8b96431ccd81f8bb433fc71f0329eefb54bd4380b3fc3a9fc5d1'; // Default: bendahara123
   }
 
   async verifyTreasurerPassword(entered) {
@@ -2055,9 +2055,9 @@ class PaskasDataService {
    * ===================================================================
    */
   getRekapPasswordHash() {
-    return safeStorage.getItem('paskas_rekap_password') || 
-           (this.getSettings() && this.getSettings().paskas_rekap_password) || 
-           ''; 
+    return safeStorage.getItem('paskas_rekap_password') ||
+      (this.getSettings() && this.getSettings().paskas_rekap_password) ||
+      '';
   }
 
   async verifyRekapPassword(entered) {
@@ -2097,9 +2097,9 @@ class PaskasDataService {
    * ===================================================================
    */
   getPresensiPasswordHash() {
-    return safeStorage.getItem('paskas_presensi_password') || 
-           (this.getSettings() && this.getSettings().paskas_presensi_password) || 
-           ''; 
+    return safeStorage.getItem('paskas_presensi_password') ||
+      (this.getSettings() && this.getSettings().paskas_presensi_password) ||
+      '';
   }
 
   async verifyPresensiPassword(entered) {

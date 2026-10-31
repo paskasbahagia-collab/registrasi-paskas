@@ -6888,6 +6888,18 @@ function registerAnotherParticipant() {
 window.isViewedFromTicketSearch = false;
 
 function openPublicTicketSearch() {
+  const modal = document.getElementById('modalPublicTicketSearch');
+  if (modal) {
+    modal.style.display = 'flex';
+    const input = document.getElementById('modalInputSearchPublicTicket');
+    if (input) {
+      input.value = '';
+      const res = document.getElementById('modalSearchPublicTicketResults');
+      if (res) { res.style.display = 'none'; res.innerHTML = ''; }
+      setTimeout(() => input.focus(), 150);
+    }
+    return;
+  }
   if (typeof navigateTo === 'function') {
     navigateTo('registration');
   }
@@ -6904,16 +6916,14 @@ function openPublicTicketSearch() {
   }
 }
 
-async function handleSearchPublicTicket() {
-  const inputEl = document.getElementById('inputSearchPublicTicket');
-  const resultsEl = document.getElementById('searchPublicTicketResults');
-  const btnEl = document.getElementById('btnSearchPublicTicket');
-  if (!inputEl) return;
+function closePublicTicketSearchModal() {
+  const modal = document.getElementById('modalPublicTicketSearch');
+  if (modal) modal.style.display = 'none';
+}
 
-  const rawQuery = inputEl.value.trim();
+async function executePublicTicketSearch(rawQuery, resultsEl, btnEl, btnDefaultHtml = '<i class="fa-solid fa-magnifying-glass"></i><span>Cari Tiket</span>') {
   if (!rawQuery) {
     showToast('Silakan masukkan Nama atau Nomor Tiket Anda terlebih dahulu.', 'warning');
-    inputEl.focus();
     return;
   }
 
@@ -6923,7 +6933,7 @@ async function handleSearchPublicTicket() {
   }
 
   try {
-    // Pastikan data registrasi sudah termuat
+    // Pastikan data registrasi sudah termuat dari Cloud Supabase atau lokal
     if (!allRegistrations || allRegistrations.length === 0) {
       if (window.dataService && typeof window.dataService.getRegistrations === 'function') {
         allRegistrations = await window.dataService.getRegistrations();
@@ -6936,7 +6946,7 @@ async function handleSearchPublicTicket() {
     const matched = (allRegistrations || []).filter(p => {
       const name = (p.full_name || '').toLowerCase();
       const code = (p.registration_code || '').toLowerCase();
-      const phone = (p.phone || '').replace(/\D/g, '');
+      const phone = (p.phone_number || p.phone || '').replace(/\D/g, '');
       const group = (p.group_name || '').toLowerCase();
       const daerah = (p.daerah || '').toLowerCase();
 
@@ -6949,6 +6959,9 @@ async function handleSearchPublicTicket() {
 
       // Cocokkan nama rombongan / kafilah
       if (group && group.includes(q)) return true;
+
+      // Cocokkan daerah
+      if (daerah && daerah.includes(q)) return true;
 
       // Cocokkan nomor HP jika input mengandung minimal 4 digit
       if (cleanDigits.length >= 4 && phone.includes(cleanDigits)) return true;
@@ -6988,7 +7001,7 @@ async function handleSearchPublicTicket() {
       }
       setTimeout(() => {
         openTargetParticipantSuccessView(target);
-      }, 400);
+      }, 350);
       return;
     }
 
@@ -7012,7 +7025,7 @@ async function handleSearchPublicTicket() {
                     ${p.age ? `<span style="font-size: 11px; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; white-space: nowrap;">${p.age} th</span>` : ''}
                   </div>
                   <div style="font-size: 11.5px; color: #64748b; margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    <span style="background: #e0f2fe; color: #0284c7; font-weight: 800; padding: 2px 7px; border-radius: 5px; font-size: 11px; border: 1px solid #bae6fd; white-space: nowrap;">
+                    <span style="background: #e0f2fe; color: #0369a1; font-weight: 800; padding: 2px 7px; border-radius: 5px; font-size: 11px; border: 1px solid #bae6fd; white-space: nowrap;">
                       <i class="fa-solid fa-ticket"></i> ${escapeHtml(p.registration_code || '-')}
                     </span>
                     <span style="color: #334155; font-weight: 600;">• ${escapeHtml(p.wilayah || 'Mandiri')}${p.daerah ? ' / ' + escapeHtml(p.daerah) : ''}</span>
@@ -7041,13 +7054,24 @@ async function handleSearchPublicTicket() {
   } finally {
     if (btnEl) {
       btnEl.disabled = false;
-      btnEl.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i><span>Cari Tiket Saya</span>';
+      btnEl.innerHTML = btnDefaultHtml;
     }
   }
 }
 
+function handleSearchPublicTicket() {
+  const inputEl = document.getElementById('inputSearchPublicTicket');
+  const resultsEl = document.getElementById('searchPublicTicketResults');
+  const btnEl = document.getElementById('btnSearchPublicTicket');
+  executePublicTicketSearch(inputEl?.value?.trim() || '', resultsEl, btnEl, '<i class="fa-solid fa-magnifying-glass"></i><span>Cari Tiket Saya</span>');
+}
+
 function openTargetParticipantSuccessView(target) {
   if (!target) return;
+  closePublicTicketSearchModal();
+  if (typeof navigateTo === 'function') {
+    navigateTo('registration');
+  }
   window.isViewedFromTicketSearch = true;
 
   if (target.registration_type === 'kelompok' && target.group_name) {
@@ -7083,8 +7107,17 @@ function selectSearchPublicTicketResult(id) {
   if (p) openTargetParticipantSuccessView(p);
 }
 
+function handleModalSearchPublicTicket() {
+  const inputEl = document.getElementById('modalInputSearchPublicTicket');
+  const resultsEl = document.getElementById('modalSearchPublicTicketResults');
+  const btnEl = document.getElementById('modalBtnSearchPublicTicket');
+  executePublicTicketSearch(inputEl?.value?.trim() || '', resultsEl, btnEl, '<i class="fa-solid fa-magnifying-glass"></i><span>Cari Tiket</span>');
+}
+
 window.openPublicTicketSearch = openPublicTicketSearch;
+window.closePublicTicketSearchModal = closePublicTicketSearchModal;
 window.handleSearchPublicTicket = handleSearchPublicTicket;
+window.handleModalSearchPublicTicket = handleModalSearchPublicTicket;
 window.openTargetParticipantSuccessView = openTargetParticipantSuccessView;
 window.selectSearchPublicTicketResult = selectSearchPublicTicketResult;
 
@@ -14690,6 +14723,8 @@ function handleHashRoute() {
     navigateTo('settings');
   } else if (hash === 'dashboard') {
     navigateTo('dashboard');
+  } else if (hash === 'cektiket' || hash === 'searchticket' || hash === 'tiket') {
+    openPublicTicketSearch();
   }
 }
 
