@@ -120,7 +120,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/style.css?v=194.0">
+  <link rel="stylesheet" href="css/style.css?v=195.0">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="images/logo-paskas-bahagia.png">
@@ -5915,6 +5915,38 @@ CREATE TABLE IF NOT EXISTS registrations (
             <h4 style="font-size: 14px; font-weight: 700; color: #38bdf8; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
               <i class="fa-solid fa-id-card"></i> 1. Identitas & Profil Peserta
             </h4>
+
+            <!-- PAS FOTO PESERTA (PREVIEW & EDIT) -->
+            <div class="edit-photo-card" style="display: flex; align-items: center; gap: 16px; padding: 14px 16px; background: rgba(15, 23, 42, 0.7); border: 1.5px dashed rgba(56, 189, 248, 0.35); border-radius: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+              <div style="position: relative; width: 72px; height: 90px; border-radius: 8px; overflow: hidden; background: #0b1120; border: 2px solid rgba(56, 189, 248, 0.45); flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,0.4);">
+                <img id="editAttPhotoPreview" src="" alt="Pas Foto Peserta" style="width: 100%; height: 100%; object-fit: cover; object-position: top center; display: none; cursor: pointer;" onclick="if(this.src) openPhotoPreviewLightbox(this.src, document.getElementById('editAttFullName')?.value || 'Pas Foto')" title="Klik untuk perbesar foto">
+                <div id="editAttPhotoPlaceholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-align: center; padding: 4px;">
+                  <i class="fa-solid fa-user-circle" style="font-size: 32px; color: #64748b; margin-bottom: 4px;"></i>
+                  <span style="font-size: 9px; line-height: 1.1; font-weight: 600; color: #94a3b8;">Belum Ada Foto</span>
+                </div>
+              </div>
+
+              <div style="flex: 1; min-width: 220px;">
+                <div style="font-size: 13.5px; font-weight: 700; color: #ffffff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-camera" style="color: #38bdf8;"></i> Pas Foto Peserta (E-Tiket & Presensi)
+                </div>
+                <p style="font-size: 11.5px; color: #94a3b8; margin: 0 0 10px 0; line-height: 1.4;">
+                  Mendukung kamera HP / galeri (JPG, PNG, WEBP s/d 100MB). Otomatis dioptimalkan untuk E-Tiket & Meja Front Desk.
+                </p>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                  <input type="file" id="editAttPhotoInput" accept="image/*" style="display: none;" onchange="handleEditPhotoSelect(event)">
+                  <input type="hidden" id="editAttPhotoData">
+                  <button type="button" class="btn btn-sm" onclick="document.getElementById('editAttPhotoInput').click()" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> <span id="editAttBtnPhotoText">Ganti / Upload Foto</span>
+                  </button>
+                  <button type="button" id="editAttBtnRemovePhoto" class="btn btn-sm" onclick="removeEditPhoto()" style="display: none; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35); font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 6px; cursor: pointer; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-trash-can"></i> Hapus Foto
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
               <div class="form-group" style="grid-column: 1 / -1;">
                 <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
@@ -6885,8 +6917,8 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
-  <script src="js/supabase-config.js?v=191.0"></script>
-  <script src="js/app.js?v=194.0"></script>
+  <script src="js/supabase-config.js?v=195.0"></script>
+  <script src="js/app.js?v=195.0"></script>
 
     <!-- ===================================================== -->
     <!-- MODAL IN-APP PILIH KONTINGEN (MENGGANTIKAN POPUP OS) -->

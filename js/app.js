@@ -8117,6 +8117,61 @@ function toggleEditGroupFields() {
   if (groupLeaderWrap) groupLeaderWrap.style.display = (regType === 'rombongan') ? 'block' : 'none';
 }
 
+async function handleEditPhotoSelect(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  try {
+    showToast('Memproses dan mengoptimalkan pas foto...', 'info');
+    const compressed = await compressParticipantPhoto(file, 500, 650, 0.76);
+    const photoDataUrl = (typeof compressed === 'object' && compressed.dataUrl) ? compressed.dataUrl : compressed;
+
+    const photoDataInput = document.getElementById('editAttPhotoData');
+    if (photoDataInput) photoDataInput.value = photoDataUrl;
+
+    const photoPreview = document.getElementById('editAttPhotoPreview');
+    const photoPlaceholder = document.getElementById('editAttPhotoPlaceholder');
+    const btnRemovePhoto = document.getElementById('editAttBtnRemovePhoto');
+    const btnPhotoText = document.getElementById('editAttBtnPhotoText');
+
+    if (photoPreview) {
+      photoPreview.src = photoDataUrl;
+      photoPreview.style.display = 'block';
+    }
+    if (photoPlaceholder) photoPlaceholder.style.display = 'none';
+    if (btnRemovePhoto) btnRemovePhoto.style.display = 'inline-flex';
+    if (btnPhotoText) btnPhotoText.textContent = 'Ganti Pas Foto';
+
+    showToast('Pas foto berhasil diunggah! Klik "Simpan Perubahan Data" untuk menerapkan ke Cloud.', 'success');
+  } catch (err) {
+    console.error('Gagal memproses pas foto:', err);
+    showToast('Gagal memproses pas foto: ' + err.message, 'error');
+  }
+}
+
+function removeEditPhoto() {
+  const photoDataInput = document.getElementById('editAttPhotoData');
+  if (photoDataInput) photoDataInput.value = '';
+
+  const fileInput = document.getElementById('editAttPhotoInput');
+  if (fileInput) fileInput.value = '';
+
+  const photoPreview = document.getElementById('editAttPhotoPreview');
+  const photoPlaceholder = document.getElementById('editAttPhotoPlaceholder');
+  const btnRemovePhoto = document.getElementById('editAttBtnRemovePhoto');
+  const btnPhotoText = document.getElementById('editAttBtnPhotoText');
+
+  if (photoPreview) {
+    photoPreview.src = '';
+    photoPreview.style.display = 'none';
+  }
+  if (photoPlaceholder) photoPlaceholder.style.display = 'flex';
+  if (btnRemovePhoto) btnRemovePhoto.style.display = 'none';
+  if (btnPhotoText) btnPhotoText.textContent = 'Upload Pas Foto';
+
+  showToast('Pas foto dihapus. Klik "Simpan Perubahan Data" untuk menerapkan ke Cloud.', 'info');
+}
+
 function openEditAttendeeModal(id) {
   const attendee = (allRegistrations || []).find(a => String(a.id) === String(id));
   if (!attendee) {
@@ -8128,6 +8183,36 @@ function openEditAttendeeModal(id) {
   document.getElementById('editAttId').value = attendee.id;
   const badgeCode = document.getElementById('editAttCodeBadge');
   if (badgeCode) badgeCode.textContent = attendee.registration_code || 'PKB-XXX';
+
+  // Pas foto peserta
+  const photoSrc = [attendee.photo_url, attendee.photo_data].find(p => typeof p === 'string' && p.trim() !== '') || '';
+  const photoDataInput = document.getElementById('editAttPhotoData');
+  if (photoDataInput) photoDataInput.value = photoSrc;
+
+  const photoPreview = document.getElementById('editAttPhotoPreview');
+  const photoPlaceholder = document.getElementById('editAttPhotoPlaceholder');
+  const btnRemovePhoto = document.getElementById('editAttBtnRemovePhoto');
+  const btnPhotoText = document.getElementById('editAttBtnPhotoText');
+
+  if (photoSrc) {
+    if (photoPreview) {
+      photoPreview.src = photoSrc;
+      photoPreview.style.display = 'block';
+    }
+    if (photoPlaceholder) photoPlaceholder.style.display = 'none';
+    if (btnRemovePhoto) btnRemovePhoto.style.display = 'inline-flex';
+    if (btnPhotoText) btnPhotoText.textContent = 'Ganti Pas Foto';
+  } else {
+    if (photoPreview) {
+      photoPreview.src = '';
+      photoPreview.style.display = 'none';
+    }
+    if (photoPlaceholder) photoPlaceholder.style.display = 'flex';
+    if (btnRemovePhoto) btnRemovePhoto.style.display = 'none';
+    if (btnPhotoText) btnPhotoText.textContent = 'Upload Pas Foto';
+  }
+  const fileInput = document.getElementById('editAttPhotoInput');
+  if (fileInput) fileInput.value = '';
 
   document.getElementById('editAttFullName').value = attendee.full_name || '';
   const elGender = document.getElementById('editAttGender');
@@ -8234,8 +8319,13 @@ async function submitEditAttendee(e) {
     const medicalHistory = rawMed ? rawMed : 'Tidak Ada (Sehat)';
     const notes = (document.getElementById('editAttNotes')?.value || '').trim();
 
+    const photoDataVal = (document.getElementById('editAttPhotoData')?.value || '').trim();
+    const photoUrl = photoDataVal || null;
+
     const updates = {
       full_name: fullName,
+      photo_url: photoUrl,
+      photo_data: photoUrl,
       gender: gender,
       age: age,
       is_child: isChild,
@@ -8282,6 +8372,15 @@ async function submitEditAttendee(e) {
       currentTicketRecord = { ...currentTicketRecord, ...updates, ...(updated || {}) };
       if (typeof renderActiveTicket === 'function') {
         renderActiveTicket(currentTicketRecord);
+      }
+    }
+
+    // 6. Jika Front Desk card sedang menampilkan peserta ini, perbarui kartu verifikasinya
+    if (typeof frontdeskSelectedAttendeeId !== 'undefined' && String(frontdeskSelectedAttendeeId) === String(id)) {
+      const activeP = (allRegistrations || []).find(x => String(x.id) === String(id));
+      if (activeP && typeof renderFrontdeskVerificationCard === 'function') {
+        const isGrp = (activeP.registration_type === 'rombongan' && !!activeP.group_name);
+        renderFrontdeskVerificationCard(activeP, isGrp);
       }
     }
 
@@ -17456,6 +17555,8 @@ window.refreshActiveScreenViews = refreshActiveScreenViews;
 window.openEditAttendeeModal = openEditAttendeeModal;
 window.openEditAttendeeFromDetail = openEditAttendeeFromDetail;
 window.closeEditAttendeeModal = closeEditAttendeeModal;
+window.handleEditPhotoSelect = handleEditPhotoSelect;
+window.removeEditPhoto = removeEditPhoto;
 window.toggleEditGroupFields = toggleEditGroupFields;
 window.submitEditAttendee = submitEditAttendee;
 window.formatWhatsAppInviteMessage = formatWhatsAppInviteMessage;
@@ -18059,9 +18160,12 @@ function renderFrontdeskVerificationCard(p, isGroup = false) {
       <!-- Kolom Kiri: Foto Besar & Badge Status -->
       <div class="fd-card-left">
         <div class="fd-photo-wrap ${isAttended ? 'attended' : 'pending'}">
-          ${photoUrl ? `<img src="${photoUrl}" alt="${escapeHtml(p.full_name)}" class="fd-photo-img">` : `<div class="fd-photo-placeholder">${initial}</div>`}
+          ${photoUrl ? `<img src="${photoUrl}" alt="${escapeHtml(p.full_name)}" class="fd-photo-img" style="cursor: pointer;" onclick="if(typeof openPhotoPreviewLightbox === 'function') openPhotoPreviewLightbox('${photoUrl.replace(/'/g, "\\'")}', '${escapeHtml(p.full_name).replace(/'/g, "\\'")}')" title="Klik untuk perbesar foto">` : `<div class="fd-photo-placeholder">${initial}</div>`}
         </div>
-        <span style="font-size: 11.5px; font-weight: 800; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 999px; border: 1px solid #e2e8f0;">
+        <button type="button" class="btn btn-sm" onclick="openEditAttendeeModal('${p.id}')" style="margin-top: 6px; font-size: 11px; font-weight: 700; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; border-radius: 6px; padding: 4px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);" title="Ganti pas foto atau edit data peserta">
+          <i class="fa-solid fa-camera"></i> Edit Foto/Data
+        </button>
+        <span style="font-size: 11.5px; font-weight: 800; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 999px; border: 1px solid #e2e8f0; margin-top: 4px;">
           ${p.is_child ? '<i class="fa-solid fa-child" style="color:#f59e0b;"></i> Anak-anak' : '<i class="fa-solid fa-user-tie" style="color:#047857;"></i> Peserta Dewasa'}
         </span>
       </div>

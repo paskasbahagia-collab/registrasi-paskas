@@ -1137,11 +1137,23 @@ class PaskasDataService {
   }
 
   /**
-   * Mengupdate data pendaftaran peserta (misal: setting kamar/gedung)
+   * Mengupdate data pendaftaran peserta (misal: setting kamar/gedung/foto)
    */
   async updateRegistration(id, updates) {
     this.ensureSupabaseClient();
     const now = new Date().toISOString();
+
+    // Jika ada update photo_url baru berupa base64, coba upload ke storage bucket Supabase jika tersedia
+    if (updates && updates.photo_url && typeof updates.photo_url === 'string' && updates.photo_url.startsWith('data:image')) {
+      try {
+        const currentRec = (await this.getLocalRegistrations()).find(i => String(i.id) === String(id));
+        const code = (currentRec && currentRec.registration_code) || 'PKB';
+        updates.photo_url = await this.uploadPhotoIfNeeded(updates.photo_url, code);
+      } catch (err) {
+        console.warn('Gagal upload foto ke storage bucket, simpan langsung payload foto:', err);
+      }
+    }
+
     const cleanUpdates = this.sanitizeRegistrationPayload({ ...updates, updated_at: now });
 
     if (this.isSupabaseConnected && this.supabaseClient) {

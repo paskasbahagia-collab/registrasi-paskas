@@ -15330,3 +15330,22 @@ input:checked + .slider:before {
 .fd-picker-modal-body::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ======================================================= */
+/* MODAL EDIT DATA PESERTA: PAS FOTO UPLOADER & PREVIEW   */
+/* ======================================================= */
+.edit-photo-card {
+  transition: all 0.2s ease-in-out;
+}
+.edit-photo-card:hover {
+  border-color: rgba(56, 189, 248, 0.6) !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+}
+.edit-photo-card button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+.edit-photo-card button:active {
+  transform: translateY(0);
+}
+
