@@ -978,16 +978,16 @@ class PaskasDataService {
     if (this.isSupabaseConnected && this.supabaseClient) {
       const remoteMax = await this.getLatestRemoteSequence();
       if (remoteMax > 0) {
-        let currentMaxInBatch = 0;
+        let currentMinInBatch = Infinity;
         stampedList.forEach(item => {
           const m = String(item.registration_code || '').match(/PKB-(\d+)/i);
           if (m && m[1]) {
             const n = parseInt(m[1], 10);
-            if (n > currentMaxInBatch) currentMaxInBatch = n;
+            if (n < currentMinInBatch) currentMinInBatch = n;
           }
         });
-        // Jika kode rombongan sudah tertinggal dibanding data di Cloud
-        if (currentMaxInBatch <= remoteMax) {
+        // Jika ada nomor tiket dalam rombongan yang sudah bentrok/tertinggal dibanding data Cloud
+        if (currentMinInBatch <= remoteMax) {
           stampedList.forEach((item, idx) => {
             item.registration_code = `PKB-${String(remoteMax + 1 + idx).padStart(3, '0')}`;
           });
