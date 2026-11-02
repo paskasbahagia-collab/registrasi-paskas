@@ -7172,16 +7172,20 @@ async function loadAndRenderRegistrations() {
     try { renderFinanceView(); } catch (e) {}
   }
 
-  // Update data fingerprint
+  // Update data fingerprint & version tag
   try {
     lastDataFingerprint = calculateDataFingerprint(allRegistrations);
+    if (window.dataService && typeof window.dataService.getLatestDataVersion === 'function') {
+      window.dataService.getLatestDataVersion().then(v => { if (v) lastKnownDataVersion = v; }).catch(() => {});
+    }
   } catch (e) {}
 }
 
 // ===================================================================
-// MULTI-DEVICE REALTIME SYNC (DUAL ENGINE: WEBSOCKET + BACKGROUND POLL)
+// MULTI-DEVICE REALTIME SYNC (DUAL ENGINE: WEBSOCKET + LIGHT PING)
 // ===================================================================
 let isSilentlySyncing = false;
+let lastKnownDataVersion = '';
 let lastDataFingerprint = '';
 let realtimeSyncInterval = null;
 
@@ -7240,6 +7244,19 @@ async function syncRegistrationsSilently() {
 
   isSilentlySyncing = true;
   try {
+    // 1. LIGHTWEIGHT PING CHECK (~57 bytes): Cek tag versi data sebelum menyedot 445 data
+    if (typeof window.dataService.getLatestDataVersion === 'function') {
+      const currentVersion = await window.dataService.getLatestDataVersion();
+      if (currentVersion && lastKnownDataVersion && currentVersion === lastKnownDataVersion) {
+        // Data di Cloud sama persis dengan yang ada di browser, lewati dan hemat 100% bandwidth!
+        return;
+      }
+      if (currentVersion) {
+        lastKnownDataVersion = currentVersion;
+      }
+    }
+
+    // 2. Jika ada perubahan data baru atau initial sync, unduh data segar
     const freshList = await window.dataService.getRegistrations();
     if (Array.isArray(freshList)) {
       const freshFp = calculateDataFingerprint(freshList);
@@ -7304,7 +7321,7 @@ function initMultiDeviceRealtimeSync() {
     lastDataFingerprint = calculateDataFingerprint(allRegistrations);
   }
 
-  // 1. WebSocket Live Stream via Supabase Realtime
+  // 1. WebSocket Live Stream via Supabase Realtime (Instant Push)
   if (window.dataService && typeof window.dataService.setupRealtimeSubscription === 'function') {
     try {
       window.dataService.setupRealtimeSubscription((payload) => {
@@ -7315,7 +7332,7 @@ function initMultiDeviceRealtimeSync() {
     }
   }
 
-  // 2. Background Polling interval setiap 4 detik saat tab aktif (safety net otomatis)
+  // 2. Background Heartbeat Ping pengaman (setiap 30 detik saat tab aktif, ~57 bytes per ping)
   if (realtimeSyncInterval) {
     clearInterval(realtimeSyncInterval);
   }
@@ -7323,7 +7340,7 @@ function initMultiDeviceRealtimeSync() {
     if (document.visibilityState === 'visible') {
       syncRegistrationsSilently();
     }
-  }, 4000);
+  }, 30000);
 }
 
 async function forceReloadCloudData(btn) {

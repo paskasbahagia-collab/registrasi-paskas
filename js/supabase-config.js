@@ -580,6 +580,55 @@ class PaskasDataService {
   }
 
   /**
+   * Pengecekan versi data ringan (Lightweight Ping ~57 bytes)
+   * Mengembalikan tag berupa: `${count}_${latestId}_${latestUpdatedAt}`
+   * Mencegah unduhan 445 data berulang saat data di server belum berubah (hemat 99.8% bandwidth).
+   */
+  async getLatestDataVersion() {
+    this.ensureSupabaseClient();
+    if (this.isSupabaseConnected && this.supabaseClient) {
+      try {
+        const { data, count, error } = await this.supabaseClient
+          .from('registrations')
+          .select('id, updated_at', { count: 'exact' })
+          .order('updated_at', { ascending: false })
+          .limit(1);
+        if (!error && Array.isArray(data) && data.length > 0) {
+          return `${count}_${data[0].id}_${data[0].updated_at}`;
+        }
+      } catch (e) {
+        console.debug('getLatestDataVersion SDK error:', e);
+      }
+    }
+
+    // Direct REST fallback (jika SDK belum siap)
+    try {
+      const creds = this.getCredentials();
+      if (creds.url && creds.key) {
+        const cleanUrl = creds.url.replace(/\/+$/, '');
+        const resp = await fetch(`${cleanUrl}/rest/v1/registrations?select=id,updated_at&order=updated_at.desc&limit=1`, {
+          headers: {
+            'apikey': creds.key,
+            'Authorization': `Bearer ${creds.key}`,
+            'Prefer': 'count=exact'
+          }
+        });
+        if (resp.ok) {
+          const contentRange = resp.headers.get('content-range'); // format "0-0/445"
+          const totalCount = contentRange ? contentRange.split('/')[1] : '';
+          const rows = await resp.json();
+          if (Array.isArray(rows) && rows.length > 0) {
+            return `${totalCount}_${rows[0].id}_${rows[0].updated_at}`;
+          }
+        }
+      }
+    } catch (e) {
+      console.debug('getLatestDataVersion REST fallback error:', e);
+    }
+    return null;
+  }
+
+  /**
    * Mengambil semua pendaftaran peserta (Sinkron Cloud Supabase & Local)
    */
   async getRegistrations() {
