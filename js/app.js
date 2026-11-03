@@ -1,4 +1,29 @@
 
+function setRekapKloterFilter(kloterVal) {
+  const sel = document.getElementById('filterKloter');
+  if (sel) sel.value = kloterVal;
+
+  ['ALL', '1', '2'].forEach(k => {
+    const btn = document.getElementById('pillKloter' + k);
+    if (btn) {
+      if (k === kloterVal) {
+        btn.style.background = '#047857';
+        btn.style.color = '#ffffff';
+        btn.style.borderColor = '#047857';
+        btn.style.fontWeight = '800';
+      } else {
+        btn.style.background = '#ffffff';
+        btn.style.color = '#475569';
+        btn.style.borderColor = '#cbd5e1';
+        btn.style.fontWeight = '700';
+      }
+    }
+  });
+
+  applyRekapFilters();
+}
+window.setRekapKloterFilter = setRekapKloterFilter;
+
 var safeStorage = (typeof window !== 'undefined' && window.safeStorage) ? window.safeStorage : {
   _mem: {},
   getItem(k) { return Object.prototype.hasOwnProperty.call(this._mem, k) ? this._mem[k] : null; },
@@ -2796,13 +2821,32 @@ function handleIndividuAgeChange() {
     if (guardianRow) guardianRow.style.display = 'none';
   }
 
-  // Khusus Seragam Kaos: Peserta usia 12 tahun ke bawah tidak mendapatkan seragam kaos
+  // Khusus Seragam Kaos: Kloter 2 bebas kaos (-), anak <= 12 th juga tidak dapat kaos
+  const isKloter2 = (window.dataService?.getSettings()?.active_kloter === '2');
   const isUnder12 = !isNaN(age) && age > 0 && age <= 12;
   const radioGrid = document.getElementById('indSizeRadioGrid');
   const childClothNotice = document.getElementById('indChildClothNotice');
   const badgeNote = document.getElementById('indClothBadgeNote');
   const reqStar = document.getElementById('indClothRequiredStar');
   const clothRadios = document.querySelectorAll('input[name="ind_clothSize"]');
+
+  if (isKloter2) {
+    clothRadios.forEach(r => {
+      r.disabled = true;
+      r.checked = false;
+    });
+    if (radioGrid) {
+      radioGrid.style.opacity = '0.4';
+      radioGrid.style.pointerEvents = 'none';
+    }
+    if (childClothNotice) {
+      childClothNotice.style.display = 'block';
+      childClothNotice.innerHTML = '<i class="fa-solid fa-gift" style="color: #047857;"></i> <strong>Pendaftaran Kloter 2:</strong> Fasilitas seragam kaos ditiadakan (otomatis tercatat sebagai tanda "-").';
+    }
+    if (badgeNote) badgeNote.textContent = 'Ditiadakan (Kloter 2)';
+    if (reqStar) reqStar.style.display = 'none';
+    return;
+  }
 
   if (isUnder12) {
     clothRadios.forEach(r => {
@@ -4057,7 +4101,7 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
       departure_time: departureTime,
       transport_arrival: transportArrival,
       transport_departure: transportDeparture,
-      cloth_size: clothSize,
+      cloth_size: ((window.dataService?.getSettings()?.active_kloter === '2') || isChild) ? '-' : clothSize,
       medical_history: medical || 'Tidak Ada (Sehat)',
       photo_url: ind_selectedPhotoData || null,
       notes: ''
@@ -4453,6 +4497,10 @@ function handleKelompokPreview(e) {
     `;
   }
 
+  if (isK2ActiveForm) {
+    batchRecords.forEach(b => { b.cloth_size = '-'; });
+  }
+
   pendingRegistrationData = {
     type: 'kelompok',
     groupName: groupName,
@@ -4830,7 +4878,8 @@ function addGroupCoordinatorCard(opts = {}) {
       </select>
     </td>
     <td>
-      <select class="form-control form-control-sm grp-coord-cloth">
+      <select class="form-control form-control-sm grp-coord-cloth" ${(window.dataService?.getSettings()?.active_kloter === '2') ? 'disabled style="background: #334155; color: #94a3b8; cursor: not-allowed;" title="Kloter 2 tidak mendapatkan seragam kaos"' : ''}>
+        ${(window.dataService?.getSettings()?.active_kloter === '2') ? '<option value="-" selected>- (Bebas Kaos / Kloter 2)</option>' : `
         <option value="S" ${initialCloth === 'S' ? 'selected' : ''}>S</option>
         <option value="M" ${initialCloth === 'M' ? 'selected' : ''}>M</option>
         <option value="L" ${initialCloth === 'L' ? 'selected' : ''}>L</option>
@@ -4838,6 +4887,7 @@ function addGroupCoordinatorCard(opts = {}) {
         <option value="XXL" ${initialCloth === 'XXL' ? 'selected' : ''}>XXL</option>
         <option value="3XL" ${initialCloth === '3XL' ? 'selected' : ''}>3XL</option>
         <option value="4XL" ${initialCloth === '4XL' ? 'selected' : ''}>4XL</option>
+        `}
       </select>
     </td>
     <td>
@@ -5096,8 +5146,9 @@ function addGroupMemberCard(opts = {}) {
       </select>
     </td>
     <td>
-      <select class="form-control form-control-sm grp-member-cloth" ${initialAge > 0 && initialAge <= 12 ? 'disabled style="background: #334155; color: #94a3b8; cursor: not-allowed;" title="Peserta anak 12 tahun ke bawah tidak mendapatkan seragam kaos"' : ''}>
-        <option value="-" ${initialCloth === '-' || (initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>- (Anak &le;12 th)</option>
+      <select class="form-control form-control-sm grp-member-cloth" ${(window.dataService?.getSettings()?.active_kloter === '2') || (initialAge > 0 && initialAge <= 12) ? 'disabled style="background: #334155; color: #94a3b8; cursor: not-allowed;" title="' + ((window.dataService?.getSettings()?.active_kloter === '2') ? 'Kloter 2 tidak mendapatkan seragam kaos' : 'Peserta anak 12 tahun ke bawah tidak mendapatkan seragam kaos') + '"' : ''}>
+        <option value="-" ${(window.dataService?.getSettings()?.active_kloter === '2') || initialCloth === '-' || (initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>- (${(window.dataService?.getSettings()?.active_kloter === '2') ? 'Bebas Kaos / Kloter 2' : 'Anak &le;12 th'})</option>
+        ${(window.dataService?.getSettings()?.active_kloter !== '2') ? `
         <option value="S" ${initialCloth === 'S' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>S</option>
         <option value="M" ${initialCloth === 'M' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>M</option>
         <option value="L" ${initialCloth === 'L' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>L</option>
@@ -5105,6 +5156,7 @@ function addGroupMemberCard(opts = {}) {
         <option value="XXL" ${initialCloth === 'XXL' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>XXL</option>
         <option value="3XL" ${initialCloth === '3XL' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>3XL</option>
         <option value="4XL" ${initialCloth === '4XL' && !(initialAge > 0 && initialAge <= 12) ? 'selected' : ''}>4XL</option>
+        ` : ''}
       </select>
     </td>
     <td>
@@ -7466,6 +7518,17 @@ function hasParticipantMedicalIssue(itemOrMed) {
 
 function updateSummaryMetrics() {
   const totalOrang = allRegistrations.length;
+  const k2Count = allRegistrations.filter(r => isKloter2Participant(r)).length;
+  const k1Count = totalOrang - k2Count;
+
+  // Update Top Kloter Pill Badges
+  const bAll = document.getElementById('badgeTopKloterALL');
+  const bK1 = document.getElementById('badgeTopKloter1');
+  const bK2 = document.getElementById('badgeTopKloter2');
+  if (bAll) bAll.textContent = totalOrang;
+  if (bK1) bK1.textContent = k1Count;
+  if (bK2) bK2.textContent = k2Count;
+
   const individuCount = allRegistrations.filter(r => r.registration_type === 'individu').length;
   const kelompokMemberCount = allRegistrations.filter(r => r.registration_type === 'kelompok').length;
 
@@ -10363,7 +10426,7 @@ function exportToExcel() {
     }
     if (p.total_fee && Number(p.total_fee) > 0) return Number(p.total_fee);
     const settings = window.dataService ? window.dataService.getSettings() : {};
-    const adultFee = Number(settings.adult_fee || 350000);
+    const adultFee = Number(settings.adult_fee || 200000);
     const childFee = Number(settings.child_fee || 100000);
     const toddlerFee = Number(settings.toddler_fee || 50000);
     const age = Number(p.age);
@@ -11471,7 +11534,7 @@ function initSettingsPage(defaultTab = 'info', skipSwitchTab = false) {
   const toddlerFeeInput = document.getElementById('cfg_toddlerFee');
   const lateThresholdInput = document.getElementById('cfg_eventLateThreshold');
 
-  if (adultFeeInput) adultFeeInput.value = settings.adult_fee || '350000';
+  if (adultFeeInput) adultFeeInput.value = (settings.adult_fee && settings.adult_fee !== '350000') ? settings.adult_fee : '200000';
   if (childFeeInput) childFeeInput.value = settings.child_fee || '100000';
   if (toddlerFeeInput) toddlerFeeInput.value = settings.toddler_fee || '50000';
   if (lateThresholdInput) lateThresholdInput.value = settings.event_late_threshold || '2026-11-12T12:00:00';
@@ -16382,7 +16445,7 @@ function calculateParticipantFee(p) {
     return Number(p.total_fee);
   }
   const settings = window.dataService ? window.dataService.getSettings() : {};
-  const adultFee = Number(settings.adult_fee || 350000);
+  const adultFee = Number(settings.adult_fee || 200000);
   const childFee = Number(settings.child_fee || 100000);
   const toddlerFee = Number(settings.toddler_fee || 50000);
 
@@ -16397,7 +16460,7 @@ function renderFinanceView() {
   const settings = window.dataService ? window.dataService.getSettings() : {};
   const adultFeeDisplay = document.getElementById('financeAdultFeeDisplay');
   if (adultFeeDisplay) {
-    adultFeeDisplay.textContent = `Rp ${Number(settings.adult_fee || 350000).toLocaleString('id-ID')}`;
+    adultFeeDisplay.textContent = `Rp ${Number(settings.adult_fee || 200000).toLocaleString('id-ID')}`;
   }
 
   // Populate Rombongan Filter Options
@@ -18279,7 +18342,7 @@ async function resetTreasurerPasswordDefault() {
 }
 
 async function saveTariffAndPresensiConfig() {
-  const adult = document.getElementById('cfg_adultFee')?.value || '350000';
+  const adult = document.getElementById('cfg_adultFee')?.value || '200000';
   const child = document.getElementById('cfg_childFee')?.value || '100000';
   const toddler = document.getElementById('cfg_toddlerFee')?.value || '50000';
   const lateThreshold = document.getElementById('cfg_eventLateThreshold')?.value || '2026-11-12T12:00:00';

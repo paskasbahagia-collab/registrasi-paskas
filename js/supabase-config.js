@@ -83,7 +83,7 @@ Panitia Pelaksana Silaturahmi Akbar Paskas Bahagia`,
   announcement_date: '20 Oktober 2026, 14:00 WIB',
   announcement_text: 'Ahlan wa Sahlan! Registrasi peserta Silaturahmi Akbar Paskas Bahagia resmi dibuka. Pastikan melengkapi data rombongan dan ukuran seragam dengan benar sebelum batas akhir pendaftaran.',
   paskas_treasurer_password: 'dff9cd137cab8b96431ccd81f8bb433fc71f0329eefb54bd4380b3fc3a9fc5d1',
-  adult_fee: '350000',
+  adult_fee: '200000',
   child_fee: '100000',
   toddler_fee: '50000',
   event_late_threshold: '2026-11-12T12:00:00'
@@ -306,6 +306,9 @@ class PaskasDataService {
           }
         });
         const merged = { ...this.getSettings(), ...cloudSettings };
+        if (merged.adult_fee === '350000') {
+          merged.adult_fee = '200000';
+        }
         safeStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(merged));
         return merged;
       } catch (e) {
@@ -886,6 +889,9 @@ class PaskasDataService {
 
     const rawCode = String(newRecord.registration_code || '');
     const isKloter2 = rawCode.includes('K2-') || (this.getSettings().active_kloter === '2');
+    if (isKloter2) {
+      newRecord.cloth_size = '-';
+    }
     const targetKloter = isKloter2 ? '2' : '1';
     const prefix = isKloter2 ? 'PKB-K2-' : 'PKB-';
     const baseMin = isKloter2 ? 500 : 0;
@@ -1047,6 +1053,9 @@ class PaskasDataService {
     }));
 
     let isKloter2 = (this.getSettings().active_kloter === '2');
+    if (isKloter2) {
+      stampedList.forEach(item => { item.cloth_size = '-'; });
+    }
     if (stampedList.length > 0) {
       const code = String(stampedList[0].registration_code || '');
       if (code.includes('K2-') || (code.match(/PKB-(\d+)/i) && parseInt(code.match(/PKB-(\d+)/i)[1], 10) >= 501)) {
@@ -1416,6 +1425,9 @@ class PaskasDataService {
     try {
       const saved = safeStorage.getItem(STORAGE_KEYS.SETTINGS);
       const res = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS };
+      if (res.adult_fee === '350000' || !res.adult_fee) {
+        res.adult_fee = '200000';
+      }
       if (!res.ticket_template_image ||
         typeof res.ticket_template_image !== 'string' ||
         res.ticket_template_image.includes('[object') ||
@@ -1645,7 +1657,7 @@ class PaskasDataService {
     let totalFee = Number(item.total_fee || 0);
     if (!totalFee || totalFee <= 0) {
       const settings = this.getSettings();
-      const adultFee = Number(settings.adult_fee || 350000);
+      const adultFee = Number(settings.adult_fee || 200000);
       const childFee = Number(settings.child_fee || 100000);
       const toddlerFee = Number(settings.toddler_fee || 50000);
       const age = Number(item.age || 0);
@@ -1717,7 +1729,7 @@ class PaskasDataService {
     let totalFee = Number(item.total_fee || 0);
     if (!totalFee || totalFee <= 0) {
       const settings = this.getSettings();
-      const adultFee = Number(settings.adult_fee || 350000);
+      const adultFee = Number(settings.adult_fee || 200000);
       const childFee = Number(settings.child_fee || 100000);
       const toddlerFee = Number(settings.toddler_fee || 50000);
       const age = Number(item.age || 0);
@@ -1770,7 +1782,7 @@ class PaskasDataService {
     let totalFee = Number(item.total_fee || 0);
     if (!totalFee || totalFee <= 0) {
       const settings = this.getSettings();
-      const adultFee = Number(settings.adult_fee || 350000);
+      const adultFee = Number(settings.adult_fee || 200000);
       const childFee = Number(settings.child_fee || 100000);
       const toddlerFee = Number(settings.toddler_fee || 50000);
       const age = Number(item.age || 0);
@@ -1834,7 +1846,7 @@ class PaskasDataService {
     let totalFee = Number(item.total_fee || 0);
     if (!totalFee || totalFee <= 0) {
       const settings = this.getSettings();
-      const adultFee = Number(settings.adult_fee || 350000);
+      const adultFee = Number(settings.adult_fee || 200000);
       const childFee = Number(settings.child_fee || 100000);
       const toddlerFee = Number(settings.toddler_fee || 50000);
       const age = Number(item.age || 0);
@@ -1886,7 +1898,7 @@ class PaskasDataService {
     let totalFee = Number(item?.total_fee || 0);
     if (!totalFee || totalFee <= 0) {
       const settings = this.getSettings();
-      const adultFee = Number(settings.adult_fee || 350000);
+      const adultFee = Number(settings.adult_fee || 200000);
       const childFee = Number(settings.child_fee || 100000);
       const toddlerFee = Number(settings.toddler_fee || 50000);
       const age = Number(item?.age || 0);
@@ -1926,7 +1938,7 @@ class PaskasDataService {
 
   async resetAllPayments() {
     const settings = this.getSettings();
-    const adultFee = Number(settings.adult_fee || 350000);
+    const adultFee = Number(settings.adult_fee || 200000);
     const childFee = Number(settings.child_fee || 100000);
     const toddlerFee = Number(settings.toddler_fee || 50000);
 

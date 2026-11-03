@@ -8,3 +8,4 @@ serve.ps1
 *.backup.jpg
 .vercel
 .env*
+scratch/

@@ -90,7 +90,7 @@ VALUES
     ('google_email_script_url', 'https://script.google.com/macros/s/AKfycbw1k6dhuACxMSKHLqFLKHla2QQzc2CnZddLp93mh98Jg-Mg0etauHLuQ0cakuCMMBZ83A/exec', 'URL Apps Script Web App untuk pengiriman email otomatis dari paskasbahagia@gmail.com'),
     ('paskas_admin_password', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Hash SHA-256 kata sandi administrator (aman terenkripsi: bawaan admin123)'),
     ('paskas_treasurer_password', 'dff9cd137cab8b96431ccd81f8bb433fc71f0329eefb54bd4380b3fc3a9fc5d1', 'Hash SHA-256 kata sandi bendahara (aman terenkripsi: bawaan bendahara123)'),
-    ('adult_fee', '350000', 'Tarif standar registrasi peserta dewasa (>15 tahun)'),
+    ('adult_fee', '200000', 'Tarif standar registrasi peserta dewasa (>15 tahun)'),
     ('child_fee', '100000', 'Tarif registrasi anak-anak (5-15 tahun)'),
     ('toddler_fee', '50000', 'Tarif registrasi balita (<5 tahun)'),
     ('event_late_threshold', '2026-11-12T12:00:00', 'Batas jam kehadiran tepat waktu hari-H (melewati jam ini otomatis berstatus Hadir Telat)'),

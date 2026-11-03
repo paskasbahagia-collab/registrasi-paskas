@@ -2741,7 +2741,7 @@
                   </div>
                   <div>
                     <div style="font-size: 12px; font-weight: 700; color: #7e22ce;">Dewasa (&gt; 15 Tahun)</div>
-                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; line-height: 1.2;" id="financeAdultFeeDisplay">Rp 350.000</div>
+                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; line-height: 1.2;" id="financeAdultFeeDisplay">Rp 200.000</div>
 
                   </div>
                 </div>
@@ -3251,6 +3251,32 @@
               </div>
             </div>
             <p class="editorial-desc">Pantau statistik kehadiran perorangan &amp; kafilah rombongan, proporsi gender, armada transportasi, logistik seragam, serta mitigasi posko medis secara akurat.</p>
+          </div>
+
+          <!-- ======================================================= -->
+          <!-- BAR SWITCHER KLOTER (REKAP DATA)                        -->
+          <!-- ======================================================= -->
+          <div class="rekap-kloter-selector-bar" style="margin-top: 14px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: #ffffff; padding: 12px 18px; border-radius: 12px; border: 1.5px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: #ecfdf5; color: #047857; display: flex; align-items: center; justify-content: center; font-size: 15px;">
+                <i class="fa-solid fa-layer-group"></i>
+              </div>
+              <div>
+                <strong style="font-size: 13.5px; color: #0f172a; display: block;">Filter Tampilan Rekap Data:</strong>
+                <span style="font-size: 11px; color: #64748b;">Pilih untuk memisahkan data Kloter 1 dan Kloter 2</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="rekapTopKloterPills">
+              <button type="button" class="btn-top-kloter-pill active" id="pillKloterALL" onclick="setRekapKloterFilter('ALL')" style="padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 800; border: 1.5px solid #047857; background: #047857; color: #ffffff; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-users"></i> Semua Kloter (1 &amp; 2) <span id="badgeTopKloterALL" style="background: rgba(255,255,255,0.25); padding: 1px 7px; border-radius: 999px; font-size: 11px;">0</span>
+              </button>
+              <button type="button" class="btn-top-kloter-pill" id="pillKloter1" onclick="setRekapKloterFilter('1')" style="padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-flag"></i> Khusus Kloter 1 <span id="badgeTopKloter1" style="background: #f1f5f9; color: #475569; padding: 1px 7px; border-radius: 999px; font-size: 11px;">0</span>
+              </button>
+              <button type="button" class="btn-top-kloter-pill" id="pillKloter2" onclick="setRekapKloterFilter('2')" style="padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-flag-checkered text-emerald"></i> Khusus Kloter 2 <span id="badgeTopKloter2" style="background: #ecfdf5; color: #047857; padding: 1px 7px; border-radius: 999px; font-size: 11px;">0</span>
+              </button>
+            </div>
           </div>
 
           <!-- ======================================================= -->
@@ -4693,7 +4719,7 @@ CREATE TABLE IF NOT EXISTS registrations (
                       <label class="form-label" style="font-size: 12.5px; font-weight: 700; color: #1a1815;">
                         <i class="fa-solid fa-user text-gold"></i> Tarif Peserta Dewasa (&gt;15 Thn) - Rp
                       </label>
-                      <input type="number" id="cfg_adultFee" class="form-control" value="350000" placeholder="350000">
+                      <input type="number" id="cfg_adultFee" class="form-control" value="200000" placeholder="200000">
                     </div>
 
                     <div class="form-group" style="margin-bottom: 14px;">
@@ -7105,8 +7131,8 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
-  <script src="js/supabase-config.js?v=201.0"></script>
-  <script src="js/app.js?v=201.0"></script>
+  <script src="js/supabase-config.js?v=202.0"></script>
+  <script src="js/app.js?v=202.0"></script>
 
     <!-- ===================================================== -->
     <!-- MODAL IN-APP PILIH KONTINGEN (MENGGANTIKAN POPUP OS) -->
