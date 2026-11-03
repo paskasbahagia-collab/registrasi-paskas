@@ -2773,6 +2773,11 @@
                 <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px;"></i>
                 <input type="text" id="financeSearchInput" class="form-control" style="padding-left: 36px; padding-right: 12px; height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; color: #0f172a !important; font-weight: 600; width: 100%; box-sizing: border-box;" placeholder="Cari nama peserta, nomor tiket, rombongan, atau wilayah..." oninput="filterFinanceData()">
               </div>
+              <select id="finFilterKloter" class="fin-select-filter" onchange="filterFinanceData()" title="Filter Kloter Pendaftaran" style="height: 38px; background: #ffffff; border: 1.5px solid #047857; border-radius: 8px; padding: 0 12px; font-size: 13px; font-weight: 700; color: #047857;">
+                <option value="all">Semua Kloter (1 &amp; 2)</option>
+                <option value="1">Kloter 1 (Wajib Bayar)</option>
+                <option value="2">Kloter 2 (Bebas Biaya / Infaq)</option>
+              </select>
               <select id="finFilterRombongan" class="fin-select-filter" onchange="filterFinanceData()" title="Filter Rombongan" style="height: 38px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #334155;">
                 <option value="all">Semua Rombongan</option>
               </select>
@@ -7100,8 +7105,8 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
-  <script src="js/supabase-config.js?v=200.0"></script>
-  <script src="js/app.js?v=200.0"></script>
+  <script src="js/supabase-config.js?v=201.0"></script>
+  <script src="js/app.js?v=201.0"></script>
 
     <!-- ===================================================== -->
     <!-- MODAL IN-APP PILIH KONTINGEN (MENGGANTIKAN POPUP OS) -->

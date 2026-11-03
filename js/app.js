@@ -11131,10 +11131,15 @@ function exportToExcel() {
     totPaidAll += paid;
     totRemAll += remaining;
 
+    const isK2 = isKloter2Participant(item);
     if (isCancelled) {
       totFeeRefund += fee;
       totPaidRefund += paid;
       refundList.push({ item, fee, paid, remaining, status: 'Dibatalkan (Refund)' });
+    } else if (isK2) {
+      totFeeLunas += 0;
+      totPaidLunas += paid;
+      lunasList.push({ item, fee: 0, paid, remaining: 0, status: paid > 0 ? ('Infaq (Rp ' + paid.toLocaleString('id-ID') + ')') : 'Bebas Biaya (Kloter 2)' });
     } else if (remaining <= 0 && paid > 0) {
       totFeeLunas += fee;
       totPaidLunas += paid;
@@ -16057,7 +16062,12 @@ function openPresensiDetailModal(id) {
   const paid = Number(p.paid_amount || 0);
   const remaining = Math.max(0, fee - paid);
   const isVerified = p.payment_verified === 'verified';
-  if (paid > 0 && remaining <= 0 && isVerified) {
+  const isK2 = isKloter2Participant(p);
+  if (isK2) {
+    document.getElementById('detModalPayment').innerHTML = paid > 0 
+      ? `<span class="badge-paid" style="background:#ecfdf5; color:#047857;"><i class="fa-solid fa-hand-holding-heart"></i> INFAQ (Rp ${paid.toLocaleString('id-ID')})</span>`
+      : '<span class="badge-paid" style="background:#f0fdf4; color:#166534;"><i class="fa-solid fa-gift"></i> BEBAS BIAYA (KLOTER 2)</span>';
+  } else if (paid > 0 && remaining <= 0 && isVerified) {
     document.getElementById('detModalPayment').innerHTML = '<span class="badge-paid">LUNAS</span>';
   } else if (paid > 0 && !isVerified) {
     document.getElementById('detModalPayment').innerHTML = '<span class="badge-partial">BELUM LUNAS (MENUNGGU VERIFIKASI)</span>';
@@ -16354,7 +16364,20 @@ function lockTreasurerSession() {
   showToast('Sesi akses keuangan telah dikunci.', 'info');
 }
 
+function isKloter2Participant(p) {
+  if (!p) return false;
+  const code = String(p.registration_code || '');
+  if (/K2-/i.test(code)) return true;
+  const digits = code.replace(/\D/g, '');
+  const num = digits ? parseInt(digits, 10) : 0;
+  return num >= 501;
+}
+
 function calculateParticipantFee(p) {
+  // Kloter 2 (Gelombang 2): Bebas Biaya Pendaftaran (Rp 0). Infaq bersifat sukarela.
+  if (isKloter2Participant(p)) {
+    return 0;
+  }
   if (p.total_fee && Number(p.total_fee) > 0) {
     return Number(p.total_fee);
   }
@@ -16430,8 +16453,12 @@ function renderFinanceView() {
       totalMasuk += paid;
       totalPiutang += remaining;
 
+      const isK2 = isKloter2Participant(p);
       const isVerified = p.payment_verified === 'verified';
-      if (remaining <= 0 && paid > 0 && isVerified) {
+      if (isK2) {
+        // Kloter 2 bebas biaya pendaftaran: tidak ada piutang/tunggakan
+        countLunas++;
+      } else if (remaining <= 0 && paid > 0 && isVerified) {
         countLunas++;
       } else if (paid > 0 && !isVerified) {
         countUnverified++;
@@ -16675,6 +16702,7 @@ function renderFinanceTable() {
   if (!tbody) return;
 
   const query = (document.getElementById('financeSearchInput')?.value || '').toLowerCase().trim();
+  const kloterVal = document.getElementById('finFilterKloter')?.value || 'all';
   const rombonganVal = document.getElementById('finFilterRombongan')?.value || 'all';
   const kategoriVal = document.getElementById('finFilterKategori')?.value || 'all';
   const metodeVal = document.getElementById('finFilterMetode')?.value || 'all';
@@ -16684,10 +16712,17 @@ function renderFinanceTable() {
   const list = allRegistrations || [];
 
   const filtered = list.filter(p => {
+    const isK2 = isKloter2Participant(p);
     const fee = calculateParticipantFee(p);
     const paid = Number(p.paid_amount || 0);
     const remaining = Math.max(0, fee - paid);
     const age = Number(p.age || 0);
+
+    // Kloter Filter
+    if (kloterVal !== 'all') {
+      if (kloterVal === '2' && !isK2) return false;
+      if (kloterVal === '1' && isK2) return false;
+    }
 
     // Rombongan Filter
     if (rombonganVal !== 'all' && (p.group_name || 'Mandiri') !== rombonganVal) {
@@ -16735,12 +16770,17 @@ function renderFinanceTable() {
     // Status Filter (Lunas hanya jika sudah diverifikasi)
     const isVerified = p.payment_verified === 'verified';
     if (statusVal === 'paid') {
-      if (remaining > 0 || paid === 0 || !isVerified || p.attendance_status === 'cancelled') return false;
+      if (p.attendance_status === 'cancelled') return false;
+      if (isK2) return true; // Kloter 2 selalu masuk kategori beres kewajiban
+      if (remaining > 0 || paid === 0 || !isVerified) return false;
     } else if (statusVal === 'unverified') {
+      if (isK2) return false;
       if (paid === 0 || isVerified || p.attendance_status === 'cancelled') return false;
     } else if (statusVal === 'partial') {
+      if (isK2) return false; // Kloter 2 tidak ada cicilan/tunggakan
       if (paid === 0 || remaining <= 0 || !isVerified || p.attendance_status === 'cancelled') return false;
     } else if (statusVal === 'pending') {
+      if (isK2) return false; // Kloter 2 tidak ada tagihan tertunggak
       if (paid > 0 || p.attendance_status === 'cancelled') return false;
     } else if (statusVal === 'refund') {
       if (p.attendance_status !== 'cancelled') return false;
@@ -16785,13 +16825,22 @@ function renderFinanceTable() {
     const latestNote = instList.length > 0 ? (instList[instList.length - 1].notes || '') : '';
     const isVerified = p.payment_verified === 'verified';
 
+    const isK2 = isKloter2Participant(p);
     let statusBadge = '<span class="badge-debt">BELUM BAYAR</span>';
-    if (remaining <= 0 && paid > 0 && isVerified) {
-      statusBadge = '<span class="badge-paid">LUNAS</span>';
-    } else if (paid > 0 && !isVerified) {
-      statusBadge = '<span class="badge-partial">BELUM LUNAS</span>';
-    } else if (paid > 0 && remaining > 0) {
-      statusBadge = '<span class="badge-partial">CICILAN</span>';
+    if (isK2) {
+      if (paid > 0) {
+        statusBadge = `<span class="badge-paid" style="background: #ecfdf5; color: #047857; border: 1.5px solid #10b981; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-hand-holding-heart"></i> INFAQ (Rp ${paid.toLocaleString('id-ID')})</span>`;
+      } else {
+        statusBadge = `<span class="badge-paid" style="background: #f0fdf4; color: #166534; border: 1px solid #86efac; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-gift"></i> BEBAS BIAYA</span>`;
+      }
+    } else {
+      if (remaining <= 0 && paid > 0 && isVerified) {
+        statusBadge = '<span class="badge-paid">LUNAS</span>';
+      } else if (paid > 0 && !isVerified) {
+        statusBadge = '<span class="badge-partial">BELUM LUNAS</span>';
+      } else if (paid > 0 && remaining > 0) {
+        statusBadge = '<span class="badge-partial">CICILAN</span>';
+      }
     }
 
     if (p.attendance_status === 'cancelled') {
@@ -16840,6 +16889,12 @@ function renderFinanceTable() {
           <span style="font-family: monospace; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 7px; border-radius: 4px;">
             ${p.registration_code || '-'}
           </span>
+          <div style="margin-top: 2px;">
+            ${isK2 
+              ? '<span style="font-size: 9.5px; font-weight: 800; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 1px 5px; border-radius: 3px;">Kloter 2</span>'
+              : '<span style="font-size: 9.5px; font-weight: 700; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 3px;">Kloter 1</span>'
+            }
+          </div>
         </td>
         <td class="col-name" style="white-space: normal; word-break: break-word;">
           <div style="font-weight: 800; color: #0f172a; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="openRecordPaymentModal(${p.id})" title="Klik untuk Buka Catat Pembayaran & Verifikasi">${p.full_name || '-'} <i class="fa-solid fa-pen-to-square" style="font-size: 11px; color: #10b981;" title="Catat / Verifikasi"></i></div>
@@ -16883,19 +16938,26 @@ function renderFinanceTable() {
           <div style="font-weight: 700; color: #1e293b; font-size: 13px;">${p.group_name || 'Mandiri'}</div>
           <div style="font-size: 11px; color: #64748b;">${p.wilayah || '-'}</div>
         </td>
-        <td class="col-fee" style="font-weight: 800; color: #1e293b; text-align: right; white-space: nowrap;">Rp ${fee.toLocaleString('id-ID')}</td>
+        <td class="col-fee" style="font-weight: 800; color: #1e293b; text-align: right; white-space: nowrap;">
+          ${isK2 ? '<span style="font-size: 11px; background: #ecfdf5; color: #047857; padding: 2px 7px; border-radius: 4px; border: 1px solid #a7f3d0; font-weight: 700;">Bebas (Rp 0)</span>' : `Rp ${fee.toLocaleString('id-ID')}`}
+        </td>
         <td class="col-paid" style="font-weight: 800; color: #059669; text-align: right; white-space: nowrap;">
           Rp ${paid.toLocaleString('id-ID')}
-          ${paid > 0 && instList.length > 0 ? (
-            instList.some(x => /cash|tunai|kontan/i.test(x.method || ''))
-              ? (instList.some(x => !(/cash|tunai|kontan/i.test(x.method || '')))
-                  ? '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px; text-align: right;"><i class="fa-solid fa-money-bill-wave"></i> Cash + TF</div>'
-                  : '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px; text-align: right;"><i class="fa-solid fa-money-bill-wave"></i> Cash</div>')
-              : '<div style="font-size: 10px; font-weight: 600; color: #0284c7; margin-top: 2px; text-align: right;"><i class="fa-solid fa-building-columns"></i> Transfer</div>'
+          ${paid > 0 ? (
+            isK2 
+              ? '<div style="font-size: 10px; font-weight: 700; color: #047857; margin-top: 2px; text-align: right;"><i class="fa-solid fa-hand-holding-heart"></i> Infaq</div>'
+              : (instList.length > 0 ? (
+                  instList.some(x => /cash|tunai|kontan/i.test(x.method || ''))
+                    ? (instList.some(x => !(/cash|tunai|kontan/i.test(x.method || '')))
+                        ? '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px; text-align: right;"><i class="fa-solid fa-money-bill-wave"></i> Cash + TF</div>'
+                        : '<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px; text-align: right;"><i class="fa-solid fa-money-bill-wave"></i> Cash</div>')
+                    : '<div style="font-size: 10px; font-weight: 600; color: #0284c7; margin-top: 2px; text-align: right;"><i class="fa-solid fa-building-columns"></i> Transfer</div>'
+                ) : '')
           ) : ''}
-
         </td>
-        <td class="col-rem" style="font-weight: 800; color: #dc2626; text-align: right; white-space: nowrap;">Rp ${remaining.toLocaleString('id-ID')}</td>
+        <td class="col-rem" style="font-weight: 800; color: ${isK2 ? '#64748b' : '#dc2626'}; text-align: right; white-space: nowrap;">
+          ${isK2 ? 'Rp 0' : `Rp ${remaining.toLocaleString('id-ID')}`}
+        </td>
         <td class="col-status" style="text-align: center; white-space: nowrap;">${statusBadge}</td>
         <td class="col-verify" style="text-align: center; white-space: nowrap;">${verifyColHtml}</td>
         <td class="col-action" style="text-align: center; white-space: nowrap;">
@@ -17188,10 +17250,20 @@ function openRecordPaymentModal(id) {
   const remaining = Math.max(0, fee - paid);
 
   document.getElementById('payModalParticipantId').value = id;
-  document.getElementById('payModalParticipantName').textContent = `${p.full_name} (${p.registration_code}) - ${p.group_name || 'Mandiri'}`;
-  document.getElementById('payModalTotalFee').textContent = `Rp ${fee.toLocaleString('id-ID')}`;
+  const isK2 = isKloter2Participant(p);
+  document.getElementById('payModalParticipantName').textContent = `${p.full_name} (${p.registration_code}) - ${p.group_name || 'Mandiri'} ${isK2 ? '[Kloter 2 - Bebas Biaya]' : ''}`;
+  document.getElementById('payModalTotalFee').textContent = isK2 ? 'Rp 0 (Bebas Biaya)' : `Rp ${fee.toLocaleString('id-ID')}`;
   document.getElementById('payModalPaidAmount').textContent = `Rp ${paid.toLocaleString('id-ID')}`;
-  document.getElementById('payModalRemainingAmount').textContent = `Rp ${remaining.toLocaleString('id-ID')}`;
+  document.getElementById('payModalRemainingAmount').textContent = isK2 ? 'Rp 0' : `Rp ${remaining.toLocaleString('id-ID')}`;
+
+  const payModalHint = document.getElementById('payModalHint');
+  if (payModalHint) {
+    if (isK2) {
+      payModalHint.innerHTML = '<strong style="color: #047857;"><i class="fa-solid fa-hand-holding-heart"></i> Peserta Kloter 2 (Bebas Biaya):</strong> Nominal yang diinput di bawah ini akan tercatat resmi sebagai <strong>Infaq Sukarela</strong>.';
+    } else {
+      payModalHint.innerHTML = 'Ketik nominal yang dibayar, sistem otomatis mengalokasikan termin cicilan.';
+    }
+  }
 
   const ctxPaid = document.getElementById('payModalContextPaid');
   if (ctxPaid) ctxPaid.textContent = `Rp ${paid.toLocaleString('id-ID')}`;
@@ -19406,7 +19478,8 @@ function showCheckinSuccessPass(p, isJustCheckedIn = false) {
   const paid = Number(p.paid_amount || 0);
   const remaining = Math.max(0, fee - paid);
   const isVerified = p.payment_verified === 'verified';
-  const isFullyPaid = (paid > 0 && remaining <= 0) || p.payment_status === 'paid' || isVerified;
+  const isK2 = isKloter2Participant(p);
+  const isFullyPaid = isK2 || (paid > 0 && remaining <= 0) || p.payment_status === 'paid' || isVerified;
 
   const photoUrl = p.photo_url || p.photo_data || '';
   const initial = (p.full_name || 'P').trim()[0].toUpperCase();
