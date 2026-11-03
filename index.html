@@ -1399,7 +1399,7 @@
           <!-- =================================================== -->
           <!-- B. FORM REGISTRASI KELOMPOK / ROMBONGAN             -->
           <!-- =================================================== -->
-          <form id="formKelompok" class="registration-form" style="display: none;" onsubmit="handleKelompokPreview(event)">
+          <form id="formKelompok" class="registration-form" style="display: none;" onsubmit="handleKelompokPreview(event)" novalidate>
             <!-- Anti-bot honeypot field -->
             <div style="display:none !important; position:absolute; left:-9999px; top:-9999px;" aria-hidden="true">
               <label for="grp_hp_fax">Biarkan kolom ini kosong</label>
@@ -1630,7 +1630,7 @@
                 <button type="button" class="btn btn-secondary" onclick="navigateTo('dashboard')">
                   <i class="fa-solid fa-arrow-left"></i> Kembali ke Dashboard
                 </button>
-                <button type="submit" class="btn btn-primary btn-glow" id="grpSubmitBtn">
+                <button type="submit" class="btn btn-primary btn-glow" id="grpSubmitBtn" onclick="handleKelompokPreview(event)">
                   <i class="fa-solid fa-eye"></i> Pratinjau Registrasi Rombongan (<span id="grpTotalMemberCounter">1</span>)
                 </button>
               </div>
@@ -7132,8 +7132,8 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
-  <script src="js/supabase-config.js?v=206.0"></script>
-  <script src="js/app.js?v=206.0"></script>
+  <script src="js/supabase-config.js?v=207.0"></script>
+  <script src="js/app.js?v=207.0"></script>
 
     <!-- ===================================================== -->
     <!-- MODAL IN-APP PILIH KONTINGEN (MENGGANTIKAN POPUP OS) -->

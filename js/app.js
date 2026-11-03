@@ -4214,10 +4214,16 @@ function handleKelompokPreview(e) {
   }
   const memberCards = document.querySelectorAll('.member-card');
 
-  const groupName = document.getElementById('grp_name').value.trim();
+  const groupName = (document.getElementById('grp_name')?.value || '').trim();
   if (!groupName) {
-    showToast('Harap isi Nama Rombongan.', 'warning');
-    document.getElementById('grp_name')?.focus();
+    showToast('Harap isi Nama Rombongan / Kafilah terlebih dahulu.', 'warning');
+    const el = document.getElementById('grp_name');
+    if (el) {
+      el.focus();
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.outline = '2px solid #ef4444';
+      setTimeout(() => { el.style.outline = ''; }, 3000);
+    }
     return;
   }
 
@@ -4227,24 +4233,42 @@ function handleKelompokPreview(e) {
 
   if (!defaultWilayah) {
     showToast('Harap pilih Wilayah Asal kafilah rombongan.', 'warning');
-    document.getElementById('grp_defaultWilayah')?.focus();
+    const el = document.getElementById('grp_defaultWilayah');
+    if (el) {
+      el.focus();
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.outline = '2px solid #ef4444';
+      setTimeout(() => { el.style.outline = ''; }, 3000);
+    }
     return;
   }
   if (!defaultDaerah) {
     showToast('Harap isi Daerah Asal (Kota / Kabupaten) rombongan.', 'warning');
-    document.getElementById('grp_defaultDaerah')?.focus();
+    const el = document.getElementById('grp_defaultDaerah');
+    if (el) {
+      el.focus();
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.outline = '2px solid #ef4444';
+      setTimeout(() => { el.style.outline = ''; }, 3000);
+    }
     return;
   }
 
-  const defaultArrival = document.getElementById('grp_defaultArrival').value;
-  const defaultDeparture = document.getElementById('grp_defaultDeparture').value;
-  const defaultTransportSelect = document.getElementById('grp_defaultTransport').value;
+  const defaultArrival = document.getElementById('grp_defaultArrival')?.value || '2026-11-10';
+  const defaultDeparture = document.getElementById('grp_defaultDeparture')?.value || '2026-11-13';
+  const defaultTransportSelect = document.getElementById('grp_defaultTransport')?.value || 'Bus';
   let defaultTransport = defaultTransportSelect;
   if (defaultTransportSelect === 'Lainnya') {
     const otherVal = document.getElementById('grp_defaultTransportOther')?.value.trim();
     if (!otherVal) {
       showToast('Harap sebutkan jenis armada/kendaraan lainnya untuk rombongan.', 'warning');
-      document.getElementById('grp_defaultTransportOther')?.focus();
+      const el = document.getElementById('grp_defaultTransportOther');
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.outline = '2px solid #ef4444';
+        setTimeout(() => { el.style.outline = ''; }, 3000);
+      }
       return;
     }
     defaultTransport = `Lainnya (${otherVal})`;
@@ -4543,6 +4567,7 @@ function handleKelompokPreview(e) {
     `;
   }
 
+  const isK2ActiveForm = (window.dataService?.getSettings()?.active_kloter === '2');
   if (isK2ActiveForm) {
     batchRecords.forEach(b => { b.cloth_size = '-'; });
   }
