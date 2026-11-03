@@ -151,10 +151,6 @@
             <i class="fa-solid fa-user-plus"></i>
             <span>Registrasi</span>
           </button>
-          <button class="nav-link admin-only" data-page="checkin" onclick="navigateTo('checkin')">
-            <i class="fa-solid fa-qrcode"></i>
-            <span>Presensi Mandiri</span>
-          </button>
           <button class="nav-link admin-only" data-page="rekap" onclick="navigateTo('rekap')">
             <i class="fa-solid fa-chart-pie"></i>
             <span>Rekap Data</span>
@@ -192,9 +188,6 @@
       </button>
       <button class="mobile-link" data-page="registration" onclick="navigateTo('registration'); toggleMobileNav();">
         <i class="fa-solid fa-user-plus"></i> Registrasi Peserta
-      </button>
-      <button class="mobile-link admin-only" data-page="checkin" onclick="navigateTo('checkin'); toggleMobileNav();">
-        <i class="fa-solid fa-qrcode"></i> Presensi Mandiri (Scan QR)
       </button>
       <button class="mobile-link admin-only" data-page="rekap" onclick="navigateTo('rekap'); toggleMobileNav();">
         <i class="fa-solid fa-chart-pie"></i> Rekap Data Peserta
@@ -7132,8 +7125,8 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
-  <script src="js/supabase-config.js?v=210.0"></script>
-  <script src="js/app.js?v=210.0"></script>
+  <script src="js/supabase-config.js?v=211.0"></script>
+  <script src="js/app.js?v=211.0"></script>
 
     <!-- ===================================================== -->
     <!-- MODAL IN-APP PILIH KONTINGEN (MENGGANTIKAN POPUP OS) -->
@@ -7275,6 +7268,9 @@ CREATE TABLE IF NOT EXISTS registrations (
           </button>
           <button type="button" class="btn btn-outline" onclick="copyGateQrLink()">
             <i class="fa-solid fa-copy"></i> Salin Link
+          </button>
+          <button type="button" class="btn btn-outline" onclick="window.open('#checkin', '_blank')" title="Buka tampilan check-in mandiri di tab baru (untuk tablet / kiosk gerbang)">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka Layar Kiosk
           </button>
         </div>
       </div>
