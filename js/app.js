@@ -2850,9 +2850,24 @@ function handleIndividuAgeChange() {
 
   if (isKloter2) {
     clothRadios.forEach(r => {
-      r.disabled = true;
-      r.checked = false;
+      if (r.value !== '-') {
+        r.disabled = true;
+        r.checked = false;
+      }
     });
+    let noneRadio = document.getElementById('indClothNone');
+    if (!noneRadio) {
+      noneRadio = document.createElement('input');
+      noneRadio.type = 'radio';
+      noneRadio.name = 'ind_clothSize';
+      noneRadio.id = 'indClothNone';
+      noneRadio.value = '-';
+      noneRadio.style.display = 'none';
+      document.getElementById('indSizeRadioGrid')?.appendChild(noneRadio);
+    }
+    noneRadio.disabled = false;
+    noneRadio.checked = true;
+
     if (radioGrid) {
       radioGrid.style.opacity = '0.4';
       radioGrid.style.pointerEvents = 'none';
@@ -3149,8 +3164,11 @@ function validateIndividuStep(step) {
   }
 
   if (step === 3) {
+    const noticeEl = document.getElementById('indChildClothNotice');
+    const isKloter2Notice = noticeEl && (noticeEl.style.display !== 'none' || (noticeEl.innerHTML && noticeEl.innerHTML.includes('Kloter 2')));
     const isClothDisabled = (document.querySelector('input[name="ind_clothSize"]:not([disabled])') === null);
-    const isKloter2 = (window.dataService?.getSettings()?.active_kloter === '2') || isClothDisabled;
+    const isKloter2Setting = (window.dataService?.getSettings()?.active_kloter === '2');
+    const isKloter2 = isKloter2Setting || isKloter2Notice || isClothDisabled;
     const rawAge = document.getElementById('ind_age')?.value;
     const parsedAge = parseInt(rawAge || '0', 10);
     const isUnder12 = !isNaN(parsedAge) && parsedAge > 0 && parsedAge <= 12;
@@ -3158,7 +3176,7 @@ function validateIndividuStep(step) {
     // Di Kloter 2 pemilihan seragam ditiadakan (bebas biaya, otomatis tanda '-') sehingga tidak wajib diisi
     if (!isKloter2 && !isUnder12) {
       const clothEl = document.querySelector('input[name="ind_clothSize"]:checked');
-      if (!clothEl) {
+      if (!clothEl || clothEl.value === '-') {
         showToast('Mohon pilih ukuran seragam kaos resmi Anda.', 'error');
         return false;
       }
