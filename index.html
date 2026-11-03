@@ -151,7 +151,7 @@
             <i class="fa-solid fa-user-plus"></i>
             <span>Registrasi</span>
           </button>
-          <button class="nav-link" data-page="checkin" onclick="navigateTo('checkin')">
+          <button class="nav-link admin-only" data-page="checkin" onclick="navigateTo('checkin')">
             <i class="fa-solid fa-qrcode"></i>
             <span>Presensi Mandiri</span>
           </button>
@@ -193,7 +193,7 @@
       <button class="mobile-link" data-page="registration" onclick="navigateTo('registration'); toggleMobileNav();">
         <i class="fa-solid fa-user-plus"></i> Registrasi Peserta
       </button>
-      <button class="mobile-link" data-page="checkin" onclick="navigateTo('checkin'); toggleMobileNav();">
+      <button class="mobile-link admin-only" data-page="checkin" onclick="navigateTo('checkin'); toggleMobileNav();">
         <i class="fa-solid fa-qrcode"></i> Presensi Mandiri (Scan QR)
       </button>
       <button class="mobile-link admin-only" data-page="rekap" onclick="navigateTo('rekap'); toggleMobileNav();">
@@ -2860,6 +2860,9 @@
                 <span class="mag-kicker-title">SISTEM ADMINISTRATOR</span>
               </div>
               <div class="mag-meta-right" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <button type="button" class="btn btn-editorial-outline" onclick="openGateQrModal()" title="Cetak / Tampilkan QR Code Gerbang Hari-H" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 700; padding: 7px 16px; border-radius: 999px;">
+                  <i class="fa-solid fa-qrcode text-emerald"></i> Cetak QR Gerbang
+                </button>
                 <button type="button" class="btn-mag-top-action back" onclick="navigateTo('dashboard')" title="Kembali ke Beranda">
                   <i class="fa-solid fa-arrow-left"></i> Kembali ke Beranda
                 </button>
@@ -5223,6 +5226,48 @@ CREATE TABLE IF NOT EXISTS registrations (
                   </div>
                 </div>
               </div>
+
+              <!-- Card 3: Poster & QR Code Presensi Gerbang (Self Check-in Jemaah Hari-H) -->
+              <div class="settings-card-item" style="margin-top: 24px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 10px;">
+                  <h4 class="settings-item-title" style="margin: 0;">
+                    <i class="fa-solid fa-qrcode text-emerald"></i> Poster QR Code Presensi Gerbang (Self Check-in Jemaah Hari-H)
+                  </h4>
+                  <span class="settings-chip-badge" style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857;">
+                    <i class="fa-solid fa-bolt"></i> Siap Pakai &amp; Cetak A4
+                  </span>
+                </div>
+                <p class="settings-item-desc">
+                  Cetak poster QR Code ini untuk ditempelkan di gerbang pintu masuk atau meja front desk. Jemaah cukup melakukan scan menggunakan kamera HP masing-masing, memasukkan nama/nomor tiket, lalu sistem akan memvalidasi kehadiran dan menampilkan kartu kedatangan resmi (status pelunasan, nomor kamar, ukuran kaos, dan jam hadir).
+                </p>
+
+                <div style="background: #fdfbf7; border: 1.5px solid #e2dac9; border-radius: var(--radius-md); padding: 20px; margin-top: 16px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+                  <div style="background: #ffffff; border: 2px solid #10b981; border-radius: 12px; padding: 12px; text-align: center; flex-shrink: 0; box-shadow: 0 8px 20px -5px rgba(16, 185, 129, 0.2);">
+                    <img id="settingsGateQrPreviewImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&amp;format=png&amp;data=https%3A%2F%2Fregistrasi-paskas-bahagia.vercel.app%2F%23checkin" alt="QR Code Gerbang" style="width: 140px; height: 140px; display: block; border-radius: 6px;">
+                    <span style="display: block; margin-top: 6px; font-size: 11px; font-weight: 700; color: #047857;">Scan via Kamera HP</span>
+                  </div>
+                  <div style="flex: 1; min-width: 250px;">
+                    <div style="font-size: 14px; font-weight: 800; color: #1e293b; margin-bottom: 4px;">Link Tujuan Scan Jemaah:</div>
+                    <div style="font-family: monospace; font-size: 12px; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 8px 12px; border-radius: 8px; word-break: break-all; margin-bottom: 14px;">
+                      https://registrasi-paskas-bahagia.vercel.app/#checkin
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                      <button type="button" class="btn btn-sm btn-primary" onclick="openGateQrModal()" style="background: #047857; border: none; font-size: 13px; font-weight: 700; padding: 9px 16px; border-radius: 8px;">
+                        <i class="fa-solid fa-print"></i> Cetak Poster A4 / Lihat QR
+                      </button>
+                      <button type="button" class="btn btn-sm btn-secondary" onclick="downloadGateQrImage()" style="font-size: 13px; font-weight: 700; padding: 9px 14px; border-radius: 8px;">
+                        <i class="fa-solid fa-download"></i> Unduh Gambar QR
+                      </button>
+                      <button type="button" class="btn btn-sm btn-secondary" onclick="copyGateQrLink()" style="font-size: 13px; font-weight: 700; padding: 9px 14px; border-radius: 8px;">
+                        <i class="fa-solid fa-link"></i> Salin Link
+                      </button>
+                      <button type="button" class="btn btn-sm btn-editorial-outline" onclick="navigateTo('checkin')" style="font-size: 13px; font-weight: 700; padding: 9px 14px; border-radius: 8px; color: #b45309; border-color: #d97706;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka Halaman Presensi
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Tab: Keamanan & Password Admin -->
@@ -5573,12 +5618,6 @@ CREATE TABLE IF NOT EXISTS registrations (
           <p class="checkin-desc">
             Silakan masukkan <strong>Nomor Tiket (misal: PKB-025)</strong> atau <strong>Nama Lengkap</strong> Anda untuk konfirmasi kehadiran resmi.
           </p>
-          <div style="margin-top: 16px;">
-            <button type="button" class="checkin-gate-qr-btn" onclick="openGateQrModal()" title="Cetak poster QR Code untuk ditempel di gerbang / meja depan">
-              <i class="fa-solid fa-qrcode" style="color: #34d399; font-size: 15px;"></i>
-              <span>Cetak / Tampilkan Poster QR Gerbang (Untuk Panitia)</span>
-            </button>
-          </div>
         </div>
 
         <!-- Step 1: Form Pencarian Peserta -->
