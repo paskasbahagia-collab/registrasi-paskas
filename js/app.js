@@ -7309,20 +7309,18 @@ async function loadAndRenderRegistrations() {
       if (r && r.gender) r.gender = normalizeGender(r.gender);
     });
   }
-  filteredRegistrations = [...allRegistrations];
-  currentPage = 1;
-
   // Populate Wilayah dropdown filter
   populateWilayahFilter();
 
-  // Update summary metric counters
-  updateSummaryMetrics();
-
-  // Render Table & Pagination
-  renderRekapTable();
-
-  // Render Visual Charts
-  renderCharts();
+  if (typeof applyRekapFilters === 'function') {
+    applyRekapFilters();
+  } else {
+    filteredRegistrations = [...allRegistrations];
+    currentPage = 1;
+    updateSummaryMetrics();
+    renderRekapTable();
+    renderCharts();
+  }
 
   // Update Nav & Settings Badge & Magazine Seal Pill
   const badge = document.getElementById('rekapBadgeCount');
@@ -7390,15 +7388,17 @@ function refreshActiveScreenViews() {
       try { renderFinanceView(); } catch (e) { console.warn('renderFinanceView error:', e); }
     }
   } else if (activePageId === 'page-rekap') {
-    if (typeof renderRekapTable === 'function') {
-      try {
+    try {
+      populateWilayahFilter();
+      if (typeof applyRekapFilters === 'function') {
+        applyRekapFilters();
+      } else if (typeof renderRekapTable === 'function') {
         filteredRegistrations = [...allRegistrations];
-        populateWilayahFilter();
         updateSummaryMetrics();
         renderRekapTable();
         renderCharts();
-      } catch (e) { console.warn('renderRekapTable error:', e); }
-    }
+      }
+    } catch (e) { console.warn('refreshActiveScreenViews rekap error:', e); }
   } else if (activePageId === 'page-dashboard' || !activePageId) {
     if (typeof updateSummaryMetrics === 'function') {
       try { updateSummaryMetrics(); renderCharts(); } catch (e) {}
@@ -7520,12 +7520,16 @@ async function forceReloadCloudData(btn) {
   try {
     showToast('Menghubungkan & menarik data dari Cloud Supabase...', 'info');
     allRegistrations = await window.dataService.getRegistrations();
-    filteredRegistrations = [...allRegistrations];
-    currentPage = 1;
     populateWilayahFilter();
-    updateSummaryMetrics();
-    renderRekapTable();
-    renderCharts();
+    if (typeof applyRekapFilters === 'function') {
+      applyRekapFilters();
+    } else {
+      filteredRegistrations = [...allRegistrations];
+      currentPage = 1;
+      updateSummaryMetrics();
+      renderRekapTable();
+      renderCharts();
+    }
 
     const badge = document.getElementById('rekapBadgeCount');
     if (badge) badge.textContent = allRegistrations.length;
@@ -7962,7 +7966,7 @@ function renderRekapTable() {
           : `<span style="font-size: 13px; font-weight: 700; color: #1e293b;">${ageVal} th</span>`)
       : `<span style="color: #64748b;">-</span>`;
 
-    const photoSrc = [item.photo_url, item.photo_data].find(p => typeof p === 'string' && p.trim() !== '') || '';
+    const photoSrc = [item.photo_url, item.photo_data].find(p => typeof p === 'string' && p.trim() !== '' && !p.includes('[object')) || '';
     const safeFullName = String(item.full_name || '');
     const clothDisplay = (isChildUnder12 || item.cloth_size === '-') ? '-' : (item.cloth_size || '-');
 
