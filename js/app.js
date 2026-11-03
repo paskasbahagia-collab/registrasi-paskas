@@ -1,8 +1,18 @@
+function isKloter2Participant(p) {
+  if (!p) return false;
+  const code = String(p.registration_code || '').trim();
+  if (/K2|KLOTER\s*2/i.test(code)) return true;
+  const match = code.match(/PKB-(?:K2-)?(\d+)/i);
+  if (match) {
+    const seq = parseInt(match[1], 10);
+    if (seq >= 501) return true;
+  }
+  if (p.kloter === '2' || p.kloter === 2) return true;
+  return false;
+}
+window.isKloter2Participant = isKloter2Participant;
 
-function setRekapKloterFilter(kloterVal) {
-  const sel = document.getElementById('filterKloter');
-  if (sel) sel.value = kloterVal;
-
+function syncRekapTopPills(kloterVal) {
   ['ALL', '1', '2'].forEach(k => {
     const btn = document.getElementById('pillKloter' + k);
     if (btn) {
@@ -19,7 +29,13 @@ function setRekapKloterFilter(kloterVal) {
       }
     }
   });
+}
+window.syncRekapTopPills = syncRekapTopPills;
 
+function setRekapKloterFilter(kloterVal) {
+  const sel = document.getElementById('filterKloter');
+  if (sel) sel.value = kloterVal;
+  syncRekapTopPills(kloterVal);
   applyRekapFilters();
 }
 window.setRekapKloterFilter = setRekapKloterFilter;
@@ -7517,38 +7533,48 @@ function hasParticipantMedicalIssue(itemOrMed) {
 }
 
 function updateSummaryMetrics() {
-  const totalOrang = allRegistrations.length;
-  const k2Count = allRegistrations.filter(r => isKloter2Participant(r)).length;
-  const k1Count = totalOrang - k2Count;
+  const totalOrangAll = allRegistrations.length;
+  const k2CountAll = allRegistrations.filter(r => isKloter2Participant(r)).length;
+  const k1CountAll = totalOrangAll - k2CountAll;
 
-  // Update Top Kloter Pill Badges
+  // Update Top Kloter Pill Badges (Live counters for all tabs)
   const bAll = document.getElementById('badgeTopKloterALL');
   const bK1 = document.getElementById('badgeTopKloter1');
   const bK2 = document.getElementById('badgeTopKloter2');
-  if (bAll) bAll.textContent = totalOrang;
-  if (bK1) bK1.textContent = k1Count;
-  if (bK2) bK2.textContent = k2Count;
+  if (bAll) bAll.textContent = totalOrangAll;
+  if (bK1) bK1.textContent = k1CountAll;
+  if (bK2) bK2.textContent = k2CountAll;
 
-  const individuCount = allRegistrations.filter(r => r.registration_type === 'individu').length;
-  const kelompokMemberCount = allRegistrations.filter(r => r.registration_type === 'kelompok').length;
+  // Tentukan dataset aktif berdasarkan pilihan filter kloter (Semua, Kloter 1, atau Kloter 2)
+  const filterKloter = document.getElementById('filterKloter')?.value || 'ALL';
+  let activeList = allRegistrations;
+  if (filterKloter === '1') {
+    activeList = allRegistrations.filter(r => !isKloter2Participant(r));
+  } else if (filterKloter === '2') {
+    activeList = allRegistrations.filter(r => isKloter2Participant(r));
+  }
+
+  const totalOrang = activeList.length;
+  const individuCount = activeList.filter(r => r.registration_type === 'individu').length;
+  const kelompokMemberCount = activeList.filter(r => r.registration_type === 'kelompok').length;
 
   // Hitung jumlah rombongan / kafilah unik
   const uniqueGroupNames = Array.from(new Set(
-    allRegistrations
+    activeList
       .filter(r => r.registration_type === 'kelompok' && r.group_name)
       .map(r => r.group_name)
   ));
   const totalKafilah = uniqueGroupNames.length;
 
-  const female = allRegistrations.filter(r => isFemaleGender(r.gender)).length;
-  const male = allRegistrations.length - female;
+  const female = activeList.filter(r => isFemaleGender(r.gender)).length;
+  const male = activeList.length - female;
 
   const malePct = totalOrang > 0 ? Math.round((male / totalOrang) * 100) : 0;
   const femalePct = totalOrang > 0 ? (100 - malePct) : 0;
 
   // Group Wilayah unik dan hitung terbanyak (nama sama langsung digabungkan jumlahnya)
   const wilayahMap = {};
-  allRegistrations.forEach(r => {
+  activeList.forEach(r => {
     if (r.wilayah) {
       const w = normalizeWilayahName(r.wilayah);
       wilayahMap[w] = (wilayahMap[w] || 0) + 1;
@@ -7565,13 +7591,13 @@ function updateSummaryMetrics() {
     }
   }
 
-  // Top Cloth Size & Kebutuhan Kaos Riil (Mengecualikan Anak <= 12 Tahun yang tidak dapat kaos)
+  // Top Cloth Size & Kebutuhan Kaos Riil (Mengecualikan Anak <= 12 Tahun dan Kloter 2 yang tidak dapat kaos)
   const VALID_CLOTH_SIZES = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
   const clothCounts = {};
   let totalClothPcs = 0;
   let childWithoutCloth = 0;
 
-  allRegistrations.forEach(r => {
+  activeList.forEach(r => {
     const sz = (r.cloth_size || '').trim();
     const isChild = (r.age && r.age > 0 && r.age <= 12) || sz === '-' || !sz;
     if (isChild || sz === '-') {
@@ -7593,7 +7619,7 @@ function updateSummaryMetrics() {
 
   // Top Transport Arrival
   const transportCounts = {};
-  allRegistrations.forEach(r => {
+  activeList.forEach(r => {
     let t = r.transport_arrival || 'Lainnya';
     if (t === 'Bus Panitia' || t === 'Bus Panitia / Rombongan' || t.toLowerCase() === 'bus/rombongan') t = 'Bus';
     transportCounts[t] = (transportCounts[t] || 0) + 1;
@@ -7609,7 +7635,7 @@ function updateSummaryMetrics() {
 
   // Top Transport Departure
   const transportDepCounts = {};
-  allRegistrations.forEach(r => {
+  activeList.forEach(r => {
     let td = r.transport_departure || 'Lainnya';
     if (td === 'Bus Panitia' || td === 'Bus Panitia / Rombongan' || td.toLowerCase() === 'bus/rombongan') td = 'Bus';
     transportDepCounts[td] = (transportDepCounts[td] || 0) + 1;
@@ -7624,7 +7650,7 @@ function updateSummaryMetrics() {
   }
 
   // Medical notes with real concerns (terstandarisasi)
-  const medicalSpecial = allRegistrations.filter(r => hasParticipantMedicalIssue(r)).length;
+  const medicalSpecial = activeList.filter(r => hasParticipantMedicalIssue(r)).length;
 
   // KPI Percentages
   const pctMandiri = totalOrang > 0 ? Math.round((individuCount / totalOrang) * 100) : 0;
@@ -7766,13 +7792,15 @@ function clearRekapSearch() {
 }
 
 function applyRekapFilters() {
-  const search = document.getElementById('searchRekapInput').value.toLowerCase().trim();
+  const search = (document.getElementById('searchRekapInput')?.value || '').toLowerCase().trim();
   const filterAge = document.getElementById('filterAgeCategory')?.value || 'ALL';
-  const type = document.getElementById('filterType').value;
+  const type = document.getElementById('filterType')?.value || 'ALL';
   const filterKloter = document.getElementById('filterKloter')?.value || 'ALL';
-  const gender = document.getElementById('filterGender').value;
-  const wilayah = document.getElementById('filterWilayah').value;
-  const cloth = document.getElementById('filterCloth').value;
+  const gender = document.getElementById('filterGender')?.value || 'ALL';
+  const wilayah = document.getElementById('filterWilayah')?.value || 'ALL';
+  const cloth = document.getElementById('filterCloth')?.value || 'ALL';
+
+  syncRekapTopPills(filterKloter);
 
   filteredRegistrations = allRegistrations.filter(item => {
     // Search match
@@ -7789,13 +7817,12 @@ function applyRekapFilters() {
     // Type match
     const matchType = type === 'ALL' || item.registration_type === type;
 
-    // Kloter match (No >= 501 adalah Kloter 2, No < 501 adalah Kloter 1)
+    // Kloter match (Kloter 1 < 501, Kloter 2 >= 501 / PKB-K2-)
     let matchKloter = true;
-    if (filterKloter !== 'ALL') {
-      const digits = (item.registration_code || '').replace(/\D/g, '');
-      const num = digits ? parseInt(digits, 10) : 0;
-      const isKloter2 = num >= 501 || /K2-/i.test(item.registration_code || '');
-      matchKloter = (filterKloter === '2') ? isKloter2 : !isKloter2;
+    if (filterKloter === '1') {
+      matchKloter = !isKloter2Participant(item);
+    } else if (filterKloter === '2') {
+      matchKloter = isKloter2Participant(item);
     }
 
     // Gender match
@@ -7822,6 +7849,10 @@ function applyRekapFilters() {
 
     return matchSearch && matchType && matchKloter && matchGender && matchWilayah && matchCloth && matchAge;
   });
+
+  // Re-calculate 5 pillars and chart statistics matching active kloter filter
+  updateSummaryMetrics();
+  renderCharts();
 
   currentPage = 1;
   renderRekapTable();
@@ -8942,7 +8973,15 @@ function switchChartTab(tabName) {
 function renderCharts() {
   if (!window.Chart) return;
 
-  const totalOrang = allRegistrations.length;
+  const filterKloter = document.getElementById('filterKloter')?.value || 'ALL';
+  let chartSourceData = allRegistrations;
+  if (filterKloter === '1') {
+    chartSourceData = chartSourceData.filter(r => !isKloter2Participant(r));
+  } else if (filterKloter === '2') {
+    chartSourceData = chartSourceData.filter(r => isKloter2Participant(r));
+  }
+
+  const totalOrang = chartSourceData.length;
 
   // --- 1. DATA COMPUTATION ---
   // Cloth (Dipisah Ikhwan & Akhwat untuk memudahkan pendataan & pemesanan logistik)
@@ -8954,7 +8993,7 @@ function renderCharts() {
   let totalAkhwat = 0;
   let totalChildNoCloth = 0;
 
-  allRegistrations.forEach(r => {
+  chartSourceData.forEach(r => {
     const isFemale = (r.gender === 'Perempuan' || (r.gender && r.gender.toLowerCase().includes('perempuan')) || (r.gender && r.gender.toLowerCase().includes('akhwat')));
     const sz = (r.cloth_size || '').trim();
     const isChild = (r.age && r.age > 0 && r.age <= 12) || sz === '-' || !sz;
@@ -9004,7 +9043,7 @@ function renderCharts() {
 
   // Transport
   const transportCounts = {};
-  allRegistrations.forEach(r => {
+  chartSourceData.forEach(r => {
     let t = r.transport_arrival || 'Lainnya';
     if (t === 'Bus Panitia' || t === 'Bus Panitia / Rombongan' || t.toLowerCase() === 'bus/rombongan') t = 'Bus';
     transportCounts[t] = (transportCounts[t] || 0) + 1;
@@ -9018,7 +9057,7 @@ function renderCharts() {
 
   // Wilayah (Grouped case-insensitively, identical region names merged automatically)
   const wilayahAggregated = {};
-  allRegistrations.forEach(r => {
+  chartSourceData.forEach(r => {
     if (r.wilayah) {
       const w = normalizeWilayahName(r.wilayah);
       if (!wilayahAggregated[w]) {
@@ -9047,12 +9086,12 @@ function renderCharts() {
   const topWilayahPct = totalOrang > 0 ? Math.round((topWilayahCount / totalOrang) * 100) : 0;
 
   // Gender & Type
-  const female = allRegistrations.filter(r => isFemaleGender(r.gender)).length;
-  const male = allRegistrations.length - female;
+  const female = chartSourceData.filter(r => isFemaleGender(r.gender)).length;
+  const male = chartSourceData.length - female;
   const malePct = totalOrang > 0 ? Math.round((male / totalOrang) * 100) : 0;
   const femalePct = totalOrang > 0 ? (100 - malePct) : 0;
-  const individu = allRegistrations.filter(r => r.registration_type === 'individu').length;
-  const kelompok = allRegistrations.filter(r => r.registration_type === 'kelompok').length;
+  const individu = chartSourceData.filter(r => r.registration_type === 'individu').length;
+  const kelompok = chartSourceData.filter(r => r.registration_type === 'kelompok').length;
   const indPct = totalOrang > 0 ? Math.round((individu / totalOrang) * 100) : 0;
   const kelPct = totalOrang > 0 ? (100 - indPct) : 0;
 
@@ -9060,13 +9099,13 @@ function renderCharts() {
   renderRekapWilayahSummaryTable(sortedWilayahList, totalOrang, male, female, individu, kelompok);
 
   // Health computation (terstandarisasi)
-  const healthyList = allRegistrations.filter(r => !hasParticipantMedicalIssue(r));
-  const healthIssueList = allRegistrations.filter(r => hasParticipantMedicalIssue(r));
+  const healthyList = chartSourceData.filter(r => !hasParticipantMedicalIssue(r));
+  const healthIssueList = chartSourceData.filter(r => hasParticipantMedicalIssue(r));
   const healthyCount = healthyList.length;
   const issueCount = healthIssueList.length;
   const healthyPct = totalOrang > 0 ? Math.round((healthyCount / totalOrang) * 100) : 0;
   const issuePct = totalOrang > 0 ? (100 - healthyPct) : 0;
-  const emergencyReadyCount = allRegistrations.filter(r => r.emergency_phone && r.emergency_phone.trim() !== '' && r.emergency_phone.trim() !== '-').length;
+  const emergencyReadyCount = chartSourceData.filter(r => r.emergency_phone && r.emergency_phone.trim() !== '' && r.emergency_phone.trim() !== '-').length;
 
   renderHealthSection(healthIssueList, healthyCount, issueCount, healthyPct, issuePct, emergencyReadyCount, totalOrang);
 
@@ -9097,7 +9136,7 @@ function renderCharts() {
   let countBaru = 0, countMadya = 0, countSenior = 0;
   const paskasByWilayah = {};
 
-  allRegistrations.forEach(r => {
+  chartSourceData.forEach(r => {
     const cat = calcPaskasCategory(r);
     if (cat.level === 'PASKAS Baru') countBaru++;
     else if (cat.level === 'PASKAS Madya') countMadya++;
@@ -16427,14 +16466,7 @@ function lockTreasurerSession() {
   showToast('Sesi akses keuangan telah dikunci.', 'info');
 }
 
-function isKloter2Participant(p) {
-  if (!p) return false;
-  const code = String(p.registration_code || '');
-  if (/K2-/i.test(code)) return true;
-  const digits = code.replace(/\D/g, '');
-  const num = digits ? parseInt(digits, 10) : 0;
-  return num >= 501;
-}
+// isKloter2Participant is defined at the top of js/app.js
 
 function calculateParticipantFee(p) {
   // Kloter 2 (Gelombang 2): Bebas Biaya Pendaftaran (Rp 0). Infaq bersifat sukarela.
