@@ -11044,46 +11044,42 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, ws5, 'Kepulangan & Transport');
 
   // ===================================================================
-  // 6. HALAMAN KEENAM: REKAP KESEHATAN (DIUTAMAKAN RIWAYAT MEDIS)
+  // 6. HALAMAN KEENAM: REKAP KESEHATAN (KHUSUS PESERTA DENGAN RIWAYAT MEDIS / SAKIT)
   // ===================================================================
-  function hasMedicalIssue(item) {
-    if (!item || !item.medical_history) return false;
-    const str = String(item.medical_history).trim().toLowerCase();
-    if (!str || str === '-' || str === 'none' || str === 'nihil' || str === 'null') return false;
-    if (str.includes('tidak ada') || str.includes('sehat') || str.includes('normal') || str.includes('prima') || str.includes('baik')) {
-      return false;
-    }
-    return true;
-  }
-
-  const sortedHealth = [...sourceData].sort((a, b) => {
-    const hA = hasMedicalIssue(a) ? 1 : 0;
-    const hB = hasMedicalIssue(b) ? 1 : 0;
-    if (hB !== hA) return hB - hA; // Yang memiliki riwayat medis berada paling atas
-    return (a.full_name || '').localeCompare(b.full_name || '');
-  });
+  const healthIssueList = sourceData
+    .filter(item => hasParticipantMedicalIssue(item))
+    .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
 
   const s6Headers = [
     'No', 'Status Kesehatan', 'Riwayat Medis / Sakit', 'Nama Peserta', 'Usia', 
     'Jenis Kelamin', 'Gedung / Asrama', 'Kamar / Tenda', 'No WhatsApp', 'No HP Darurat', 'Catatan Medis'
   ];
   const s6Rows = [s6Headers];
-  sortedHealth.forEach((item, idx) => {
-    const isIssue = hasMedicalIssue(item);
+
+  if (healthIssueList.length === 0) {
     s6Rows.push([
-      idx + 1,
-      isIssue ? '⚠️ PERHATIAN MEDIS' : '✅ Normal',
-      sanitizeSpreadsheetValue(item.medical_history || 'Tidak Ada'),
-      sanitizeSpreadsheetValue(item.full_name),
-      item.age ? `${item.age} Th` : '-',
-      sanitizeSpreadsheetValue(item.gender),
-      sanitizeSpreadsheetValue(item.building || '-'),
-      sanitizeSpreadsheetValue(item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-')),
-      sanitizeSpreadsheetValue(item.phone_number || '-'),
-      sanitizeSpreadsheetValue(item.emergency_phone || '-'),
-      sanitizeSpreadsheetValue(item.notes || '-')
+      1,
+      '✅ Normal',
+      'Alhamdulillah seluruh peserta dalam kondisi sehat / tidak ada catatan riwayat medis.',
+      '-', '-', '-', '-', '-', '-', '-', '-'
     ]);
-  });
+  } else {
+    healthIssueList.forEach((item, idx) => {
+      s6Rows.push([
+        idx + 1,
+        '⚠️ PERHATIAN MEDIS',
+        sanitizeSpreadsheetValue(item.medical_history || 'Perlu Perhatian'),
+        sanitizeSpreadsheetValue(item.full_name),
+        item.age ? `${item.age} Th` : '-',
+        sanitizeSpreadsheetValue(item.gender),
+        sanitizeSpreadsheetValue(item.building || '-'),
+        sanitizeSpreadsheetValue(item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || '-')),
+        sanitizeSpreadsheetValue(item.phone_number || '-'),
+        sanitizeSpreadsheetValue(item.emergency_phone || '-'),
+        sanitizeSpreadsheetValue(item.notes || '-')
+      ]);
+    });
+  }
   const ws6 = XLSX.utils.aoa_to_sheet(s6Rows);
   formatSheet(ws6, s6Rows, [0], '991B1B', (rIdx, cIdx, val, row) => {
     const statusVal = row[1];
@@ -11276,114 +11272,161 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, ws7, 'Rekapitulasi Wilayah');
 
   // ===================================================================
-  // 8. HALAMAN KEDELAPAN: REKAP PEMBAYARAN (DIPISAH LUNAS, KURANG, BELUM BAYAR DALAM SATU SHEET)
+  // 8. HALAMAN KEDELAPAN: REKAP PEMBAYARAN (DIPISAH KLOTER 1 & KLOTER 2 INFAQ)
   // ===================================================================
-  const lunasList = [];
-  const kurangList = [];
-  const belumList = [];
-  const refundList = [];
+  const k1Lunas = [];
+  const k1Kurang = [];
+  const k1Belum = [];
+  const k1Refund = [];
 
-  let totFeeAll = 0, totPaidAll = 0, totRemAll = 0;
-  let totFeeLunas = 0, totPaidLunas = 0;
-  let totFeeKurang = 0, totPaidKurang = 0, totRemKurang = 0;
-  let totFeeBelum = 0, totRemBelum = 0;
-  let totFeeRefund = 0, totPaidRefund = 0;
+  let k1TotFee = 0, k1TotPaid = 0, k1TotRem = 0;
+  let k1FeeLunas = 0, k1PaidLunas = 0;
+  let k1FeeKurang = 0, k1PaidKurang = 0, k1RemKurang = 0;
+  let k1FeeBelum = 0, k1RemBelum = 0;
+  let k1FeeRefund = 0, k1PaidRefund = 0;
+
+  const k2List = [];
+  let k2TotalInfaq = 0;
+  let k2InfaqCount = 0;
 
   sourceData.forEach(item => {
-    const fee = getParticipantFeeSafe(item);
+    const isK2 = isKloter2Participant(item);
     const paid = Number(item.paid_amount || 0);
-    const remaining = Math.max(0, fee - paid);
     const isCancelled = item.attendance_status === 'cancelled';
     const isVerified = item.payment_verified === 'verified';
 
-    totFeeAll += fee;
-    totPaidAll += paid;
-    totRemAll += remaining;
-
-    const isK2 = isKloter2Participant(item);
-    if (isCancelled) {
-      totFeeRefund += fee;
-      totPaidRefund += paid;
-      refundList.push({ item, fee, paid, remaining, status: 'Dibatalkan (Refund)' });
-    } else if (isK2) {
-      totFeeLunas += 0;
-      totPaidLunas += paid;
-      lunasList.push({ item, fee: 0, paid, remaining: 0, status: paid > 0 ? ('Infaq (Rp ' + paid.toLocaleString('id-ID') + ')') : 'Bebas Biaya (Kloter 2)' });
-    } else if (remaining <= 0 && paid > 0) {
-      totFeeLunas += fee;
-      totPaidLunas += paid;
-      lunasList.push({ item, fee, paid, remaining: 0, status: isVerified ? 'Lunas' : 'Lunas (Menunggu Verifikasi)' });
-    } else if (paid > 0 && remaining > 0) {
-      totFeeKurang += fee;
-      totPaidKurang += paid;
-      totRemKurang += remaining;
-      kurangList.push({ item, fee, paid, remaining, status: isVerified ? 'Kurang (Cicilan)' : 'Kurang (Menunggu Verifikasi)' });
+    if (isK2) {
+      if (paid > 0) {
+        k2TotalInfaq += paid;
+        k2InfaqCount++;
+      }
+      k2List.push(item);
     } else {
-      totFeeBelum += fee;
-      totRemBelum += fee;
-      belumList.push({ item, fee, paid: 0, remaining: fee, status: 'Belum Bayar' });
+      const fee = getParticipantFeeSafe(item);
+      const remaining = Math.max(0, fee - paid);
+
+      k1TotFee += fee;
+      k1TotPaid += paid;
+      k1TotRem += remaining;
+
+      if (isCancelled) {
+        k1FeeRefund += fee;
+        k1PaidRefund += paid;
+        k1Refund.push({ item, fee, paid, remaining, status: 'Dibatalkan (Refund)' });
+      } else if (remaining <= 0 && paid > 0) {
+        k1FeeLunas += fee;
+        k1PaidLunas += paid;
+        k1Lunas.push({ item, fee, paid, remaining: 0, status: isVerified ? 'Lunas' : 'Lunas (Menunggu Verifikasi)' });
+      } else if (paid > 0 && remaining > 0) {
+        k1FeeKurang += fee;
+        k1PaidKurang += paid;
+        k1RemKurang += remaining;
+        k1Kurang.push({ item, fee, paid, remaining, status: isVerified ? 'Kurang (Cicilan)' : 'Kurang (Menunggu Verifikasi)' });
+      } else {
+        k1FeeBelum += fee;
+        k1RemBelum += fee;
+        k1Belum.push({ item, fee, paid: 0, remaining: fee, status: 'Belum Bayar' });
+      }
     }
   });
 
-  // Urutkan tiap kategori:
-  // Lunas: Berdasarkan Nama A-Z
-  lunasList.sort((a, b) => (a.item.full_name || '').localeCompare(b.item.full_name || ''));
-  // Kurang: Berdasarkan Sisa Piutang terbesar ke terkecil lalu Nama
-  kurangList.sort((a, b) => (b.remaining - a.remaining) || (a.item.full_name || '').localeCompare(b.item.full_name || ''));
-  // Belum Bayar: Berdasarkan Wilayah lalu Nama
-  belumList.sort((a, b) => (a.item.wilayah || '').localeCompare(b.item.wilayah || '') || (a.item.full_name || '').localeCompare(b.item.full_name || ''));
-  // Refund: Berdasarkan Nama
-  refundList.sort((a, b) => (a.item.full_name || '').localeCompare(b.item.full_name || ''));
+  // Urutkan Kloter 1:
+  k1Lunas.sort((a, b) => (a.item.full_name || '').localeCompare(b.item.full_name || ''));
+  k1Kurang.sort((a, b) => (b.remaining - a.remaining) || (a.item.full_name || '').localeCompare(b.item.full_name || ''));
+  k1Belum.sort((a, b) => (a.item.wilayah || '').localeCompare(b.item.wilayah || '') || (a.item.full_name || '').localeCompare(b.item.full_name || ''));
+  k1Refund.sort((a, b) => (a.item.full_name || '').localeCompare(b.item.full_name || ''));
 
-  const s8Headers = [
+  // Urutkan Kloter 2: Berdasarkan NOMOR PENDAFTARAN (Kode Tiket: PKB-K2-501, 502, dst)
+  function getSeqNum(code) {
+    const m = String(code || '').match(/(\d+)/g);
+    return m ? parseInt(m[m.length - 1], 10) : 0;
+  }
+  k2List.sort((a, b) => getSeqNum(a.registration_code) - getSeqNum(b.registration_code));
+
+  const s8HeadersK1 = [
     'No', 'No Tiket', 'Nama Peserta', 'Kategori Usia', 'Usia', 
     'Jenis Kelamin', 'Wilayah', 'Rombongan', 'Total Biaya (Rp)', 'Total Terbayar (Rp)', 
     'Sisa Piutang (Rp)', 'Status Presensi', 'No WhatsApp', 'Status Pembayaran', 'Catatan'
   ];
+
+  const s8HeadersK2 = [
+    'No', 'No Tiket', 'Nama Peserta', 'Kategori Usia', 'Usia', 
+    'Jenis Kelamin', 'Wilayah', 'Rombongan', 'Biaya Wajib (Rp)', 'Infaq Sukarela (Rp)', 
+    'Sisa Piutang (Rp)', 'Status Presensi', 'No WhatsApp', 'Keterangan Infaq', 'Catatan'
+  ];
+
   const s8Rows = [];
   const s8HeaderIndexes = [];
   const s8BannerIndexes = [];
   const s8SubtotalIndexes = [];
   const s8Merges = [];
 
-  // BAGIAN 0: RINGKASAN REKAPITULASI PEMBAYARAN
-  const rPaySumTitleIdx = s8Rows.length;
-  s8Rows.push(['RINGKASAN STATUS KEUANGAN & PEMBAYARAN PESERTA PASKAS BAHAGIA', '', '', '', '', '', '']);
-  s8BannerIndexes.push({ rIdx: rPaySumTitleIdx, color: '064E3B' });
-  s8Merges.push({ s: { r: rPaySumTitleIdx, c: 0 }, e: { r: rPaySumTitleIdx, c: 6 } });
+  // -------------------------------------------------------------
+  // RINGKASAN KLOTER 1
+  // -------------------------------------------------------------
+  const rK1SumTitleIdx = s8Rows.length;
+  s8Rows.push(['RINGKASAN STATUS KEUANGAN & PEMBAYARAN KLOTER 1 (WAJIB KONTRIBUSI PESERTA)', '', '', '', '', '', '']);
+  s8BannerIndexes.push({ rIdx: rK1SumTitleIdx, color: '064E3B' });
+  s8Merges.push({ s: { r: rK1SumTitleIdx, c: 0 }, e: { r: rK1SumTitleIdx, c: 6 } });
 
-  const rPaySumHeadIdx = s8Rows.length;
-  s8Rows.push(['No', 'Kategori Pembayaran', 'Jumlah Peserta', 'Total Kewajiban (Rp)', 'Total Terbayar (Rp)', 'Sisa Piutang (Rp)', 'Persentase Lunas']);
-  s8HeaderIndexes.push(rPaySumHeadIdx);
+  const rK1SumHeadIdx = s8Rows.length;
+  s8Rows.push(['No', 'Kategori Pembayaran Kloter 1', 'Jumlah Peserta', 'Total Kewajiban (Rp)', 'Total Terbayar (Rp)', 'Sisa Piutang (Rp)', 'Persentase Lunas']);
+  s8HeaderIndexes.push(rK1SumHeadIdx);
 
-  const pctLunas = totFeeLunas > 0 ? '100%' : '0%';
-  const pctKurang = totFeeKurang > 0 ? `${Math.round((totPaidKurang / totFeeKurang) * 100)}%` : '0%';
-  const pctAll = totFeeAll > 0 ? `${Math.round((totPaidAll / totFeeAll) * 100)}%` : '0%';
+  const pctLunas = k1FeeLunas > 0 ? '100%' : '0%';
+  const pctKurang = k1FeeKurang > 0 ? `${Math.round((k1PaidKurang / k1FeeKurang) * 100)}%` : '0%';
+  const pctAllK1 = k1TotFee > 0 ? `${Math.round((k1TotPaid / k1TotFee) * 100)}%` : '0%';
 
-  s8Rows.push([1, 'Lunas', lunasList.length, totFeeLunas, totPaidLunas, 0, pctLunas]);
-  s8Rows.push([2, 'Kurang / Cicilan', kurangList.length, totFeeKurang, totPaidKurang, totRemKurang, pctKurang]);
-  s8Rows.push([3, 'Belum Bayar', belumList.length, totFeeBelum, 0, totRemBelum, '0%']);
-  if (refundList.length > 0) {
-    s8Rows.push([4, 'Dibatalkan / Refund', refundList.length, totFeeRefund, totPaidRefund, 0, '-']);
+  s8Rows.push([1, 'Lunas', k1Lunas.length, k1FeeLunas, k1PaidLunas, 0, pctLunas]);
+  s8Rows.push([2, 'Kurang / Cicilan', k1Kurang.length, k1FeeKurang, k1PaidKurang, k1RemKurang, pctKurang]);
+  s8Rows.push([3, 'Belum Bayar', k1Belum.length, k1FeeBelum, 0, k1RemBelum, '0%']);
+  if (k1Refund.length > 0) {
+    s8Rows.push([4, 'Dibatalkan / Refund', k1Refund.length, k1FeeRefund, k1PaidRefund, 0, '-']);
   }
 
-  const rPaySumTotalIdx = s8Rows.length;
-  s8Rows.push(['TOTAL KESELURUHAN', '', sourceData.length, totFeeAll, totPaidAll, totRemAll, pctAll]);
-  s8Merges.push({ s: { r: rPaySumTotalIdx, c: 0 }, e: { r: rPaySumTotalIdx, c: 1 } });
+  const rK1SumTotalIdx = s8Rows.length;
+  const k1TotalCount = k1Lunas.length + k1Kurang.length + k1Belum.length + k1Refund.length;
+  s8Rows.push(['TOTAL KLOTER 1', '', k1TotalCount, k1TotFee, k1TotPaid, k1TotRem, pctAllK1]);
+  s8Merges.push({ s: { r: rK1SumTotalIdx, c: 0 }, e: { r: rK1SumTotalIdx, c: 1 } });
 
-  // Jeda baris pemisah antar tabel
+  s8Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+
+  // -------------------------------------------------------------
+  // RINGKASAN KLOTER 2 (INFAQ)
+  // -------------------------------------------------------------
+  const rK2SumTitleIdx = s8Rows.length;
+  s8Rows.push(['RINGKASAN REKAPITULASI INFAQ KLOTER 2 (BEBAS BIAYA REGISTRASI & FASILITAS KAOS DITIADAKAN)', '', '', '', '', '', '']);
+  s8BannerIndexes.push({ rIdx: rK2SumTitleIdx, color: '0284C7' });
+  s8Merges.push({ s: { r: rK2SumTitleIdx, c: 0 }, e: { r: rK2SumTitleIdx, c: 6 } });
+
+  const rK2SumHeadIdx = s8Rows.length;
+  s8Rows.push(['No', 'Kategori Kloter 2', 'Jumlah Peserta', 'Total Nominal Infaq (Rp)', 'Keterangan', '', '']);
+  s8HeaderIndexes.push(rK2SumHeadIdx);
+  s8Merges.push({ s: { r: rK2SumHeadIdx, c: 4 }, e: { r: rK2SumHeadIdx, c: 6 } });
+
+  s8Rows.push([1, 'Peserta Berinfaq Sukarela', k2InfaqCount, k2TotalInfaq, `${k2InfaqCount} orang berpartisipasi infaq`, '', '']);
+  s8Merges.push({ s: { r: s8Rows.length - 1, c: 4 }, e: { r: s8Rows.length - 1, c: 6 } });
+
+  s8Rows.push([2, 'Peserta Bebas Biaya (Rp 0)', k2List.length - k2InfaqCount, 0, 'Bebas biaya registrasi (Kloter 2)', '', '']);
+  s8Merges.push({ s: { r: s8Rows.length - 1, c: 4 }, e: { r: s8Rows.length - 1, c: 6 } });
+
+  const rK2SumTotalIdx = s8Rows.length;
+  s8Rows.push(['TOTAL PESERTA KLOTER 2', '', k2List.length, k2TotalInfaq, `Total Infaq Terkumpul: Rp ${k2TotalInfaq.toLocaleString('id-ID')}`, '', '']);
+  s8Merges.push({ s: { r: rK2SumTotalIdx, c: 0 }, e: { r: rK2SumTotalIdx, c: 1 } });
+  s8Merges.push({ s: { r: rK2SumTotalIdx, c: 4 }, e: { r: rK2SumTotalIdx, c: 6 } });
+
   s8Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
   s8Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
 
-  // HELPER UNTUK MENGISI DAFTAR TABEL SUB-SEKSI PEMBAYARAN
+  // HELPER TABEL SUB-SEKSI KLOTER 1
   function appendPaymentSubSection(titleText, bannerColor, list, subtotalLabel, totFee, totPaid, totRem) {
     const rBanner = s8Rows.length;
     s8Rows.push([titleText, '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
     s8BannerIndexes.push({ rIdx: rBanner, color: bannerColor });
-    s8Merges.push({ s: { r: rBanner, c: 0 }, e: { r: rBanner, c: s8Headers.length - 1 } });
+    s8Merges.push({ s: { r: rBanner, c: 0 }, e: { r: rBanner, c: s8HeadersK1.length - 1 } });
 
     const rHead = s8Rows.length;
-    s8Rows.push([...s8Headers]);
+    s8Rows.push([...s8HeadersK1]);
     s8HeaderIndexes.push(rHead);
 
     list.forEach(({ item, fee, paid, remaining, status }, idx) => {
@@ -11419,51 +11462,103 @@ function exportToExcel() {
     s8Rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
   }
 
-  // 1. SEKSI LUNAS
+  // 1. KLOTER 1: SEKSI LUNAS
   appendPaymentSubSection(
-    `1. DAFTAR PESERTA LUNAS — TOTAL: ${lunasList.length} PESERTA (TOTAL TERBAYAR: Rp ${totPaidLunas.toLocaleString('id-ID')})`,
+    `1. KLOTER 1 — DAFTAR PESERTA LUNAS (TOTAL: ${k1Lunas.length} PESERTA | TERBAYAR: Rp ${k1PaidLunas.toLocaleString('id-ID')})`,
     '047857',
-    lunasList,
-    `SUBTOTAL PESERTA LUNAS (${lunasList.length} Orang)`,
-    totFeeLunas,
-    totPaidLunas,
+    k1Lunas,
+    `SUBTOTAL KLOTER 1 LUNAS (${k1Lunas.length} Orang)`,
+    k1FeeLunas,
+    k1PaidLunas,
     0
   );
 
-  // 2. SEKSI KURANG BAYAR / CICILAN
+  // 2. KLOTER 1: SEKSI KURANG BAYAR
   appendPaymentSubSection(
-    `2. DAFTAR PESERTA KURANG BAYAR / CICILAN — TOTAL: ${kurangList.length} PESERTA (TERBAYAR: Rp ${totPaidKurang.toLocaleString('id-ID')} | SISA KURANG: Rp ${totRemKurang.toLocaleString('id-ID')})`,
+    `2. KLOTER 1 — DAFTAR PESERTA KURANG BAYAR / CICILAN (TOTAL: ${k1Kurang.length} PESERTA | SISA KURANG: Rp ${k1RemKurang.toLocaleString('id-ID')})`,
     'D97706',
-    kurangList,
-    `SUBTOTAL PESERTA KURANG BAYAR (${kurangList.length} Orang)`,
-    totFeeKurang,
-    totPaidKurang,
-    totRemKurang
+    k1Kurang,
+    `SUBTOTAL KLOTER 1 KURANG BAYAR (${k1Kurang.length} Orang)`,
+    k1FeeKurang,
+    k1PaidKurang,
+    k1RemKurang
   );
 
-  // 3. SEKSI BELUM BAYAR
+  // 3. KLOTER 1: SEKSI BELUM BAYAR
   appendPaymentSubSection(
-    `3. DAFTAR PESERTA BELUM BAYAR — TOTAL: ${belumList.length} PESERTA (TOTAL PIUTANG: Rp ${totRemBelum.toLocaleString('id-ID')})`,
+    `3. KLOTER 1 — DAFTAR PESERTA BELUM BAYAR (TOTAL: ${k1Belum.length} PESERTA | TOTAL PIUTANG: Rp ${k1RemBelum.toLocaleString('id-ID')})`,
     'DC2626',
-    belumList,
-    `SUBTOTAL PESERTA BELUM BAYAR (${belumList.length} Orang)`,
-    totFeeBelum,
+    k1Belum,
+    `SUBTOTAL KLOTER 1 BELUM BAYAR (${k1Belum.length} Orang)`,
+    k1FeeBelum,
     0,
-    totRemBelum
+    k1RemBelum
   );
 
-  // 4. SEKSI DIBATALKAN / REFUND (JIKA ADA)
-  if (refundList.length > 0) {
+  if (k1Refund.length > 0) {
     appendPaymentSubSection(
-      `4. DAFTAR PESERTA DIBATALKAN / REFUND — TOTAL: ${refundList.length} PESERTA`,
+      `4. KLOTER 1 — DAFTAR PESERTA DIBATALKAN / REFUND (TOTAL: ${k1Refund.length} PESERTA)`,
       '475569',
-      refundList,
-      `SUBTOTAL PESERTA DIBATALKAN (${refundList.length} Orang)`,
-      totFeeRefund,
-      totPaidRefund,
+      k1Refund,
+      `SUBTOTAL KLOTER 1 DIBATALKAN (${k1Refund.length} Orang)`,
+      k1FeeRefund,
+      k1PaidRefund,
       0
     );
   }
+
+  // -------------------------------------------------------------
+  // TABEL KLOTER 2: DIURUTKAN DARI NOMOR PENDAFTARAN & INFAQ
+  // -------------------------------------------------------------
+  const rK2TableBanner = s8Rows.length;
+  s8Rows.push([
+    `DAFTAR PESERTA KLOTER 2 — BEBAS BIAYA & INFAQ SUKARELA (URUT NOMOR REGISTRASI: ${k2List.length} PESERTA | TOTAL INFAQ: Rp ${k2TotalInfaq.toLocaleString('id-ID')})`,
+    '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+  ]);
+  s8BannerIndexes.push({ rIdx: rK2TableBanner, color: '0284C7' });
+  s8Merges.push({ s: { r: rK2TableBanner, c: 0 }, e: { r: rK2TableBanner, c: s8HeadersK2.length - 1 } });
+
+  const rK2TableHead = s8Rows.length;
+  s8Rows.push([...s8HeadersK2]);
+  s8HeaderIndexes.push(rK2TableHead);
+
+  k2List.forEach((item, idx) => {
+    const isChild = item.age && parseInt(item.age, 10) < 15;
+    const kategori = (item.age && parseInt(item.age, 10) < 5) ? 'Balita' : (isChild ? 'Anak-anak' : 'Dewasa');
+    const paid = Number(item.paid_amount || 0);
+    const hasInfaq = paid > 0;
+
+    s8Rows.push([
+      idx + 1,
+      sanitizeSpreadsheetValue(item.registration_code),
+      sanitizeSpreadsheetValue(item.full_name),
+      kategori,
+      item.age ? `${item.age} Th` : '-',
+      sanitizeSpreadsheetValue(item.gender),
+      sanitizeSpreadsheetValue(item.wilayah),
+      sanitizeSpreadsheetValue(item.group_name || 'Mandiri'),
+      0, // Biaya Wajib: 0 (Bebas Biaya)
+      hasInfaq ? paid : '', // Sesuai permintaan user: "kalau ada yang infaq datanya masukin kalau tidak ada kosongin saja bro"
+      0, // Sisa Piutang: 0
+      sanitizeSpreadsheetValue(item.attendance_status || 'Belum Hadir'),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      hasInfaq ? `Infaq Sukarela (Rp ${paid.toLocaleString('id-ID')})` : 'Bebas Biaya (Kloter 2)',
+      sanitizeSpreadsheetValue(item.notes || '-')
+    ]);
+  });
+
+  // Baris Subtotal Kloter 2
+  const rK2Sub = s8Rows.length;
+  s8Rows.push([
+    `TOTAL INFAQ KLOTER 2 (${k2List.length} Peserta, ${k2InfaqCount} Berinfaq)`,
+    '', '', '', '', '', '', '',
+    0,
+    k2TotalInfaq > 0 ? k2TotalInfaq : '',
+    0,
+    '', '', '', ''
+  ]);
+  s8SubtotalIndexes.push(rK2Sub);
+  s8Merges.push({ s: { r: rK2Sub, c: 0 }, e: { r: rK2Sub, c: 7 } });
 
   const ws8 = XLSX.utils.aoa_to_sheet(s8Rows);
   ws8['!merges'] = s8Merges;
@@ -11476,10 +11571,10 @@ function exportToExcel() {
         alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
       };
     }
-    if (rIdx === rPaySumTotalIdx) {
+    if (rIdx === rK1SumTotalIdx || rIdx === rK2SumTotalIdx) {
       return {
-        fill: { fgColor: { rgb: 'D1FAE5' } },
-        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '065F46' } },
+        fill: { fgColor: { rgb: rIdx === rK1SumTotalIdx ? 'D1FAE5' : 'E0F2FE' } },
+        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: rIdx === rK1SumTotalIdx ? '065F46' : '0369A1' } },
         alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : 'center', vertical: 'center' }
       };
     }
