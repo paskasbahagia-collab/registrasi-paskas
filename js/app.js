@@ -19355,13 +19355,21 @@ function resetCheckinView() {
 // =======================================================
 // MODAL QR CODE GERBANG / STANDING BANNER (A4 PRINT)
 // =======================================================
+function getGateQrTargetUrl() {
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+  if (isLocal) {
+    return 'https://registrasi-paskas-bahagia.vercel.app/#checkin';
+  }
+  return window.location.origin + window.location.pathname + '#checkin';
+}
+
 function openGateQrModal() {
   const modal = document.getElementById('modalGateQrCode');
   const img = document.getElementById('gateQrImage');
   const urlText = document.getElementById('gateQrTargetUrlText');
   if (!modal || !img) return;
 
-  const targetUrl = window.location.origin + window.location.pathname + '#checkin';
+  const targetUrl = getGateQrTargetUrl();
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&format=png&data=${encodeURIComponent(targetUrl)}`;
 
   img.src = qrApiUrl;
@@ -19380,7 +19388,7 @@ function printGateQrPoster() {
 }
 
 function downloadGateQrImage() {
-  const targetUrl = window.location.origin + window.location.pathname + '#checkin';
+  const targetUrl = getGateQrTargetUrl();
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&data=${encodeURIComponent(targetUrl)}`;
   const a = document.createElement('a');
   a.href = qrApiUrl;
@@ -19392,7 +19400,7 @@ function downloadGateQrImage() {
 }
 
 function copyGateQrLink() {
-  const targetUrl = window.location.origin + window.location.pathname + '#checkin';
+  const targetUrl = getGateQrTargetUrl();
   navigator.clipboard.writeText(targetUrl).then(() => {
     showToast('Link Presensi Mandiri berhasil disalin ke clipboard!', 'success');
   }).catch(() => {
