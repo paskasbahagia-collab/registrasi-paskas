@@ -3879,16 +3879,14 @@ function autoAllocateRoomAndGroup(gender = 'Laki-laki', isChild = false, guardia
   };
 }
 
-function generateRegistrationCode(type = 'individu', index = 0, forcePrefix = null) {
+function generateRegistrationCode(type = 'individu', index = 0, forceKloter = null) {
   const settings = (typeof window.dataService !== 'undefined' && window.dataService.getSettings)
     ? window.dataService.getSettings()
     : {};
 
-  let prefix = forcePrefix || settings.ticket_prefix;
-  if (!prefix) {
-    const kloter = settings.active_kloter || '1';
-    prefix = (kloter === '2') ? 'PKB-K2-' : 'PKB-';
-  }
+  const kloter = forceKloter || settings.active_kloter || '1';
+  const isKloter2 = (String(kloter) === '2');
+  let prefix = settings.ticket_prefix || 'PKB-';
   if (!prefix.endsWith('-')) prefix += '-';
 
   const escapedPrefix = prefix.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -3901,7 +3899,11 @@ function generateRegistrationCode(type = 'individu', index = 0, forcePrefix = nu
       const match = String(r.registration_code).match(regex);
       if (match && match[1]) {
         const num = parseInt(match[1], 10);
-        if (!isNaN(num) && num > maxSeq) maxSeq = num;
+        if (isKloter2) {
+          if (num >= 501 && num > maxSeq) maxSeq = num;
+        } else {
+          if (num < 501 && num > maxSeq) maxSeq = num;
+        }
       }
     }
   });
@@ -3915,14 +3917,24 @@ function generateRegistrationCode(type = 'individu', index = 0, forcePrefix = nu
           const match = String(r.registration_code).match(regex);
           if (match && match[1]) {
             const num = parseInt(match[1], 10);
-            if (!isNaN(num) && num > maxSeq) maxSeq = num;
+            if (isKloter2) {
+              if (num >= 501 && num > maxSeq) maxSeq = num;
+            } else {
+              if (num < 501 && num > maxSeq) maxSeq = num;
+            }
           }
         }
       });
     }
   } catch (e) {}
 
-  const nextSeq = maxSeq + 1 + index;
+  let nextSeq;
+  if (isKloter2) {
+    nextSeq = (maxSeq >= 501 ? maxSeq : 500) + 1 + index;
+  } else {
+    nextSeq = maxSeq + 1 + index;
+  }
+
   const seq = String(nextSeq).padStart(3, '0');
   return `${prefix}${seq}`;
 }
@@ -7714,11 +7726,12 @@ function applyRekapFilters() {
     // Type match
     const matchType = type === 'ALL' || item.registration_type === type;
 
-    // Kloter match
+    // Kloter match (No >= 501 adalah Kloter 2, No < 501 adalah Kloter 1)
     let matchKloter = true;
     if (filterKloter !== 'ALL') {
-      const code = item.registration_code || '';
-      const isKloter2 = /PKB-K2-/i.test(code) || /K2-/i.test(code) || /PKB2-/i.test(code);
+      const digits = (item.registration_code || '').replace(/\D/g, '');
+      const num = digits ? parseInt(digits, 10) : 0;
+      const isKloter2 = num >= 501 || /K2-/i.test(item.registration_code || '');
       matchKloter = (filterKloter === '2') ? isKloter2 : !isKloter2;
     }
 
@@ -7795,10 +7808,21 @@ function renderRekapTable() {
     const photoSrc = [item.photo_url, item.photo_data].find(p => typeof p === 'string' && p.trim() !== '') || '';
     const safeFullName = String(item.full_name || '');
     const clothDisplay = (isChildUnder12 || item.cloth_size === '-') ? '-' : (item.cloth_size || '-');
+
+    const digits = (item.registration_code || '').replace(/\D/g, '');
+    const num = digits ? parseInt(digits, 10) : 0;
+    const isK2 = num >= 501 || /K2-/i.test(item.registration_code || '');
+    const kloterBadge = isK2 
+      ? `<span class="badge-kloter-k2" style="display: inline-block; font-size: 10px; font-weight: 800; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 1px 6px; border-radius: 4px; margin-top: 3px;">Kloter 2 (501+)</span>`
+      : `<span class="badge-kloter-k1" style="display: inline-block; font-size: 10px; font-weight: 700; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px; margin-top: 3px;">Kloter 1</span>`;
+
     return `
       <tr>
         <td style="color: #475569; font-weight: 700; text-align: center;">${rowNo}</td>
-        <td><span class="badge-table-code">${item.registration_code}</span></td>
+        <td>
+          <span class="badge-table-code">${item.registration_code}</span>
+          <div>${kloterBadge}</div>
+        </td>
         <td>
           <div style="display: flex; align-items: center; gap: 10px;">
             ${photoSrc
@@ -11415,7 +11439,7 @@ function initSettingsPage(defaultTab = 'info', skipSwitchTab = false) {
   }
 
   if (ticketPrefixInput) {
-    ticketPrefixInput.value = settings.ticket_prefix || (activeKloter === '2' ? 'PKB-K2-' : 'PKB-');
+    ticketPrefixInput.value = settings.ticket_prefix || 'PKB-';
   }
   handleKloterChange(activeKloter === '2' ? 2 : 1, false);
 
@@ -12151,7 +12175,7 @@ async function saveDeadlineSettings() {
 
   const isKloter2 = document.getElementById('cfg_kloter2')?.checked;
   const activeKloter = isKloter2 ? '2' : '1';
-  let ticketPrefix = document.getElementById('cfg_ticketPrefix')?.value?.trim() || (isKloter2 ? 'PKB-K2-' : 'PKB-');
+  let ticketPrefix = document.getElementById('cfg_ticketPrefix')?.value?.trim() || 'PKB-';
   if (!ticketPrefix.endsWith('-')) ticketPrefix += '-';
 
   await window.dataService.saveSettings({
@@ -12177,10 +12201,9 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
   const card2 = document.getElementById('cardKloter2');
   const activeBadge = document.getElementById('activeKloterBadge');
 
+  if (prefixInput) prefixInput.value = 'PKB-';
+
   if (kloterNum === 2) {
-    if (prefixInput && (!prefixInput.value || prefixInput.value === 'PKB-')) {
-      prefixInput.value = 'PKB-K2-';
-    }
     if (card2) {
       card2.style.borderColor = '#047857';
       card2.style.background = '#ecfdf5';
@@ -12190,7 +12213,7 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
       card1.style.background = '#ffffff';
     }
     if (activeBadge) {
-      activeBadge.textContent = 'Kloter Aktif: Kloter 2';
+      activeBadge.textContent = 'Kloter Aktif: Kloter 2 (Mulai No. 501)';
       activeBadge.style.background = '#d1fae5';
       activeBadge.style.color = '#065f46';
     }
@@ -12203,9 +12226,6 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
       }
     }
   } else {
-    if (prefixInput && (!prefixInput.value || prefixInput.value === 'PKB-K2-')) {
-      prefixInput.value = 'PKB-';
-    }
     if (card1) {
       card1.style.borderColor = '#047857';
       card1.style.background = '#ecfdf5';
@@ -12215,7 +12235,7 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
       card2.style.background = '#ffffff';
     }
     if (activeBadge) {
-      activeBadge.textContent = 'Kloter Aktif: Kloter 1';
+      activeBadge.textContent = 'Kloter Aktif: Kloter 1 (No. 001 - 500)';
       activeBadge.style.background = '#f1f5f9';
       activeBadge.style.color = '#475569';
     }
@@ -12224,19 +12244,17 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
 }
 
 function updateKloterPreview() {
-  const prefixInput = document.getElementById('cfg_ticketPrefix');
+  const isKloter2 = document.getElementById('cfg_kloter2')?.checked;
   const codeSpan = document.getElementById('cfg_nextCodeText');
   const descSpan = document.getElementById('cfg_nextCodeDesc');
-  let prefix = prefixInput ? prefixInput.value.trim() : 'PKB-K2-';
-  if (prefix && !prefix.endsWith('-')) prefix += '-';
 
-  const nextCode = generateRegistrationCode('individu', 0, prefix);
+  const nextCode = generateRegistrationCode('individu', 0, isKloter2 ? '2' : '1');
   if (codeSpan) codeSpan.textContent = nextCode;
   if (descSpan) {
-    if (prefix.includes('K2')) {
-      descSpan.textContent = 'Otomatis mulai dari urutan 001 khusus untuk pendaftar Kloter 2.';
+    if (isKloter2) {
+      descSpan.textContent = 'Mulai dari nomor PKB-501 khusus untuk pendaftar Kloter 2.';
     } else {
-      descSpan.textContent = 'Melanjutkan urutan pendaftar Kloter 1.';
+      descSpan.textContent = 'Melanjutkan urutan pendaftar Kloter 1 (di bawah 501).';
     }
   }
 }

@@ -830,21 +830,17 @@ class PaskasDataService {
    */
   /**
    * Mengambil urutan nomor terakhir langsung dari Supabase Cloud secara realtime
-   * Mendukung filter prefix (misal: 'PKB-K2-' untuk Kloter 2, atau 'PKB-' untuk Kloter 1)
+   * Mendukung pemisahan Kloter 1 (nomor < 501) dan Kloter 2 (nomor >= 501)
    */
-  async getLatestRemoteSequence(targetPrefix = 'PKB-') {
+  async getLatestRemoteSequence(targetKloter = '1') {
     let maxSeq = 0;
+    const isKloter2 = (String(targetKloter) === '2');
     if (this.supabaseClient) {
       try {
-        let prefix = targetPrefix || 'PKB-';
-        if (!prefix.endsWith('-')) prefix += '-';
-        const escapedPrefix = prefix.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const regex = new RegExp(`^${escapedPrefix}(\\d+)`, 'i');
-
         const queryPromise = this.supabaseClient
           .from('registrations')
           .select('registration_code')
-          .ilike('registration_code', `${prefix}%`)
+          .ilike('registration_code', 'PKB-%')
           .order('id', { ascending: false })
           .limit(100);
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Sequence query timeout')), 2500));
@@ -852,10 +848,14 @@ class PaskasDataService {
         const { data } = await Promise.race([queryPromise, timeoutPromise]);
         if (data && Array.isArray(data)) {
           data.forEach(r => {
-            const m = String(r.registration_code || '').match(regex);
+            const m = String(r.registration_code || '').match(/PKB-(\d+)/i);
             if (m && m[1]) {
               const num = parseInt(m[1], 10);
-              if (!isNaN(num) && num > maxSeq) maxSeq = num;
+              if (isKloter2) {
+                if (num >= 501 && num > maxSeq) maxSeq = num;
+              } else {
+                if (num < 501 && num > maxSeq) maxSeq = num;
+              }
             }
           });
         }
@@ -881,26 +881,19 @@ class PaskasDataService {
       updated_at: now
     };
 
-    // Deteksi prefix dinamis (misal 'PKB-K2-' untuk Kloter 2 atau 'PKB-' untuk Kloter 1)
-    let prefix = 'PKB-';
     const rawCode = String(newRecord.registration_code || '');
-    if (rawCode.includes('K2-')) {
-      prefix = 'PKB-K2-';
-    } else {
-      const matchPrefix = rawCode.match(/^([A-Za-z0-9]+-)/);
-      if (matchPrefix) prefix = matchPrefix[1];
-    }
-    if (!prefix.endsWith('-')) prefix += '-';
-    const escapedPrefix = prefix.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-    const prefixRegex = new RegExp(`^${escapedPrefix}(\\d+)`, 'i');
+    const curMatch = rawCode.match(/PKB-(\d+)/i);
+    const curNum = curMatch ? parseInt(curMatch[1], 10) : 0;
+    const isKloter2 = curNum >= 501 || (this.getSettings().active_kloter === '2');
+    const targetKloter = isKloter2 ? '2' : '1';
 
     // Sinkronisasi realtime sequence remote Supabase sebelum insert untuk meminimalkan race condition
     if (this.isSupabaseConnected && this.supabaseClient) {
-      const remoteMax = await this.getLatestRemoteSequence(prefix);
-      const curMatch = rawCode.match(prefixRegex);
-      const curNum = curMatch ? parseInt(curMatch[1], 10) : 0;
-      if (curNum <= remoteMax || !curMatch) {
-        newRecord.registration_code = `${prefix}${String(remoteMax + 1).padStart(3, '0')}`;
+      const remoteMax = await this.getLatestRemoteSequence(targetKloter);
+      const baseMin = isKloter2 ? 500 : 0;
+      const effectiveMax = Math.max(remoteMax, baseMin);
+      if (curNum <= effectiveMax || !curMatch) {
+        newRecord.registration_code = `PKB-${String(effectiveMax + 1).padStart(3, '0')}`;
       }
     }
 
@@ -912,9 +905,10 @@ class PaskasDataService {
       for (let attempt = 0; attempt < 4; attempt++) {
         try {
           if (attempt > 0) {
-            const latestSeq = await this.getLatestRemoteSequence(prefix);
-            const nextNum = Math.max(latestSeq, 0) + 1;
-            newRecord.registration_code = `${prefix}${String(nextNum).padStart(3, '0')}`;
+            const latestSeq = await this.getLatestRemoteSequence(targetKloter);
+            const baseMin = isKloter2 ? 500 : 0;
+            const nextNum = Math.max(latestSeq, baseMin) + 1;
+            newRecord.registration_code = `PKB-${String(nextNum).padStart(3, '0')}`;
             await new Promise(r => setTimeout(r, 120 * attempt));
           }
 
@@ -1046,39 +1040,33 @@ class PaskasDataService {
       updated_at: now
     }));
 
-    // Deteksi prefix dinamis untuk batch rombongan
-    let prefix = 'PKB-';
+    let isKloter2 = (this.getSettings().active_kloter === '2');
     if (stampedList.length > 0) {
-      const sampleCode = String(stampedList[0].registration_code || '');
-      if (sampleCode.includes('K2-')) {
-        prefix = 'PKB-K2-';
-      } else {
-        const matchPrefix = sampleCode.match(/^([A-Za-z0-9]+-)/);
-        if (matchPrefix) prefix = matchPrefix[1];
+      const m = String(stampedList[0].registration_code || '').match(/PKB-(\d+)/i);
+      if (m && m[1] && parseInt(m[1], 10) >= 501) {
+        isKloter2 = true;
       }
     }
-    if (!prefix.endsWith('-')) prefix += '-';
-    const escapedPrefix = prefix.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-    const batchRegex = new RegExp(`^${escapedPrefix}(\\d+)`, 'i');
+    const targetKloter = isKloter2 ? '2' : '1';
+    const baseMin = isKloter2 ? 500 : 0;
 
     // Cek sequence remote Supabase secara realtime sebelum penomoran rombongan
     if (this.isSupabaseConnected && this.supabaseClient) {
-      const remoteMax = await this.getLatestRemoteSequence(prefix);
-      if (remoteMax >= 0) {
-        let currentMinInBatch = Infinity;
-        stampedList.forEach(item => {
-          const m = String(item.registration_code || '').match(batchRegex);
-          if (m && m[1]) {
-            const n = parseInt(m[1], 10);
-            if (n < currentMinInBatch) currentMinInBatch = n;
-          }
-        });
-        // Jika ada nomor tiket dalam rombongan yang sudah bentrok/tertinggal dibanding data Cloud
-        if (currentMinInBatch <= remoteMax || currentMinInBatch === Infinity) {
-          stampedList.forEach((item, idx) => {
-            item.registration_code = `${prefix}${String(remoteMax + 1 + idx).padStart(3, '0')}`;
-          });
+      const remoteMax = await this.getLatestRemoteSequence(targetKloter);
+      const effectiveMax = Math.max(remoteMax, baseMin);
+      let currentMinInBatch = Infinity;
+      stampedList.forEach(item => {
+        const m = String(item.registration_code || '').match(/PKB-(\d+)/i);
+        if (m && m[1]) {
+          const n = parseInt(m[1], 10);
+          if (n < currentMinInBatch) currentMinInBatch = n;
         }
+      });
+      // Jika ada nomor tiket dalam rombongan yang sudah bentrok/tertinggal dibanding data Cloud
+      if (currentMinInBatch <= effectiveMax || currentMinInBatch === Infinity) {
+        stampedList.forEach((item, idx) => {
+          item.registration_code = `PKB-${String(effectiveMax + 1 + idx).padStart(3, '0')}`;
+        });
       }
     }
 
@@ -1089,9 +1077,10 @@ class PaskasDataService {
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           if (attempt > 0) {
-            const latestSeq = await this.getLatestRemoteSequence(prefix);
+            const latestSeq = await this.getLatestRemoteSequence(targetKloter);
+            const effectiveMax = Math.max(latestSeq, baseMin);
             stampedList.forEach((item, idx) => {
-              item.registration_code = `${prefix}${String(latestSeq + 1 + idx).padStart(3, '0')}`;
+              item.registration_code = `PKB-${String(effectiveMax + 1 + idx).padStart(3, '0')}`;
             });
             await new Promise(r => setTimeout(r, 150 * attempt));
           }
