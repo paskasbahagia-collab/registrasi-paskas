@@ -3957,6 +3957,12 @@
               <option value="kelompok">Kelompok Saja</option>
             </select>
 
+            <select id="filterKloter" class="filter-select" onchange="applyRekapFilters()" style="border-color: #10b981; font-weight: 700; color: #047857;">
+              <option value="ALL">Semua Kloter (1 &amp; 2)</option>
+              <option value="1">Kloter 1 (PKB-xxx)</option>
+              <option value="2">Kloter 2 (PKB-K2-xxx)</option>
+            </select>
+
             <select id="filterGender" class="filter-select" onchange="applyRekapFilters()">
               <option value="ALL">Semua Gender</option>
               <option value="Laki-laki">Laki-laki</option>
@@ -4036,15 +4042,69 @@
 
       </div> <!-- .rekap-editorial-sheet -->
             </div>
-            <!-- Tab 1: Deadline Settings -->
+            <!-- Tab 1: Deadline & Kloter Settings -->
             <div class="settings-tab-panel" id="settingsPanel-deadline">
               <div class="settings-card-item">
-                <h4 class="settings-item-title">
-                  <i class="fa-solid fa-calendar-xmark text-gold"></i> Batas Waktu Pengisian (Deadline)
-                </h4>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 10px;">
+                  <h4 class="settings-item-title" style="margin: 0;">
+                    <i class="fa-solid fa-layer-group text-gold"></i> Batas Waktu &amp; Gelombang Pendaftaran (Kloter 1 / Kloter 2)
+                  </h4>
+                  <span id="activeKloterBadge" class="settings-chip-badge" style="background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; font-size: 11px;">
+                    Kloter Aktif: Kloter 1
+                  </span>
+                </div>
                 <p class="settings-item-desc">
-                  Tentukan tanggal dan jam batas akhir pengisian registrasi. Jika waktu telah habis, formulir pendaftaran akan terkunci secara otomatis.
+                  Atur gelombang pendaftaran jemaah, format awalan kode tiket (prefix), batas waktu pengisian formulir, serta status buka/tutup registrasi.
                 </p>
+
+                <!-- PILIHAN GELOMBANG / KLOTER PENDAFTARAN -->
+                <div style="background: #fdfbf7; border: 1.5px solid #e2dac9; border-radius: var(--radius-md); padding: 18px 20px; margin-top: 18px; margin-bottom: 20px;">
+                  <label class="form-label" style="font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 12px; display: block;">
+                    <i class="fa-solid fa-flag text-gold"></i> Pilih Gelombang / Kloter yang Sedang Dibuka:
+                  </label>
+                  
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 16px;">
+                    <!-- Option Kloter 1 -->
+                    <label id="cardKloter1" class="kloter-radio-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px; border: 2px solid #047857; background: #ecfdf5; cursor: pointer; transition: all 0.2s ease;">
+                      <input type="radio" name="cfg_activeKloter" id="cfg_kloter1" value="1" onchange="handleKloterChange(1)" checked style="margin-top: 3px; accent-color: #047857;">
+                      <div>
+                        <div style="font-weight: 800; font-size: 14px; color: #064e3b;">Kloter 1 (Gelombang 1)</div>
+                        <div style="font-size: 12px; color: #047857; margin-top: 2px;">Format Kode: <code>PKB-001</code> s/d <code>PKB-463</code></div>
+                        <span class="settings-chip-badge" style="background: #ffffff; color: #047857; border: 1px solid #a7f3d0; font-size: 10.5px; margin-top: 6px; display: inline-block;">Data Awal Terdata</span>
+                      </div>
+                    </label>
+
+                    <!-- Option Kloter 2 -->
+                    <label id="cardKloter2" class="kloter-radio-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px; border: 2px solid #cbd5e1; background: #ffffff; cursor: pointer; transition: all 0.2s ease;">
+                      <input type="radio" name="cfg_activeKloter" id="cfg_kloter2" value="2" onchange="handleKloterChange(2)" style="margin-top: 3px; accent-color: #047857;">
+                      <div>
+                        <div style="font-weight: 800; font-size: 14px; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+                          Kloter 2 (Gelombang 2)
+                          <span style="font-size: 10px; background: #059669; color: white; padding: 2px 6px; border-radius: 4px; font-weight: 700;">BARU</span>
+                        </div>
+                        <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Format Kode: <code>PKB-K2-001</code>, <code>PKB-K2-002</code>, dst.</div>
+                        <span class="settings-chip-badge" style="background: #f1f5f9; color: #475569; font-size: 10.5px; margin-top: 6px; display: inline-block;">Mulai Urut dari 001</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <!-- Prefix Setting & Live Preview -->
+                  <div class="form-row col-2">
+                    <div class="form-group">
+                      <label class="form-label" style="font-size: 12.5px;">Awalan Kode Tiket (Prefix) <span class="required">*</span></label>
+                      <input type="text" id="cfg_ticketPrefix" class="form-control" placeholder="Contoh: PKB- atau PKB-K2-" oninput="updateKloterPreview()">
+                      <small style="color: #64748b; font-size: 11.5px; display: block; margin-top: 4px;">Awalan kode registrasi yang otomatis terpasang pada tiket jemaah.</small>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" style="font-size: 12.5px;">Simulasi Kode Tiket Pendaftar Baru</label>
+                      <div id="cfg_ticketCodePreview" style="padding: 10px 14px; background: #ffffff; border: 1.5px dashed #10b981; border-radius: 8px; font-family: monospace; font-size: 15px; font-weight: 800; color: #047857; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-ticket text-emerald"></i>
+                        <span id="cfg_nextCodeText">PKB-001</span>
+                      </div>
+                      <small id="cfg_nextCodeDesc" style="color: #059669; font-size: 11.5px; display: block; margin-top: 4px;">Nomor urut otomatis menyesuaikan kloter yang dipilih.</small>
+                    </div>
+                  </div>
+                </div>
 
                 <div class="form-row col-2" style="margin-top: 15px;">
                   <div class="form-group">

@@ -3879,12 +3879,26 @@ function autoAllocateRoomAndGroup(gender = 'Laki-laki', isChild = false, guardia
   };
 }
 
-function generateRegistrationCode(type = 'individu', index = 0) {
+function generateRegistrationCode(type = 'individu', index = 0, forcePrefix = null) {
+  const settings = (typeof window.dataService !== 'undefined' && window.dataService.getSettings)
+    ? window.dataService.getSettings()
+    : {};
+
+  let prefix = forcePrefix || settings.ticket_prefix;
+  if (!prefix) {
+    const kloter = settings.active_kloter || '1';
+    prefix = (kloter === '2') ? 'PKB-K2-' : 'PKB-';
+  }
+  if (!prefix.endsWith('-')) prefix += '-';
+
+  const escapedPrefix = prefix.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const regex = new RegExp(`^${escapedPrefix}(\\d+)`, 'i');
+
   let maxSeq = 0;
   const list = Array.isArray(allRegistrations) ? allRegistrations : [];
   list.forEach(r => {
     if (r && r.registration_code) {
-      const match = String(r.registration_code).match(/PKB-(\d+)/i);
+      const match = String(r.registration_code).match(regex);
       if (match && match[1]) {
         const num = parseInt(match[1], 10);
         if (!isNaN(num) && num > maxSeq) maxSeq = num;
@@ -3898,7 +3912,7 @@ function generateRegistrationCode(type = 'individu', index = 0) {
     if (Array.isArray(local)) {
       local.forEach(r => {
         if (r && r.registration_code) {
-          const match = String(r.registration_code).match(/PKB-(\d+)/i);
+          const match = String(r.registration_code).match(regex);
           if (match && match[1]) {
             const num = parseInt(match[1], 10);
             if (!isNaN(num) && num > maxSeq) maxSeq = num;
@@ -3910,7 +3924,7 @@ function generateRegistrationCode(type = 'individu', index = 0) {
 
   const nextSeq = maxSeq + 1 + index;
   const seq = String(nextSeq).padStart(3, '0');
-  return `PKB-${seq}`;
+  return `${prefix}${seq}`;
 }
 
 async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
@@ -7680,6 +7694,7 @@ function applyRekapFilters() {
   const search = document.getElementById('searchRekapInput').value.toLowerCase().trim();
   const filterAge = document.getElementById('filterAgeCategory')?.value || 'ALL';
   const type = document.getElementById('filterType').value;
+  const filterKloter = document.getElementById('filterKloter')?.value || 'ALL';
   const gender = document.getElementById('filterGender').value;
   const wilayah = document.getElementById('filterWilayah').value;
   const cloth = document.getElementById('filterCloth').value;
@@ -7698,6 +7713,14 @@ function applyRekapFilters() {
 
     // Type match
     const matchType = type === 'ALL' || item.registration_type === type;
+
+    // Kloter match
+    let matchKloter = true;
+    if (filterKloter !== 'ALL') {
+      const code = item.registration_code || '';
+      const isKloter2 = /PKB-K2-/i.test(code) || /K2-/i.test(code) || /PKB2-/i.test(code);
+      matchKloter = (filterKloter === '2') ? isKloter2 : !isKloter2;
+    }
 
     // Gender match
     let matchGender = true;
@@ -7721,7 +7744,7 @@ function applyRekapFilters() {
       matchAge = aVal === null || aVal >= 15;
     }
 
-    return matchSearch && matchType && matchGender && matchWilayah && matchCloth && matchAge;
+    return matchSearch && matchType && matchKloter && matchGender && matchWilayah && matchCloth && matchAge;
   });
 
   currentPage = 1;
@@ -11377,6 +11400,25 @@ function initSettingsPage(defaultTab = 'info', skipSwitchTab = false) {
   if (eventLocationInput) eventLocationInput.value = settings.event_location || '';
   if (eventDescInput) eventDescInput.value = settings.event_desc || '';
 
+  // Inisialisasi Pilihan Kloter & Awalan Kode Tiket
+  const activeKloter = settings.active_kloter || '1';
+  const kloter1Radio = document.getElementById('cfg_kloter1');
+  const kloter2Radio = document.getElementById('cfg_kloter2');
+  const ticketPrefixInput = document.getElementById('cfg_ticketPrefix');
+
+  if (activeKloter === '2') {
+    if (kloter2Radio) kloter2Radio.checked = true;
+    if (kloter1Radio) kloter1Radio.checked = false;
+  } else {
+    if (kloter1Radio) kloter1Radio.checked = true;
+    if (kloter2Radio) kloter2Radio.checked = false;
+  }
+
+  if (ticketPrefixInput) {
+    ticketPrefixInput.value = settings.ticket_prefix || (activeKloter === '2' ? 'PKB-K2-' : 'PKB-');
+  }
+  handleKloterChange(activeKloter === '2' ? 2 : 1, false);
+
   // Form Pengaturan Papan Informasi & Warta Pengumuman Dashboard
   const annEnabled = document.getElementById('cfg_announcementEnabled');
   const annLabel = document.getElementById('cfg_announcementStatusLabel');
@@ -12107,9 +12149,16 @@ async function saveDeadlineSettings() {
   const closedDesc = document.getElementById('cfg_closedDesc') ? document.getElementById('cfg_closedDesc').value.trim() : '';
   const closedMsg = document.getElementById('cfg_closedMessage') ? document.getElementById('cfg_closedMessage').value.trim() : '';
 
+  const isKloter2 = document.getElementById('cfg_kloter2')?.checked;
+  const activeKloter = isKloter2 ? '2' : '1';
+  let ticketPrefix = document.getElementById('cfg_ticketPrefix')?.value?.trim() || (isKloter2 ? 'PKB-K2-' : 'PKB-');
+  if (!ticketPrefix.endsWith('-')) ticketPrefix += '-';
+
   await window.dataService.saveSettings({
     registration_deadline: deadlineVal,
     is_registration_open: String(isOpen),
+    active_kloter: activeKloter,
+    ticket_prefix: ticketPrefix,
     closed_badge: closedBadge,
     closed_title: closedTitle,
     closed_desc: closedDesc,
@@ -12118,8 +12167,81 @@ async function saveDeadlineSettings() {
 
   initCountdownTimer();
   updateClosedNoticeContent();
-  showToast('Pengaturan batas waktu & narasi penutupan berhasil disimpan!', 'success');
+  updateKloterPreview();
+  showToast(`Pengaturan Kloter ${activeKloter} (${ticketPrefix}) & Batas Waktu berhasil disimpan!`, 'success');
 }
+
+function handleKloterChange(kloterNum, autoOpenRegistration = true) {
+  const prefixInput = document.getElementById('cfg_ticketPrefix');
+  const card1 = document.getElementById('cardKloter1');
+  const card2 = document.getElementById('cardKloter2');
+  const activeBadge = document.getElementById('activeKloterBadge');
+
+  if (kloterNum === 2) {
+    if (prefixInput && (!prefixInput.value || prefixInput.value === 'PKB-')) {
+      prefixInput.value = 'PKB-K2-';
+    }
+    if (card2) {
+      card2.style.borderColor = '#047857';
+      card2.style.background = '#ecfdf5';
+    }
+    if (card1) {
+      card1.style.borderColor = '#cbd5e1';
+      card1.style.background = '#ffffff';
+    }
+    if (activeBadge) {
+      activeBadge.textContent = 'Kloter Aktif: Kloter 2';
+      activeBadge.style.background = '#d1fae5';
+      activeBadge.style.color = '#065f46';
+    }
+    if (autoOpenRegistration) {
+      const regStatus = document.getElementById('cfg_registrationStatus');
+      const statusLabel = document.getElementById('cfg_statusLabel');
+      if (regStatus && !regStatus.checked) {
+        regStatus.checked = true;
+        if (statusLabel) statusLabel.textContent = 'Pendaftaran DIBUKA';
+      }
+    }
+  } else {
+    if (prefixInput && (!prefixInput.value || prefixInput.value === 'PKB-K2-')) {
+      prefixInput.value = 'PKB-';
+    }
+    if (card1) {
+      card1.style.borderColor = '#047857';
+      card1.style.background = '#ecfdf5';
+    }
+    if (card2) {
+      card2.style.borderColor = '#cbd5e1';
+      card2.style.background = '#ffffff';
+    }
+    if (activeBadge) {
+      activeBadge.textContent = 'Kloter Aktif: Kloter 1';
+      activeBadge.style.background = '#f1f5f9';
+      activeBadge.style.color = '#475569';
+    }
+  }
+  updateKloterPreview();
+}
+
+function updateKloterPreview() {
+  const prefixInput = document.getElementById('cfg_ticketPrefix');
+  const codeSpan = document.getElementById('cfg_nextCodeText');
+  const descSpan = document.getElementById('cfg_nextCodeDesc');
+  let prefix = prefixInput ? prefixInput.value.trim() : 'PKB-K2-';
+  if (prefix && !prefix.endsWith('-')) prefix += '-';
+
+  const nextCode = generateRegistrationCode('individu', 0, prefix);
+  if (codeSpan) codeSpan.textContent = nextCode;
+  if (descSpan) {
+    if (prefix.includes('K2')) {
+      descSpan.textContent = 'Otomatis mulai dari urutan 001 khusus untuk pendaftar Kloter 2.';
+    } else {
+      descSpan.textContent = 'Melanjutkan urutan pendaftar Kloter 1.';
+    }
+  }
+}
+window.handleKloterChange = handleKloterChange;
+window.updateKloterPreview = updateKloterPreview;
 
 async function saveSupabaseSettings() {
   const url = document.getElementById('cfg_supabaseUrl').value.trim();
