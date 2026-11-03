@@ -3886,7 +3886,7 @@ function generateRegistrationCode(type = 'individu', index = 0, forceKloter = nu
 
   const kloter = forceKloter || settings.active_kloter || '1';
   const isKloter2 = (String(kloter) === '2');
-  let prefix = settings.ticket_prefix || 'PKB-';
+  let prefix = isKloter2 ? 'PKB-K2-' : (settings.ticket_prefix || 'PKB-');
   if (!prefix.endsWith('-')) prefix += '-';
 
   const escapedPrefix = prefix.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -12201,9 +12201,8 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
   const card2 = document.getElementById('cardKloter2');
   const activeBadge = document.getElementById('activeKloterBadge');
 
-  if (prefixInput) prefixInput.value = 'PKB-';
-
   if (kloterNum === 2) {
+    if (prefixInput) prefixInput.value = 'PKB-K2-';
     if (card2) {
       card2.style.borderColor = '#047857';
       card2.style.background = '#ecfdf5';
@@ -12213,7 +12212,7 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
       card1.style.background = '#ffffff';
     }
     if (activeBadge) {
-      activeBadge.textContent = 'Kloter Aktif: Kloter 2 (Mulai No. 501)';
+      activeBadge.textContent = 'Kloter Aktif: Kloter 2 (Mulai PKB-K2-501)';
       activeBadge.style.background = '#d1fae5';
       activeBadge.style.color = '#065f46';
     }
@@ -12226,6 +12225,7 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
       }
     }
   } else {
+    if (prefixInput) prefixInput.value = 'PKB-';
     if (card1) {
       card1.style.borderColor = '#047857';
       card1.style.background = '#ecfdf5';
@@ -12235,7 +12235,7 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
       card2.style.background = '#ffffff';
     }
     if (activeBadge) {
-      activeBadge.textContent = 'Kloter Aktif: Kloter 1 (No. 001 - 500)';
+      activeBadge.textContent = 'Kloter Aktif: Kloter 1 (PKB-001 s/d 500)';
       activeBadge.style.background = '#f1f5f9';
       activeBadge.style.color = '#475569';
     }
@@ -12252,7 +12252,7 @@ function updateKloterPreview() {
   if (codeSpan) codeSpan.textContent = nextCode;
   if (descSpan) {
     if (isKloter2) {
-      descSpan.textContent = 'Mulai dari nomor PKB-501 khusus untuk pendaftar Kloter 2.';
+      descSpan.textContent = 'Mulai dari nomor PKB-K2-501 khusus untuk pendaftar Kloter 2.';
     } else {
       descSpan.textContent = 'Melanjutkan urutan pendaftar Kloter 1 (di bawah 501).';
     }
