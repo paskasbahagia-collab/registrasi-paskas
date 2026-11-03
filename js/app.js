@@ -1779,6 +1779,17 @@ function navigateTo(pageId) {
     }
   }
 
+  if (pageId === 'checkin') {
+    if (typeof resetCheckinView === 'function') resetCheckinView();
+    if (window.location.hash !== '#checkin') {
+      try { history.replaceState(null, '', '#checkin'); } catch (e) {}
+    }
+    setTimeout(() => {
+      const inp = document.getElementById('checkinSearchInput');
+      if (inp) inp.focus();
+    }, 250);
+  }
+
   if (['rekap', 'presensi', 'keuangan'].includes(pageId)) {
     if (window.location.hash !== `#${pageId}`) {
       try { history.replaceState(null, '', `#${pageId}`); } catch (e) {}
@@ -15309,6 +15320,8 @@ function handleHashRoute() {
     navigateTo('dashboard');
   } else if (hash === 'cektiket' || hash === 'searchticket' || hash === 'tiket') {
     openPublicTicketSearch();
+  } else if (hash === 'checkin' || hash === 'hadir' || hash === 'presensimandiri') {
+    navigateTo('checkin');
   }
 }
 
@@ -18901,3 +18914,500 @@ window.selectModalKontingen = selectModalKontingen;
 window.selectFrontdeskIndividuFromLiveSearch = selectFrontdeskIndividuFromLiveSearch;
 
 window.selectModalKontingenByIndex = selectModalKontingenByIndex;
+
+// =======================================================
+// MODUL PRESENSI MANDIRI JEMAAH HARI-H (SCAN QRIS / QR)
+// =======================================================
+let checkinDebounceTimer = null;
+let activeCheckinParticipant = null;
+
+function handleCheckinSearchInput(val) {
+  const q = (val || '').trim();
+  const clearBtn = document.getElementById('checkinClearBtn');
+  const resultsList = document.getElementById('checkinResultsList');
+  const loading = document.getElementById('checkinSearchLoading');
+  const helperHint = document.getElementById('checkinHelperHint');
+
+  if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
+
+  if (!q) {
+    if (resultsList) { resultsList.style.display = 'none'; resultsList.innerHTML = ''; }
+    if (loading) loading.style.display = 'none';
+    if (helperHint) helperHint.style.display = 'flex';
+    return;
+  }
+
+  if (helperHint) helperHint.style.display = 'none';
+  if (loading) loading.style.display = 'block';
+
+  clearTimeout(checkinDebounceTimer);
+  checkinDebounceTimer = setTimeout(async () => {
+    // Pastikan allRegistrations ada
+    if (!allRegistrations || allRegistrations.length === 0) {
+      if (window.dataService && typeof window.dataService.getRegistrations === 'function') {
+        allRegistrations = await window.dataService.getRegistrations();
+      }
+    }
+    if (loading) loading.style.display = 'none';
+    executeCheckinSearchFilter(q);
+  }, 180);
+}
+
+function clearCheckinSearch() {
+  const inp = document.getElementById('checkinSearchInput');
+  if (inp) {
+    inp.value = '';
+    inp.focus();
+  }
+  handleCheckinSearchInput('');
+}
+
+function executeCheckinSearchFilter(rawQuery) {
+  const resultsList = document.getElementById('checkinResultsList');
+  if (!resultsList) return;
+
+  const q = rawQuery.toLowerCase();
+  const cleanDigits = q.replace(/\D/g, '');
+  const list = allRegistrations || [];
+
+  const matched = list.filter(p => {
+    const name = (p.full_name || '').toLowerCase();
+    const code = (p.registration_code || '').toLowerCase();
+    const phone = (p.phone_number || '').replace(/\D/g, '');
+    const group = (p.group_name || '').toLowerCase();
+    const daerah = (p.daerah || '').toLowerCase();
+
+    // Cocokkan kode tiket
+    if (code === q || code.replace('pkb-', '') === q.replace('pkb-', '')) return true;
+    if (code.includes(q)) return true;
+    // Cocokkan nama
+    if (name.includes(q)) return true;
+    // Cocokkan no telepon
+    if (cleanDigits.length >= 4 && phone.includes(cleanDigits)) return true;
+    // Cocokkan rombongan atau daerah
+    if (group && group.includes(q)) return true;
+    if (daerah && daerah.includes(q)) return true;
+    return false;
+  }).slice(0, 15);
+
+  resultsList.style.display = 'block';
+
+  if (matched.length === 0) {
+    resultsList.innerHTML = `
+      <div style="padding: 24px 16px; text-align: center; color: #64748b;">
+        <i class="fa-solid fa-user-xmark" style="font-size: 28px; color: #94a3b8; margin-bottom: 8px; display: block;"></i>
+        <strong style="color: #334155; font-size: 14px;">Data Jemaah Tidak Ditemukan</strong>
+        <p style="font-size: 12.5px; margin: 4px 0 0;">Pastikan ejaan nama atau nomor tiket yang Anda masukkan sudah sesuai.</p>
+      </div>
+    `;
+    return;
+  }
+
+  resultsList.innerHTML = matched.map(p => {
+    const code = escapeHtml(p.registration_code || 'PKB');
+    const name = escapeHtml(p.full_name || '-');
+    const group = (p.group_name && p.group_name.trim() !== '' && p.group_name.trim() !== '-') ? escapeHtml(p.group_name) : 'Mandiri';
+    const daerah = escapeHtml(p.daerah || p.wilayah || '-');
+    const st = p.attendance_status || 'registered';
+    const isAttended = st === 'attended' || st === 'attended_late';
+    
+    const photoUrl = p.photo_url || p.photo_data || '';
+    const initial = (p.full_name || 'P').trim()[0].toUpperCase();
+
+    const avatarHtml = photoUrl
+      ? `<img src="${escapeHtml(photoUrl)}" alt="${name}" class="checkin-result-avatar" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'checkin-result-avatar-initial\\'>${initial}</div>';">`
+      : `<div class="checkin-result-avatar-initial">${initial}</div>`;
+
+    const statusBadge = isAttended
+      ? `<span style="font-size: 11px; font-weight: 800; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 999px;"><i class="fa-solid fa-check-double"></i> Hadir</span>`
+      : `<span style="font-size: 11px; font-weight: 700; background: #fefce8; color: #b45309; border: 1px solid #fef08a; padding: 2px 8px; border-radius: 999px;"><i class="fa-regular fa-clock"></i> Belum Check-in</span>`;
+
+    return `
+      <div class="checkin-result-item" onclick="selectCheckinParticipant(${p.id})">
+        ${avatarHtml}
+        <div class="checkin-result-info">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <div class="checkin-result-name">${name}</div>
+            ${statusBadge}
+          </div>
+          <div class="checkin-result-meta">
+            <span style="font-weight: 800; color: #b45309;">${code}</span> &bull; ${group} &bull; ${daerah}
+          </div>
+        </div>
+        <i class="fa-solid fa-chevron-right" style="color: #94a3b8; font-size: 13px;"></i>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectCheckinParticipant(participantId) {
+  const p = (allRegistrations || []).find(item => Number(item.id) === Number(participantId));
+  if (!p) {
+    showToast('Data peserta tidak ditemukan.', 'error');
+    return;
+  }
+  activeCheckinParticipant = p;
+
+  const st = p.attendance_status || 'registered';
+  const isAttended = st === 'attended' || st === 'attended_late';
+
+  // Jika SUDAH hadir, langsung buka Kartu Bukti Hadir Resmi!
+  if (isAttended) {
+    showCheckinSuccessPass(p, false);
+    return;
+  }
+
+  // Jika BELUM hadir, tampilkan kartu konfirmasi kehadiran
+  renderCheckinConfirmCard(p);
+}
+
+function renderCheckinConfirmCard(p) {
+  const searchCard = document.getElementById('checkinSearchCard');
+  const confirmCard = document.getElementById('checkinConfirmCard');
+  const successCard = document.getElementById('checkinSuccessCard');
+
+  if (searchCard) searchCard.style.display = 'none';
+  if (successCard) successCard.style.display = 'none';
+  if (!confirmCard) return;
+
+  confirmCard.style.display = 'block';
+
+  const code = escapeHtml(p.registration_code || 'PKB');
+  const name = escapeHtml(p.full_name || '-');
+  const group = (p.group_name && p.group_name.trim() !== '' && p.group_name.trim() !== '-') ? escapeHtml(p.group_name) : 'Mandiri';
+  const daerah = escapeHtml(p.daerah || p.wilayah || '-');
+  const photoUrl = p.photo_url || p.photo_data || '';
+  const initial = (p.full_name || 'P').trim()[0].toUpperCase();
+
+  const photoHtml = photoUrl
+    ? `<img src="${escapeHtml(photoUrl)}" alt="${name}" class="checkin-profile-photo" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'checkin-result-avatar-initial\\' style=\\'width:64px;height:64px;font-size:22px;\\'>${initial}</div>';">`
+    : `<div class="checkin-result-avatar-initial" style="width:64px;height:64px;font-size:22px;">${initial}</div>`;
+
+  // Cek apakah punya anggota rombongan lain yang belum hadir
+  let groupSectionHtml = '';
+  if (group !== 'Mandiri' && p.group_name) {
+    const members = (allRegistrations || []).filter(m => m.group_name === p.group_name && Number(m.id) !== Number(p.id));
+    const unAttendedMembers = members.filter(m => m.attendance_status !== 'attended' && m.attendance_status !== 'attended_late');
+    if (unAttendedMembers.length > 0) {
+      groupSectionHtml = `
+        <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 14px; padding: 14px; margin: 16px 0; text-align: left;">
+          <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-users text-emerald"></i>
+            <span>Check-in Sekaligus untuk Rombongan?</span>
+          </div>
+          <p style="font-size: 12px; color: #64748b; margin: 0 0 10px;">
+            Terdapat ${unAttendedMembers.length} anggota kafilah <strong>${group}</strong> lainnya yang belum check-in. Centang di bawah jika tiba bersamaan:
+          </p>
+          <div style="max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+            ${unAttendedMembers.map(m => `
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #334155; cursor: pointer; background: #ffffff; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <input type="checkbox" class="checkin-group-member-checkbox" value="${m.id}" checked>
+                <span style="font-weight: 700; color: #b45309;">${escapeHtml(m.registration_code || '')}</span>
+                <span>${escapeHtml(m.full_name)}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  confirmCard.innerHTML = `
+    <div class="checkin-confirm-badge-top">
+      <i class="fa-solid fa-user-check"></i>
+    </div>
+    <h2 style="font-size: 20px; font-weight: 900; color: #1e293b; margin: 0 0 6px;">Konfirmasi Kehadiran Jemaah</h2>
+    <p style="font-size: 13px; color: #64748b; margin: 0 0 16px;">Mohon pastikan identitas di bawah ini adalah data Anda:</p>
+
+    <div class="checkin-profile-box">
+      ${photoHtml}
+      <div style="flex: 1; min-width: 0;">
+        <span style="font-size: 12px; font-weight: 800; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 6px;">${code}</span>
+        <div style="font-size: 17px; font-weight: 900; color: #0f172a; margin: 4px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
+        <div style="font-size: 12.5px; color: #64748b;">Kafilah: <strong>${group}</strong> &bull; ${daerah}</div>
+      </div>
+    </div>
+
+    ${groupSectionHtml}
+
+    <button type="button" class="btn-checkin-large btn-checkin-primary" id="btnConfirmCheckinSubmit" onclick="confirmParticipantCheckin(${p.id})">
+      <i class="fa-solid fa-circle-check"></i>
+      <span>✅ Konfirmasi Kehadiran Saya Sekarang</span>
+    </button>
+
+    <div style="margin-top: 14px;">
+      <button type="button" class="btn btn-outline" style="border: none; color: #64748b; font-size: 13px;" onclick="resetCheckinView()">
+        <i class="fa-solid fa-arrow-left"></i> Bukan data saya, cari lagi
+      </button>
+    </div>
+  `;
+}
+
+async function confirmParticipantCheckin(participantId) {
+  const btn = document.getElementById('btnConfirmCheckinSubmit');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Mencatat Kehadiran ke Cloud...</span>';
+  }
+
+  try {
+    const list = allRegistrations || [];
+    const p = list.find(item => Number(item.id) === Number(participantId));
+    if (!p) throw new Error('Data peserta tidak ditemukan');
+
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    // 1. Simpan kehadiran peserta utama
+    if (window.dataService && typeof window.dataService.recordPresenceCheckIn === 'function') {
+      await window.dataService.recordPresenceCheckIn(participantId, false, nowIso);
+    }
+
+    // Update lokal
+    p.attendance_status = 'attended';
+    p.check_in_at = nowIso;
+
+    // 2. Jika ada anggota rombongan yang dicentang
+    const groupCheckboxes = document.querySelectorAll('.checkin-group-member-checkbox:checked');
+    if (groupCheckboxes && groupCheckboxes.length > 0) {
+      for (const cb of groupCheckboxes) {
+        const memId = Number(cb.value);
+        const mem = list.find(item => Number(item.id) === memId);
+        if (mem) {
+          if (window.dataService && typeof window.dataService.recordPresenceCheckIn === 'function') {
+            window.dataService.recordPresenceCheckIn(memId, false, nowIso).catch(err => console.warn('Group checkin error:', err));
+          }
+          mem.attendance_status = 'attended';
+          mem.check_in_at = nowIso;
+        }
+      }
+    }
+
+    // Refresh realtime & dashboard view
+    if (typeof refreshActiveScreenViews === 'function') refreshActiveScreenViews();
+
+    showToast(`Alhamdulillah! Kehadiran ${p.full_name} resmi tercatat.`, 'success');
+    showCheckinSuccessPass(p, true);
+  } catch (err) {
+    console.error('Checkin error:', err);
+    showToast('Gagal mencatat kehadiran: ' + (err.message || err), 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>Coba Lagi Konfirmasi Kehadiran</span>';
+    }
+  }
+}
+
+function showCheckinSuccessPass(p, isJustCheckedIn = false) {
+  const searchCard = document.getElementById('checkinSearchCard');
+  const confirmCard = document.getElementById('checkinConfirmCard');
+  const successCard = document.getElementById('checkinSuccessCard');
+
+  if (searchCard) searchCard.style.display = 'none';
+  if (confirmCard) confirmCard.style.display = 'none';
+  if (!successCard) return;
+
+  successCard.style.display = 'block';
+
+  const code = escapeHtml(p.registration_code || 'PKB');
+  const name = escapeHtml(p.full_name || '-');
+  const group = (p.group_name && p.group_name.trim() !== '' && p.group_name.trim() !== '-') ? escapeHtml(p.group_name) : 'Mandiri';
+  const daerah = escapeHtml(p.daerah || p.wilayah || '-');
+  const clothSize = escapeHtml(p.cloth_size || 'Belum Diisi');
+
+  // Info Kamar & Gedung
+  let roomText = 'Belum ditentukan';
+  if (p.building && p.building !== '-' && p.room_number && p.room_number !== '-') {
+    roomText = `${p.building} - Kamar ${p.room_number}${p.room_name && p.room_name !== '-' ? ` (${p.room_name})` : ''}`;
+  } else if (p.room_name && p.room_name !== '-') {
+    roomText = p.room_name;
+  }
+  roomText = escapeHtml(roomText);
+
+  // Waktu Hadir
+  let timeStr = 'Hari ini';
+  if (p.check_in_at) {
+    try {
+      const d = new Date(p.check_in_at);
+      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const dayName = days[d.getDay()];
+      const dateNum = d.getDate();
+      const monthName = months[d.getMonth()];
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      timeStr = `${dayName}, ${dateNum} ${monthName} ${year} &bull; Pukul ${hours}:${mins} WIB`;
+    } catch (e) {}
+  }
+
+  // Hitung status pembayaran
+  const fee = calculateParticipantFee(p);
+  const paid = Number(p.paid_amount || 0);
+  const remaining = Math.max(0, fee - paid);
+  const isVerified = p.payment_verified === 'verified';
+  const isFullyPaid = (paid > 0 && remaining <= 0) || p.payment_status === 'paid' || isVerified;
+
+  const photoUrl = p.photo_url || p.photo_data || '';
+  const initial = (p.full_name || 'P').trim()[0].toUpperCase();
+
+  const photoHtml = photoUrl
+    ? `<img src="${escapeHtml(photoUrl)}" alt="${name}" class="checkin-profile-photo" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'checkin-result-avatar-initial\\' style=\\'width:64px;height:64px;font-size:22px;\\'>${initial}</div>';">`
+    : `<div class="checkin-result-avatar-initial" style="width:64px;height:64px;font-size:22px;">${initial}</div>`;
+
+  // Bangun Narasi Ringkas Sesuai Kondisi
+  let narrativeHtml = '';
+  if (isFullyPaid) {
+    narrativeHtml = `
+      <div class="checkin-narrative-card checkin-narrative-lunas">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="color: #065f46;">✨ Ahlan wa Sahlan di PASKAS Bahagia!</span>
+          <span style="font-size: 11px; font-weight: 800; background: #059669; color: #ffffff; padding: 2px 8px; border-radius: 999px;"><i class="fa-solid fa-check"></i> LUNAS</span>
+        </div>
+        <p style="margin: 0 0 8px; color: #064e3b;">
+          Alhamdulillah, kehadiran Anda resmi tercatat pukul <strong>${timeStr}</strong> dan pembayaran telah <strong>LUNAS</strong>.
+        </p>
+        <p style="margin: 0; font-style: italic; color: #047857;">
+          Silakan tunjukkan layar ini ke meja depan untuk pengambilan ID Card, kaos ukuran <strong>${clothSize}</strong>, dan kunci <strong>${roomText}</strong>.
+        </p>
+      </div>
+    `;
+  } else {
+    narrativeHtml = `
+      <div class="checkin-narrative-card checkin-narrative-belum">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="color: #92400e;">✨ Ahlan wa Sahlan di PASKAS Bahagia!</span>
+          <span style="font-size: 11px; font-weight: 800; background: #d97706; color: #ffffff; padding: 2px 8px; border-radius: 999px;"><i class="fa-solid fa-circle-exclamation"></i> SISA TAGIHAN</span>
+        </div>
+        <p style="margin: 0 0 8px; color: #78350f;">
+          Alhamdulillah, kehadiran Anda resmi tercatat pukul <strong>${timeStr}</strong>.
+        </p>
+        <p style="margin: 0; font-style: italic; color: #92400e;">
+          Tercatat masih ada sisa tagihan sebesar <strong style="color: #b45309;">Rp ${remaining.toLocaleString('id-ID')}</strong>. Mohon kesediaannya mampir sejenak ke <strong>Meja Bendahara</strong> di samping untuk pelunasan dan pengambilan fasilitas kegiatan.
+        </p>
+      </div>
+    `;
+  }
+
+  successCard.innerHTML = `
+    <div class="checkin-success-badge-top">
+      <i class="fa-solid fa-check"></i>
+    </div>
+    <h2 class="checkin-success-title">ALHAMDULILLAH, ANDA RESMI HADIR</h2>
+    <div class="checkin-success-time-pill">
+      <i class="fa-solid fa-clock text-emerald"></i> ${timeStr}
+    </div>
+
+    <!-- Data Diri Peserta -->
+    <div class="checkin-profile-box">
+      ${photoHtml}
+      <div style="flex: 1; min-width: 0;">
+        <span style="font-size: 12px; font-weight: 800; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 6px;">${code}</span>
+        <div style="font-size: 18px; font-weight: 900; color: #0f172a; margin: 4px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
+        <div style="font-size: 12.5px; color: #64748b;">Kafilah: <strong>${group}</strong> &bull; ${daerah}</div>
+      </div>
+    </div>
+
+    <!-- Narasi Sesuai Status Pembayaran -->
+    ${narrativeHtml}
+
+    <!-- Ringkasan Fasilitas Meja Depan -->
+    <div class="checkin-facilities-grid">
+      <div class="checkin-facility-item">
+        <div class="checkin-facility-label"><i class="fa-solid fa-shirt text-amber"></i> Ukuran Kaos</div>
+        <div class="checkin-facility-val" style="color: #b45309;">${clothSize}</div>
+      </div>
+      <div class="checkin-facility-item">
+        <div class="checkin-facility-label"><i class="fa-solid fa-bed text-purple"></i> Penginapan &amp; Kamar</div>
+        <div class="checkin-facility-val" style="font-size: 13.5px; color: #0f172a;">${roomText}</div>
+      </div>
+    </div>
+
+    <!-- Tombol Navigasi Bawah -->
+    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+      <button type="button" class="btn btn-primary" onclick="resetCheckinView()" style="background: #047857; color: white; padding: 12px 20px; font-weight: 700;">
+        <i class="fa-solid fa-user-plus"></i> Presensi Peserta / Keluarga Lain
+      </button>
+      <button type="button" class="btn btn-outline" onclick="navigateTo('dashboard')" style="padding: 12px 20px;">
+        <i class="fa-solid fa-house"></i> Ke Beranda
+      </button>
+    </div>
+  `;
+}
+
+function resetCheckinView() {
+  const searchCard = document.getElementById('checkinSearchCard');
+  const confirmCard = document.getElementById('checkinConfirmCard');
+  const successCard = document.getElementById('checkinSuccessCard');
+  const inp = document.getElementById('checkinSearchInput');
+
+  if (confirmCard) { confirmCard.style.display = 'none'; confirmCard.innerHTML = ''; }
+  if (successCard) { successCard.style.display = 'none'; successCard.innerHTML = ''; }
+  if (searchCard) searchCard.style.display = 'block';
+
+  if (inp) {
+    inp.value = '';
+    handleCheckinSearchInput('');
+    setTimeout(() => inp.focus(), 150);
+  }
+}
+
+// =======================================================
+// MODAL QR CODE GERBANG / STANDING BANNER (A4 PRINT)
+// =======================================================
+function openGateQrModal() {
+  const modal = document.getElementById('modalGateQrCode');
+  const img = document.getElementById('gateQrImage');
+  const urlText = document.getElementById('gateQrTargetUrlText');
+  if (!modal || !img) return;
+
+  const targetUrl = window.location.origin + window.location.pathname + '#checkin';
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&format=png&data=${encodeURIComponent(targetUrl)}`;
+
+  img.src = qrApiUrl;
+  if (urlText) urlText.textContent = targetUrl;
+
+  modal.style.display = 'flex';
+}
+
+function closeGateQrModal() {
+  const modal = document.getElementById('modalGateQrCode');
+  if (modal) modal.style.display = 'none';
+}
+
+function printGateQrPoster() {
+  window.print();
+}
+
+function downloadGateQrImage() {
+  const targetUrl = window.location.origin + window.location.pathname + '#checkin';
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&data=${encodeURIComponent(targetUrl)}`;
+  const a = document.createElement('a');
+  a.href = qrApiUrl;
+  a.download = 'QR-Presensi-Paskas-Bahagia.png';
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function copyGateQrLink() {
+  const targetUrl = window.location.origin + window.location.pathname + '#checkin';
+  navigator.clipboard.writeText(targetUrl).then(() => {
+    showToast('Link Presensi Mandiri berhasil disalin ke clipboard!', 'success');
+  }).catch(() => {
+    prompt('Salin link presensi mandiri berikut:', targetUrl);
+  });
+}
+
+window.handleCheckinSearchInput = handleCheckinSearchInput;
+window.clearCheckinSearch = clearCheckinSearch;
+window.selectCheckinParticipant = selectCheckinParticipant;
+window.confirmParticipantCheckin = confirmParticipantCheckin;
+window.resetCheckinView = resetCheckinView;
+window.openGateQrModal = openGateQrModal;
+window.closeGateQrModal = closeGateQrModal;
+window.printGateQrPoster = printGateQrPoster;
+window.downloadGateQrImage = downloadGateQrImage;
+window.copyGateQrLink = copyGateQrLink;
+

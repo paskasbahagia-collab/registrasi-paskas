@@ -15349,3 +15349,395 @@ input:checked + .slider:before {
   transform: translateY(0);
 }
 
+/* ======================================================= */
+/* MODUL PRESENSI MANDIRI JEMAAH HARI-H (SCAN QRIS / QR)  */
+/* ======================================================= */
+.checkin-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+
+.checkin-header-banner {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.checkin-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #047857;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.checkin-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulse-green 1.8s infinite;
+}
+
+@keyframes pulse-green {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.checkin-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  margin: 0 0 4px;
+}
+
+.checkin-subtitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: #b45309;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin: 0 0 10px;
+}
+
+.checkin-desc {
+  font-size: 13.5px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 auto;
+  max-width: 520px;
+}
+
+.checkin-search-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.06);
+  margin-bottom: 20px;
+}
+
+.checkin-search-input-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.checkin-search-icon {
+  position: absolute;
+  left: 18px;
+  font-size: 18px;
+  color: #10b981;
+}
+
+.checkin-input {
+  width: 100%;
+  padding: 16px 46px 16px 50px;
+  font-size: 15px;
+  font-weight: 600;
+  border: 2px solid #cbd5e1;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #0f172a;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.checkin-input:focus {
+  border-color: #10b981;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+}
+
+.checkin-clear-btn {
+  position: absolute;
+  right: 14px;
+  background: #e2e8f0;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkin-results-list {
+  margin-top: 14px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.checkin-result-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.checkin-result-item:hover {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.checkin-result-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #10b981;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.checkin-result-avatar-initial {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #047857;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.checkin-result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.checkin-result-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.checkin-result-meta {
+  font-size: 12.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.checkin-helper-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: #64748b;
+  background: #fefce8;
+  border: 1px solid #fef08a;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+
+/* KARTU SUKSES RESMI */
+.checkin-success-card, .checkin-confirm-card {
+  background: #ffffff;
+  border: 2px solid #10b981;
+  border-radius: 24px;
+  padding: 28px 22px;
+  box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.25);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.checkin-confirm-card {
+  border-color: #f59e0b;
+  box-shadow: 0 20px 40px -10px rgba(245, 158, 11, 0.2);
+}
+
+.checkin-success-badge-top {
+  width: 68px;
+  height: 68px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 3px solid #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 16px;
+  box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.35);
+}
+
+.checkin-confirm-badge-top {
+  width: 68px;
+  height: 68px;
+  background: #fffbeb;
+  color: #d97706;
+  border: 3px solid #f59e0b;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 16px;
+  box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.25);
+}
+
+.checkin-success-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #064e3b;
+  margin: 0 0 6px;
+  letter-spacing: -0.3px;
+}
+
+.checkin-success-time-pill {
+  display: inline-block;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 999px;
+  margin-bottom: 20px;
+}
+
+.checkin-profile-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  margin-bottom: 18px;
+}
+
+.checkin-profile-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #d97706;
+  background: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.checkin-narrative-card {
+  border-radius: 16px;
+  padding: 16px 18px;
+  text-align: left;
+  margin-bottom: 20px;
+  line-height: 1.6;
+  font-size: 13.5px;
+}
+
+.checkin-narrative-lunas {
+  background: #ecfdf5;
+  border: 1.5px solid #a7f3d0;
+  color: #065f46;
+}
+
+.checkin-narrative-belum {
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  color: #92400e;
+}
+
+.checkin-facilities-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 22px;
+  text-align: left;
+}
+
+.checkin-facility-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.checkin-facility-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.checkin-facility-val {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.btn-checkin-large {
+  width: 100%;
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-checkin-large:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.btn-checkin-primary {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: #ffffff;
+  box-shadow: 0 10px 20px -5px rgba(5, 150, 105, 0.4);
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printableQrPoster, #printableQrPoster * {
+    visibility: visible;
+  }
+  #printableQrPoster {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 30px;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
