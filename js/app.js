@@ -15549,6 +15549,8 @@ function initAdminActivityTracker() {
 // PROTEKSI ANTI-INSPECT GUARD (Anti-F12, Anti-Right Click, Anti-DevTools)
 // ===================================================================
 function initAntiInspectGuard() {
+  // Dinonaktifkan: Bebas inspect dan F12 untuk kemudahan panitia/admin
+  return;
   // 1. Blokir Klik Kanan (Context Menu)
   document.addEventListener('contextmenu', function(e) {
     // Jika admin terverifikasi sedang login, beri keleluasaan
