@@ -12200,6 +12200,8 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
   const card1 = document.getElementById('cardKloter1');
   const card2 = document.getElementById('cardKloter2');
   const activeBadge = document.getElementById('activeKloterBadge');
+  const deadlineLabel = document.getElementById('lbl_kloterDeadlineContext');
+  const deadlineHint = document.getElementById('hint_kloterDeadline');
 
   if (kloterNum === 2) {
     if (prefixInput) prefixInput.value = 'PKB-K2-';
@@ -12215,6 +12217,15 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
       activeBadge.textContent = 'Kloter Aktif: Kloter 2 (Mulai PKB-K2-501)';
       activeBadge.style.background = '#d1fae5';
       activeBadge.style.color = '#065f46';
+    }
+    if (deadlineLabel) {
+      deadlineLabel.textContent = '(Batas Waktu Kloter 2)';
+      deadlineLabel.style.color = '#047857';
+      deadlineLabel.style.background = '#ecfdf5';
+      deadlineLabel.style.borderColor = '#a7f3d0';
+    }
+    if (deadlineHint) {
+      deadlineHint.textContent = 'Atur batas akhir tanggal & jam pendaftaran khusus untuk peserta Kloter 2.';
     }
     if (autoOpenRegistration) {
       const regStatus = document.getElementById('cfg_registrationStatus');
@@ -12238,6 +12249,15 @@ function handleKloterChange(kloterNum, autoOpenRegistration = true) {
       activeBadge.textContent = 'Kloter Aktif: Kloter 1 (PKB-001 s/d 500)';
       activeBadge.style.background = '#f1f5f9';
       activeBadge.style.color = '#475569';
+    }
+    if (deadlineLabel) {
+      deadlineLabel.textContent = '(Batas Waktu Kloter 1)';
+      deadlineLabel.style.color = '#475569';
+      deadlineLabel.style.background = '#f1f5f9';
+      deadlineLabel.style.borderColor = '#cbd5e1';
+    }
+    if (deadlineHint) {
+      deadlineHint.textContent = 'Batas akhir tanggal & jam pendaftaran untuk peserta Kloter 1.';
     }
   }
   updateKloterPreview();
