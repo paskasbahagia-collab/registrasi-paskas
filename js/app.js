@@ -986,6 +986,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Inisialisasi form kelompok & tanggal default
   initGroupMembers();
   setDefaultDates();
+  if (typeof handleIndividuAgeChange === 'function') handleIndividuAgeChange();
 
   // If page-settings is already active on load, ensure theme class is applied
   if (document.getElementById('page-settings')?.classList.contains('active')) {
@@ -1818,6 +1819,7 @@ function navigateTo(pageId) {
     if (window.location.hash !== '#registration') {
       try { history.replaceState(null, '', '#registration'); } catch (e) {}
     }
+    if (typeof handleIndividuAgeChange === 'function') handleIndividuAgeChange();
   }
 
   if (pageId === 'checkin') {
@@ -3147,11 +3149,14 @@ function validateIndividuStep(step) {
   }
 
   if (step === 3) {
+    const isClothDisabled = (document.querySelector('input[name="ind_clothSize"]:not([disabled])') === null);
+    const isKloter2 = (window.dataService?.getSettings()?.active_kloter === '2') || isClothDisabled;
     const rawAge = document.getElementById('ind_age')?.value;
     const parsedAge = parseInt(rawAge || '0', 10);
     const isUnder12 = !isNaN(parsedAge) && parsedAge > 0 && parsedAge <= 12;
 
-    if (!isUnder12) {
+    // Di Kloter 2 pemilihan seragam ditiadakan (bebas biaya, otomatis tanda '-') sehingga tidak wajib diisi
+    if (!isKloter2 && !isUnder12) {
       const clothEl = document.querySelector('input[name="ind_clothSize"]:checked');
       if (!clothEl) {
         showToast('Mohon pilih ukuran seragam kaos resmi Anda.', 'error');
@@ -3298,8 +3303,10 @@ function renderIndividuStepPreview() {
   const otherDeparture = document.getElementById('ind_transportDepartureOther')?.value.trim();
   const transportDeparture = (rawDeparture === 'Lainnya' && otherDeparture) ? `Lainnya (${otherDeparture})` : rawDeparture;
 
+  const isClothDisabled = (document.querySelector('input[name="ind_clothSize"]:not([disabled])') === null);
+  const isK2 = (window.dataService?.getSettings()?.active_kloter === '2') || isClothDisabled;
   const rawClothEl = document.querySelector('input[name="ind_clothSize"]:checked');
-  const clothSize = (age > 0 && age <= 12) ? '-' : (rawClothEl ? rawClothEl.value : 'L');
+  const clothSize = (isK2 || (age > 0 && age <= 12)) ? '-' : (rawClothEl ? rawClothEl.value : 'L');
   const medical = document.getElementById('ind_medical')?.value.trim() || 'Tidak Ada (Sehat)';
 
   container.innerHTML = `
@@ -3403,7 +3410,7 @@ function renderIndividuStepPreview() {
       <div class="summary-block-grid">
         <div class="summary-field-item">
           <span class="summary-field-label">Ukuran Baju Seragam</span>
-          <span class="summary-field-value badge-cloth-val">${escapeHtml(clothSize)}</span>
+          <span class="summary-field-value badge-cloth-val">${clothSize === '-' ? (isK2 ? '- (Ditiadakan / Kloter 2)' : '- (Anak ≤ 12 Thn)') : escapeHtml(clothSize)}</span>
         </div>
         <div class="summary-field-item">
           <span class="summary-field-label">Riwayat Kesehatan & Obat Rutin</span>
@@ -4062,8 +4069,10 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
     const otherDeparture = document.getElementById('ind_transportDepartureOther')?.value.trim();
     const transportDeparture = (rawDeparture === 'Lainnya' && otherDeparture) ? `Lainnya: ${otherDeparture}` : rawDeparture;
 
+    const isClothDisabled = (document.querySelector('input[name="ind_clothSize"]:not([disabled])') === null);
+    const isK2 = (window.dataService?.getSettings()?.active_kloter === '2') || isClothDisabled;
     const rawClothEl = document.querySelector('input[name="ind_clothSize"]:checked');
-    const clothSize = (age > 0 && age <= 12) ? '-' : (rawClothEl ? rawClothEl.value : 'L');
+    const clothSize = (isK2 || (age > 0 && age <= 12)) ? '-' : (rawClothEl ? rawClothEl.value : 'L');
     const medical = document.getElementById('ind_medical')?.value.trim() || 'Tidak Ada (Sehat)';
 
     // CEK DATA DUPLIKAT SECARA RAMAH (DAPAT KONFIRMASI DAFTARKAN ORANG LAIN)
@@ -4274,8 +4283,10 @@ function handleKelompokPreview(e) {
       return;
     }
 
+    const isK2Group = (window.dataService?.getSettings()?.active_kloter === '2');
     const gender = card.querySelector('.grp-coord-gender')?.value || 'Laki-laki';
-    const cloth = card.querySelector('.grp-coord-cloth')?.value || 'L';
+    const rawClothCoord = card.querySelector('.grp-coord-cloth')?.value || '-';
+    const cloth = isK2Group ? '-' : (rawClothCoord === '-' ? 'L' : rawClothCoord);
     const med = card.querySelector('.grp-coord-med')?.value.trim() || '';
     const phone = card.querySelector('.grp-coord-phone')?.value.trim() || '';
     if (!phone) {
@@ -4424,8 +4435,9 @@ function handleKelompokPreview(e) {
     const genderSelect = card.querySelector('.grp-member-gender');
     const genderRadio = card.querySelector('input[type="radio"]:checked');
     const gender = genderSelect ? genderSelect.value : (genderRadio ? genderRadio.value : 'Laki-laki');
-    const rawCloth = card.querySelector('.grp-member-cloth')?.value || 'L';
-    const cloth = (age > 0 && age <= 12) ? '-' : (rawCloth === '-' ? 'L' : rawCloth);
+    const isK2Member = (window.dataService?.getSettings()?.active_kloter === '2');
+    const rawCloth = card.querySelector('.grp-member-cloth')?.value || '-';
+    const cloth = (isK2Member || (age > 0 && age <= 12)) ? '-' : (rawCloth === '-' ? 'L' : rawCloth);
     const med = card.querySelector('.grp-member-med')?.value.trim() || '';
     const phone = card.querySelector('.grp-member-phone')?.value.trim() || primaryLeaderPhone;
 
@@ -5064,7 +5076,15 @@ function syncAllGroupGuardians() {
         noneOpt.textContent = '- (Anak ≤12 th)';
         clothSelect.insertBefore(noneOpt, clothSelect.firstChild);
       }
-      if (age > 0 && age <= 12) {
+      const isK2Active = (window.dataService?.getSettings()?.active_kloter === '2');
+      if (isK2Active) {
+        clothSelect.value = '-';
+        clothSelect.disabled = true;
+        clothSelect.title = 'Kloter 2 tidak mendapatkan seragam kaos';
+        clothSelect.style.background = '#334155';
+        clothSelect.style.color = '#94a3b8';
+        clothSelect.style.cursor = 'not-allowed';
+      } else if (age > 0 && age <= 12) {
         clothSelect.value = '-';
         clothSelect.disabled = true;
         clothSelect.title = 'Peserta anak usia 12 tahun ke bawah tidak mendapatkan seragam kaos';
