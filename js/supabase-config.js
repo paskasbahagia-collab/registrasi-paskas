@@ -158,11 +158,10 @@ class PaskasDataService {
       try {
         const parsed = JSON.parse(existing);
         if (Array.isArray(parsed)) {
-          const testCodes = new Set(['PKB-001', 'PKB-002', 'PKB-003', 'PKB-004', 'PKB-IND-2026-001']);
+          const testCodes = new Set(['PKB-IND-2026-001']);
           const cleaned = parsed.filter(p => p && !testCodes.has(p.registration_code) && p.full_name !== 'Ustadz Ahmad Fauzi');
           if (cleaned.length !== parsed.length) {
             safeStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(cleaned));
-            ['PKB-001', 'PKB-002', 'PKB-003', 'PKB-004'].forEach(code => this.recordDeletedCode(code));
           }
         }
       } catch (e) { }
