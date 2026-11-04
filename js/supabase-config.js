@@ -9,8 +9,8 @@
 // ===================================================================
 // KREDENSIAL DEFAULT CLOUD SUPABASE (Otomatis Aktif Saat Deploy Vercel)
 // ===================================================================
-const DEFAULT_SUPABASE_URL = 'https://cyqtyobzhqzmelmmpbdb.supabase.co'; // Project URL Supabase
-const DEFAULT_SUPABASE_KEY = 'sb_publishable_B5TyssfXopumAzcLVGOQSw_GaHtGm5V'; // Project Publishable Key
+const DEFAULT_SUPABASE_URL = 'https://eruvdulwzwdzpjtwlxba.supabase.co'; // Project URL Supabase Baru (PASKAS-BAHAGIA 2026)
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_wiaEW01xPPFuZxX0aAJpIA_XExBKVQ2'; // Project Publishable Key Baru
 
 const STORAGE_KEYS = {
   SUPABASE_URL: 'paskas_supabase_url',
@@ -104,6 +104,11 @@ class PaskasDataService {
       return this.supabaseClient;
     }
     let savedUrl = safeStorage.getItem(STORAGE_KEYS.SUPABASE_URL);
+    if (savedUrl && (savedUrl.includes('cyqtyobzhqzmelmmpbdb') || !savedUrl.includes('eruvdulwzwdzpjtwlxba'))) {
+      safeStorage.removeItem(STORAGE_KEYS.SUPABASE_URL);
+      safeStorage.removeItem(STORAGE_KEYS.SUPABASE_KEY);
+      savedUrl = null;
+    }
     if (!savedUrl || !savedUrl.startsWith('https://') || savedUrl.length < 15) {
       safeStorage.removeItem(STORAGE_KEYS.SUPABASE_URL);
       savedUrl = DEFAULT_SUPABASE_URL;

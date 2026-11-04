@@ -1565,7 +1565,7 @@ function renderUniformShowcaseHTML() {
               </div>
               <span class="uniform-size-guide-sub">Kaos Paskas &bull; Model 01</span>
             </div>
-            <button type="button" class="btn-visual-guide btn-visual-guide-ikhwan" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-kaos-ikhwan.png', 'Panduan Visual Size Chart Kaos Ikhwan')">
+            <button type="button" class="btn-visual-guide btn-visual-guide-ikhwan" onclick="openUniformImageLightbox('https://eruvdulwzwdzpjtwlxba.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-kaos-ikhwan.png', 'Panduan Visual Size Chart Kaos Ikhwan')">
               <i class="fa-solid fa-expand"></i>
               <span>Panduan Visual HD</span>
             </button>
@@ -1592,7 +1592,7 @@ function renderUniformShowcaseHTML() {
               </div>
               <span class="uniform-size-guide-sub">Rompi / Outer &bull; Model 02</span>
             </div>
-            <button type="button" class="btn-visual-guide btn-visual-guide-akhwat" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-rompi-akhwat.png', 'Panduan Visual Size Chart Rompi Akhwat')">
+            <button type="button" class="btn-visual-guide btn-visual-guide-akhwat" onclick="openUniformImageLightbox('https://eruvdulwzwdzpjtwlxba.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-rompi-akhwat.png', 'Panduan Visual Size Chart Rompi Akhwat')">
               <i class="fa-solid fa-expand"></i>
               <span>Panduan Visual HD</span>
             </button>
@@ -8227,7 +8227,7 @@ function viewAttendeeDetail(id) {
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
         <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
           ${attendee.photo_url || attendee.photo_data ? `
-            <img src="${attendee.photo_url || attendee.photo_data}" style="width: 70px; height: 88px; object-fit: cover; object-position: top center; border-radius: 8px; border: 2px solid #fbbf24; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openPhotoPreviewLightbox('${(attendee.photo_url || attendee.photo_data).replace(/'/g, "\\'")}', '${escapeHtml(attendee.full_name).replace(/'/g, "\\'")}')" title="Klik untuk perbesar pas foto">
+            <img src="${attendee.photo_url || attendee.photo_data}" loading="lazy" style="width: 70px; height: 88px; object-fit: cover; object-position: top center; border-radius: 8px; border: 2px solid #fbbf24; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onclick="openPhotoPreviewLightbox('${(attendee.photo_url || attendee.photo_data).replace(/'/g, "\\'")}', '${escapeHtml(attendee.full_name).replace(/'/g, "\\'")}')" title="Klik untuk perbesar pas foto">
           ` : ''}
           <div>
             <span class="badge-table-code">${attendee.registration_code}</span>
@@ -14664,7 +14664,7 @@ function renderSettingsCardsManager() {
                     <label class="form-label" style="font-size: 11.5px; margin: 0; font-weight: 700; color: #0284c7;">
                       <i class="fa-solid fa-ruler-combined"></i> Panduan Standar Ukuran Baju (Size Chart) Ikhwan
                     </label>
-                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-kaos-ikhwan.png', 'Panduan Visual Size Chart Kaos Ikhwan')" style="padding: 2px 8px; font-size: 10.5px; border-radius: 5px; background: #f0f9ff; border-color: #bae6fd; color: #0369a1; cursor: pointer;">
+                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="openUniformImageLightbox('https://eruvdulwzwdzpjtwlxba.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-kaos-ikhwan.png', 'Panduan Visual Size Chart Kaos Ikhwan')" style="padding: 2px 8px; font-size: 10.5px; border-radius: 5px; background: #f0f9ff; border-color: #bae6fd; color: #0369a1; cursor: pointer;">
                       <i class="fa-regular fa-image"></i> Lihat Gambar Panduan Kaos
                     </button>
                   </div>
@@ -14722,7 +14722,7 @@ function renderSettingsCardsManager() {
                     <label class="form-label" style="font-size: 11.5px; margin: 0; font-weight: 700; color: #db2777;">
                       <i class="fa-solid fa-ruler-combined"></i> Panduan Standar Ukuran Baju (Size Chart) Akhwat
                     </label>
-                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="openUniformImageLightbox('https://cyqtyobzhqzmelmmpbdb.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-rompi-akhwat.png', 'Panduan Visual Size Chart Rompi Akhwat')" style="padding: 2px 8px; font-size: 10.5px; border-radius: 5px; background: #fdf2f8; border-color: #fbcfe8; color: #be185d; cursor: pointer;">
+                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="openUniformImageLightbox('https://eruvdulwzwdzpjtwlxba.supabase.co/storage/v1/object/public/paskas%20bahagia/size-charts/size-chart-rompi-akhwat.png', 'Panduan Visual Size Chart Rompi Akhwat')" style="padding: 2px 8px; font-size: 10.5px; border-radius: 5px; background: #fdf2f8; border-color: #fbcfe8; color: #be185d; cursor: pointer;">
                       <i class="fa-regular fa-image"></i> Lihat Gambar Panduan Rompi
                     </button>
                   </div>
@@ -16218,7 +16218,7 @@ function renderPresensiTable() {
       : '<i class="fa-solid fa-venus" style="color: #ec4899;"></i>';
 
     const avatarHtml = p.photo_url 
-      ? `<img src="${p.photo_url}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid #10b981;">`
+      ? `<img src="${p.photo_url}" loading="lazy" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid #10b981;">`
       : `<div style="width: 34px; height: 34px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #475569;">${(p.full_name || 'P')[0]}</div>`;
 
     return `
