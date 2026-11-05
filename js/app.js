@@ -8284,7 +8284,7 @@ function viewAttendeeDetail(id) {
       <div class="ticket-item">
         <span class="item-label">Tahun Bergabung Paskas</span>
         <strong class="item-val" style="color: #38bdf8;">
-          ${attendee.join_year ? `<i class="fa-solid fa-flag" style="color:#38bdf8; margin-right:4px;"></i> Tahun ${attendee.join_year}` : '<span style="color: #64748b; font-weight: normal;">-</span>'}
+          ${attendee.join_year ? `<i class="fa-solid fa-flag" style="color:#38bdf8; margin-right:4px;"></i> Tahun ${attendee.join_year}` : '<span style="color: #94a3b8; font-size: 12.5px; font-weight: 600;"><i class="fa-solid fa-circle-minus" style="color: #64748b; margin-right: 4px;"></i> Belum Diisi</span>'}
         </strong>
       </div>
       <div class="ticket-item" style="grid-column: 1 / -1;">
