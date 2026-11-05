@@ -4130,6 +4130,10 @@ async function handleIndividuFinalSubmit(e, bypassDuplicate = false) {
       building: alloc.building,
       full_name: fullName,
       age: age > 0 ? age : null,
+      join_year: (() => {
+        const jy = parseInt(document.getElementById('ind_joinYear')?.value, 10);
+        return (!isNaN(jy) && jy > 0) ? jy : null;
+      })(),
       is_child: isChild,
       guardian_name: isChild ? (document.getElementById('ind_guardianName')?.value.trim() || null) : null,
       gender: gender,
@@ -8001,7 +8005,10 @@ function renderRekapTable() {
             ${isMale ? '<i class="fa-solid fa-mars"></i> L' : '<i class="fa-solid fa-venus"></i> P'}
           </span>
         </td>
-        <td style="text-align: center;">${ageDisplay}</td>
+        <td style="text-align: center;">
+          ${ageDisplay}
+          ${item.join_year ? `<div style="font-size: 10px; color: #0284c7; font-weight: 700; margin-top: 2px;" title="Tahun Bergabung Paskas"><i class="fa-solid fa-flag"></i> ${item.join_year}</div>` : ''}
+        </td>
         <td>
           <strong style="color: #0f172a; font-weight: 700;"><i class="fa-solid fa-location-dot" style="color: #d97706; font-size: 11px;"></i> ${escapeHtml(item.wilayah)}</strong>
           ${item.daerah ? `<br><small style="color: #64748b; font-weight: 600;"><i class="fa-solid fa-city" style="font-size: 9px;"></i> ${escapeHtml(item.daerah)}</small>` : ''}
@@ -8275,6 +8282,12 @@ function viewAttendeeDetail(id) {
         </strong>
       </div>
       <div class="ticket-item">
+        <span class="item-label">Tahun Bergabung Paskas</span>
+        <strong class="item-val" style="color: #38bdf8;">
+          ${attendee.join_year ? `<i class="fa-solid fa-flag" style="color:#38bdf8; margin-right:4px;"></i> Tahun ${attendee.join_year}` : '<span style="color: #64748b; font-weight: normal;">-</span>'}
+        </strong>
+      </div>
+      <div class="ticket-item" style="grid-column: 1 / -1;">
         <span class="item-label">Alokasi Gedung / Kamar</span>
         <strong class="item-val" style="color: ${attendee.room_name || attendee.room_number ? '#8a6a24' : '#554d3f'};">
           ${attendee.building ? attendee.building + ' &bull; ' : ''}${attendee.room_name || (attendee.room_number ? 'Kamar ' + attendee.room_number : 'Belum Disetting')}
