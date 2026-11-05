@@ -11622,13 +11622,78 @@ function exportToExcel() {
     return null;
   });
   XLSX.utils.book_append_sheet(workbook, ws8, 'Rekap Pembayaran');
+  // ===================================================================
+  // 9. HALAMAN KESEMBILAN: REKAP SANTRI & PESERTA DI BAWAH UMUR (<15 TAHUN)
+  // ===================================================================
+  const s9Headers = [
+    'No', 'Kode Tiket', 'Nama Santri / Anak', 'Usia', 'Kategori Usia', 
+    'Jenis Kelamin', 'Orang Tua / Wali Pendamping', 'Wilayah Kafilah', 'Daerah / Kota', 
+    'Rombongan / Kelompok', 'Gedung / Asrama', 'Kamar', 'Ukuran Baju', 
+    'No WhatsApp Orang Tua', 'No HP Darurat', 'Tgl Kedatangan', 'Jam Datang', 
+    'Transport Datang', 'Tgl Kepulangan', 'Jam Pulang', 'Transport Pulang', 
+    'Riwayat Medis', 'Tarif Infaq', 'Status Pembayaran', 'Catatan Khusus'
+  ];
+
+  const underageSantriList = sourceData.filter(item => {
+    const age = parseInt(item.age, 10);
+    return item.is_child || (!isNaN(age) && age > 0 && age < 15);
+  });
+
+  // Urutkan berdasarkan kode tiket numerik
+  underageSantriList.sort((a, b) => (a.registration_code || '').localeCompare(b.registration_code || '', undefined, { numeric: true }));
+
+  const s9Rows = [s9Headers];
+  underageSantriList.forEach((item, idx) => {
+    const ageVal = item.age ? parseInt(item.age, 10) : null;
+    const catLabel = (ageVal !== null && ageVal < 5) ? 'Balita (< 5 th)' : 'Anak-anak (5-14 th)';
+    const roomDisp = item.room_name ? `${item.room_name} (No. ${item.room_number || '-'})` : (item.room_number || 'Ikut Orang Tua');
+    const finStatus = (item.payment_status === 'paid' || item.payment_status === 'lunas') ? 'Lunas' : ((item.paid_amount > 0) ? 'Cicilan' : 'Belum Bayar');
+    const feeDisp = item.total_fee ? `Rp ${(Number(item.total_fee) || 0).toLocaleString('id-ID')}` : ((ageVal !== null && ageVal < 5) ? 'Rp 50.000' : 'Rp 100.000');
+
+    s9Rows.push([
+      idx + 1,
+      sanitizeSpreadsheetValue(item.registration_code),
+      sanitizeSpreadsheetValue(item.full_name),
+      ageVal !== null ? `${ageVal} Th` : '< 15 Th',
+      catLabel,
+      sanitizeSpreadsheetValue(item.gender),
+      sanitizeSpreadsheetValue(item.guardian_name || '-'),
+      sanitizeSpreadsheetValue(item.wilayah),
+      sanitizeSpreadsheetValue(item.daerah || '-'),
+      sanitizeSpreadsheetValue(item.group_name || '-'),
+      sanitizeSpreadsheetValue(item.building || 'Ikut Orang Tua'),
+      sanitizeSpreadsheetValue(roomDisp),
+      sanitizeSpreadsheetValue((ageVal !== null && ageVal <= 12) ? '- (Anak ≤ 12 th)' : (item.cloth_size || '-')),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      sanitizeSpreadsheetValue(item.emergency_phone || '-'),
+      sanitizeSpreadsheetValue(item.arrival_date || '-'),
+      sanitizeSpreadsheetValue(item.arrival_time || '10:00'),
+      sanitizeSpreadsheetValue(item.transport_arrival || '-'),
+      sanitizeSpreadsheetValue(item.departure_date || '-'),
+      sanitizeSpreadsheetValue(item.departure_time || '16:00'),
+      sanitizeSpreadsheetValue(item.transport_departure || '-'),
+      sanitizeSpreadsheetValue(item.medical_history || 'Sehat'),
+      feeDisp,
+      finStatus,
+      sanitizeSpreadsheetValue(item.notes || '-')
+    ]);
+  });
+
+  const ws9 = XLSX.utils.aoa_to_sheet(s9Rows);
+  formatSheet(ws9, s9Rows, [0], 'B45309', (rIdx, cIdx, val, row) => {
+    if (cIdx === 0 || cIdx === 1 || cIdx === 3 || cIdx === 4 || cIdx === 5 || cIdx === 12 || cIdx === 22 || cIdx === 23) {
+      return createDataStyle(rIdx % 2 === 0, 'center');
+    }
+    return null;
+  });
+  XLSX.utils.book_append_sheet(workbook, ws9, 'Santri Di Bawah Umur');
 
   // ===================================================================
   // UNDUH FILE WORKBOOK EXCEL LENGKAP 8 HALAMAN
   // ===================================================================
   const dateStr = new Date().toISOString().split('T')[0];
   XLSX.writeFile(workbook, `Rekap_Peserta_Paskas_Bahagia_${dateStr}.xlsx`);
-  showToast('File Excel 8 halaman lengkap (termasuk Rekap Pembayaran & Rekapitulasi Wilayah) berhasil diunduh!', 'success');
+  showToast('File Excel 9 halaman lengkap (termasuk Santri Di Bawah Umur & Rekap Pembayaran) berhasil diunduh!', 'success');
 }
 
 function exportToCSV() {
