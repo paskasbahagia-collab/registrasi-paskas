@@ -8490,6 +8490,10 @@ function openEditAttendeeModal(id) {
     elGender.value = isFemaleGender(attendee.gender) ? 'Perempuan' : 'Laki-laki';
   }
   document.getElementById('editAttAge').value = attendee.age || '';
+  const elJoinYear = document.getElementById('editAttJoinYear');
+  if (elJoinYear) {
+    elJoinYear.value = attendee.join_year || '';
+  }
 
   const regType = attendee.registration_type || 'individu';
   document.getElementById('editAttRegType').value = regType;
@@ -8564,6 +8568,9 @@ async function submitEditAttendee(e) {
     const ageNum = parseInt(ageRaw, 10);
     const age = isNaN(ageNum) ? null : ageNum;
     const isChild = (age !== null && age > 0 && age < 15);
+    const joinYearRaw = document.getElementById('editAttJoinYear')?.value;
+    const joinYearNum = parseInt(joinYearRaw, 10);
+    const joinYear = isNaN(joinYearNum) ? null : joinYearNum;
 
     const regType = document.getElementById('editAttRegType')?.value || 'individu';
     const groupName = (document.getElementById('editAttGroupName')?.value || '').trim();
@@ -8616,7 +8623,8 @@ async function submitEditAttendee(e) {
       departure_time: departureTime,
       transport_departure: transportDeparture,
       medical_history: medicalHistory,
-      notes: notes
+      notes: notes,
+      join_year: joinYear
     };
 
     // 1. Simpan ke Supabase & LocalStorage via PaskasDataService

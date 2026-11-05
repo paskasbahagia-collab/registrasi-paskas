@@ -6182,6 +6182,13 @@ CREATE TABLE IF NOT EXISTS registrations (
 
               <div class="form-group">
                 <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+                  Tahun Bergabung Paskas
+                </label>
+                <input type="number" id="editAttJoinYear" class="form-input" min="2000" max="2030" placeholder="Contoh: 2021" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
+              </div>
+
+              <div class="form-group">
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
                   Tipe Pendaftaran
                 </label>
                 <select id="editAttRegType" class="form-input" onchange="toggleEditGroupFields()" style="background: #0f172a; color: #f8fafc; border-color: rgba(255,255,255,0.15);">
@@ -7125,8 +7132,8 @@ CREATE TABLE IF NOT EXISTS registrations (
 
   <!-- Scripts -->
   <script src="js/ticket-template-base64.js?v=1.0"></script>
-  <script src="js/supabase-config.js?v=212.0"></script>
-  <script src="js/app.js?v=212.0"></script>
+  <script src="js/supabase-config.js?v=213.0"></script>
+  <script src="js/app.js?v=213.0"></script>
 
     <!-- ===================================================== -->
     <!-- MODAL IN-APP PILIH KONTINGEN (MENGGANTIKAN POPUP OS) -->
