@@ -1894,40 +1894,40 @@
           <!-- 4-Pillar Infographic Model: Presensi Edition (Matches Rekap Page 1-to-1) -->
           <div class="presensi-infographic-deck">
 
-            <!-- PILLAR 01: TOTAL TERDAFTAR -->
+            <!-- PILLAR 01: PESERTA AKTIF (ACTIVE ATTENDEES) -->
             <div class="infographic-pillar-card pillar-1">
               <div class="pillar-watermark-num">1</div>
               <div class="pillar-inner">
                 <div class="pillar-top-header">
-                  <h3 class="pillar-main-title">TOTAL TERDAFTAR</h3>
-                  <span class="pillar-eng-subtitle">OFFICIAL ROSTER</span>
+                  <h3 class="pillar-main-title">PESERTA AKTIF</h3>
+                  <span class="pillar-eng-subtitle">ACTIVE ATTENDEES</span>
                 </div>
 
                 <div class="pillar-lead-metric-box">
-                  <div class="pillar-lead-val" id="presensiStatTotal">0 <small class="pillar-unit">Jiwa</small></div>
-                  <div class="pillar-lead-sub" id="presensiStatSub">Seluruh pendaftar resmi acara</div>
+                  <div class="pillar-lead-val" id="presensiStatTotal">0 <small class="pillar-unit">Jiwa Aktif</small></div>
+                  <div class="pillar-lead-sub" id="presensiStatSub">Peserta terkonfirmasi siap hadir</div>
                 </div>
 
                 <div class="pillar-subpods">
                   <div class="pillar-subpod">
                     <div class="subpod-icon-circle green-1">
-                      <i class="fa-solid fa-user-check"></i>
+                      <i class="fa-solid fa-users"></i>
                     </div>
                     <div class="subpod-body">
-                      <div class="subpod-title">Pendaftar Mandiri</div>
-                      <div class="subpod-val" id="presSubMandiri">0 Orang</div>
-                      <div class="subpod-desc">Peserta perorangan resmi</div>
+                      <div class="subpod-title">Total Roster Awal</div>
+                      <div class="subpod-val" id="presSubTotalRoster">0 Orang</div>
+                      <div class="subpod-desc" id="presSubRosterDesc">Pendaftar resmi masuk</div>
                     </div>
                   </div>
 
-                  <div class="pillar-subpod">
-                    <div class="subpod-icon-circle green-1">
-                      <i class="fa-solid fa-users-line"></i>
+                  <div class="pillar-subpod" style="border-left: 2.5px solid #f87171; background: rgba(254, 242, 242, 0.65);">
+                    <div class="subpod-icon-circle" style="background: #fee2e2; color: #dc2626;">
+                      <i class="fa-solid fa-ban"></i>
                     </div>
                     <div class="subpod-body">
-                      <div class="subpod-title">Peserta Rombongan</div>
-                      <div class="subpod-val" id="presSubRombongan">0 Orang</div>
-                      <div class="subpod-desc" id="presSubKafilahCount">0 Kafilah terdaftar</div>
+                      <div class="subpod-title" style="color: #991b1b; font-weight: 700;">Batal / Mundur</div>
+                      <div class="subpod-val" id="presSubCancelledCount" style="color: #dc2626; font-weight: 800;">0 Orang</div>
+                      <div class="subpod-desc" style="color: #b91c1c; font-weight: 600;">Dialihkan ke refund</div>
                     </div>
                   </div>
                 </div>
@@ -3278,17 +3278,17 @@
           <!-- ======================================================= -->
           <div class="rekap-infographic-deck">
 
-            <!-- PILLAR 01: KEHADIRAN (ATTENDEES) -->
+            <!-- PILLAR 01: PESERTA AKTIF (ACTIVE ATTENDEES) -->
             <div class="infographic-pillar-card pillar-1">
               <div class="pillar-watermark-num">1</div>
               <div class="pillar-inner">
                 <div class="pillar-top-header">
-                  <h3 class="pillar-main-title">KEHADIRAN</h3>
-                  <span class="pillar-eng-subtitle">TOTAL ATTENDEES</span>
+                  <h3 class="pillar-main-title">PESERTA AKTIF</h3>
+                  <span class="pillar-eng-subtitle">ACTIVE ATTENDEES</span>
                 </div>
 
                 <div class="pillar-lead-metric-box">
-                  <div class="pillar-lead-val" id="statTotalPeserta">0 <small class="pillar-unit">Jiwa</small></div>
+                  <div class="pillar-lead-val" id="statTotalPeserta">0 <small class="pillar-unit">Jiwa Aktif</small></div>
                   <div class="pillar-lead-sub" id="statSubPeserta">0 Orang Mandiri &bull; 0 Orang Rombongan</div>
                 </div>
 
@@ -3300,7 +3300,7 @@
                     <div class="subpod-body">
                       <div class="subpod-title">Pendaftar Mandiri</div>
                       <div class="subpod-val" id="infographicIndividu">0 Orang</div>
-                      <div class="subpod-desc">Peserta perorangan terdata</div>
+                      <div class="subpod-desc">Peserta perorangan aktif</div>
                     </div>
                   </div>
 
@@ -3311,7 +3311,7 @@
                     <div class="subpod-body">
                       <div class="subpod-title">Peserta Rombongan</div>
                       <div class="subpod-val" id="infographicKelompok">0 Orang</div>
-                      <div class="subpod-desc" id="infographicKafilahCount">0 Kafilah terdaftar</div>
+                      <div class="subpod-desc" id="infographicKafilahCount">0 Kafilah aktif</div>
                     </div>
                   </div>
                 </div>

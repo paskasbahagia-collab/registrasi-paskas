@@ -7625,27 +7625,32 @@ function updateSummaryMetrics() {
     activeList = allRegistrations.filter(r => isKloter2Participant(r));
   }
 
-  const totalOrang = activeList.length;
-  const individuCount = activeList.filter(r => r.registration_type === 'individu').length;
-  const kelompokMemberCount = activeList.filter(r => r.registration_type === 'kelompok').length;
+  // Pisahkan peserta aktif vs mengundurkan diri (batal)
+  const cancelledInFilter = activeList.filter(r => r.attendance_status === 'cancelled').length;
+  const activeOnlyList = activeList.filter(r => r.attendance_status !== 'cancelled');
+  const totalOrang = activeOnlyList.length;
+  const totalRosterInFilter = activeList.length;
 
-  // Hitung jumlah rombongan / kafilah unik
+  const individuCount = activeOnlyList.filter(r => r.registration_type === 'individu').length;
+  const kelompokMemberCount = activeOnlyList.filter(r => r.registration_type === 'kelompok').length;
+
+  // Hitung jumlah rombongan / kafilah unik aktif
   const uniqueGroupNames = Array.from(new Set(
-    activeList
+    activeOnlyList
       .filter(r => r.registration_type === 'kelompok' && r.group_name)
       .map(r => r.group_name)
   ));
   const totalKafilah = uniqueGroupNames.length;
 
-  const female = activeList.filter(r => isFemaleGender(r.gender)).length;
-  const male = activeList.length - female;
+  const female = activeOnlyList.filter(r => isFemaleGender(r.gender)).length;
+  const male = activeOnlyList.length - female;
 
   const malePct = totalOrang > 0 ? Math.round((male / totalOrang) * 100) : 0;
   const femalePct = totalOrang > 0 ? (100 - malePct) : 0;
 
-  // Group Wilayah unik dan hitung terbanyak (nama sama langsung digabungkan jumlahnya)
+  // Group Wilayah unik dan hitung terbanyak (hanya peserta aktif)
   const wilayahMap = {};
-  activeList.forEach(r => {
+  activeOnlyList.forEach(r => {
     if (r.wilayah) {
       const w = normalizeWilayahName(r.wilayah);
       wilayahMap[w] = (wilayahMap[w] || 0) + 1;
@@ -7662,13 +7667,13 @@ function updateSummaryMetrics() {
     }
   }
 
-  // Top Cloth Size & Kebutuhan Kaos Riil (Mengecualikan Anak <= 12 Tahun dan Kloter 2 yang tidak dapat kaos)
+  // Top Cloth Size & Kebutuhan Kaos Riil (HANYA peserta aktif, mengecualikan yang batal)
   const VALID_CLOTH_SIZES = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'];
   const clothCounts = {};
   let totalClothPcs = 0;
   let childWithoutCloth = 0;
 
-  activeList.forEach(r => {
+  activeOnlyList.forEach(r => {
     const sz = (r.cloth_size || '').trim();
     const isChild = (r.age && r.age > 0 && r.age <= 12) || sz === '-' || !sz;
     if (isChild || sz === '-') {
@@ -7688,9 +7693,9 @@ function updateSummaryMetrics() {
     }
   }
 
-  // Top Transport Arrival
+  // Top Transport Arrival (HANYA peserta aktif)
   const transportCounts = {};
-  activeList.forEach(r => {
+  activeOnlyList.forEach(r => {
     let t = r.transport_arrival || 'Lainnya';
     if (t === 'Bus Panitia' || t === 'Bus Panitia / Rombongan' || t.toLowerCase() === 'bus/rombongan') t = 'Bus';
     transportCounts[t] = (transportCounts[t] || 0) + 1;
@@ -7704,9 +7709,9 @@ function updateSummaryMetrics() {
     }
   }
 
-  // Top Transport Departure
+  // Top Transport Departure (HANYA peserta aktif)
   const transportDepCounts = {};
-  activeList.forEach(r => {
+  activeOnlyList.forEach(r => {
     let td = r.transport_departure || 'Lainnya';
     if (td === 'Bus Panitia' || td === 'Bus Panitia / Rombongan' || td.toLowerCase() === 'bus/rombongan') td = 'Bus';
     transportDepCounts[td] = (transportDepCounts[td] || 0) + 1;
@@ -7720,15 +7725,15 @@ function updateSummaryMetrics() {
     }
   }
 
-  // Medical notes with real concerns (terstandarisasi)
-  const medicalSpecial = activeList.filter(r => hasParticipantMedicalIssue(r)).length;
+  // Medical notes with real concerns (HANYA peserta aktif)
+  const medicalSpecial = activeOnlyList.filter(r => hasParticipantMedicalIssue(r)).length;
 
   // KPI Percentages
   const pctMandiri = totalOrang > 0 ? Math.round((individuCount / totalOrang) * 100) : 0;
   const pctKelompok = totalOrang > 0 ? (100 - pctMandiri) : 0;
   const pctHealthy = totalOrang > 0 ? Math.round(((totalOrang - medicalSpecial) / totalOrang) * 100) : 100;
 
-  // DOM Elements - Pillar 01 (Kehadiran)
+  // DOM Elements - Pillar 01 (Peserta Aktif)
   const elTotal = document.getElementById('statTotalPeserta');
   const elSub = document.getElementById('statSubPeserta');
   const elInfogIndividu = document.getElementById('infographicIndividu');
@@ -7736,11 +7741,13 @@ function updateSummaryMetrics() {
   const elInfogKafilahCount = document.getElementById('infographicKafilahCount');
 
   if (elTotal) {
-    elTotal.innerHTML = `${totalOrang} <small class="pillar-unit">Jiwa</small>`;
+    elTotal.innerHTML = `${totalOrang} <small class="pillar-unit">Jiwa Aktif</small>`;
   }
   
   if (elSub) {
-    if (kelompokMemberCount > 0) {
+    if (cancelledInFilter > 0) {
+      elSub.innerHTML = `<span style="color:#059669;font-weight:700;"><i class="fa-solid fa-circle-check"></i> ${totalOrang} Siap Hadir</span> &bull; <span style="color:#dc2626;font-weight:700;"><i class="fa-solid fa-ban"></i> ${cancelledInFilter} Batal</span> (Total: ${totalRosterInFilter} Roster)`;
+    } else if (kelompokMemberCount > 0) {
       elSub.textContent = `${individuCount} Orang Mandiri \u2022 ${kelompokMemberCount} Orang Rombongan (${totalKafilah} Kafilah)`;
     } else {
       elSub.textContent = `${individuCount} Orang Pendaftar Mandiri`;
@@ -7981,8 +7988,13 @@ function renderRekapTable() {
       ? `<span class="badge-kloter-k2" style="display: inline-block; font-size: 10px; font-weight: 800; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 1px 6px; border-radius: 4px; margin-top: 3px;">Kloter 2 (501+)</span>`
       : `<span class="badge-kloter-k1" style="display: inline-block; font-size: 10px; font-weight: 700; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px; margin-top: 3px;">Kloter 1</span>`;
 
+    const isCancelled = item.attendance_status === 'cancelled';
+    const cancelBadge = isCancelled
+      ? `<div style="margin-top: 4px;"><span style="display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 800; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; padding: 1px 7px; border-radius: 4px;" title="Alasan: ${escapeHtml(item.cancel_reason || 'Mengundurkan diri')}"><i class="fa-solid fa-ban"></i> Batal: ${escapeHtml(item.cancel_reason || 'Mundur')}</span></div>`
+      : '';
+
     return `
-      <tr>
+      <tr style="${isCancelled ? 'background: #fff5f5;' : ''}">
         <td style="color: #475569; font-weight: 700; text-align: center;">${rowNo}</td>
         <td>
           <span class="badge-table-code">${item.registration_code}</span>
@@ -7997,6 +8009,7 @@ function renderRekapTable() {
             <div style="min-width: 0;">
               <strong style="color: #0f172a; font-size: 14.5px; font-weight: 800; display: block; letter-spacing: -0.01em;">${escapeHtml(item.full_name)}</strong>
               ${item.group_name ? `<small style="color: #b45309; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;"><i class="fa-solid fa-users"></i> ${escapeHtml(item.group_name)}</small>` : '<small style="color: #64748b; font-weight: 600; margin-top: 3px; display: block;">Individu</small>'}
+              ${cancelBadge}
             </div>
           </div>
         </td>
@@ -10301,6 +10314,10 @@ function exportToExcel() {
     return;
   }
 
+  // Pisahkan peserta aktif vs peserta yang mengundurkan diri (batal)
+  const activeData = sourceData.filter(p => p.attendance_status !== 'cancelled');
+  const cancelledData = sourceData.filter(p => p.attendance_status === 'cancelled');
+
   const workbook = XLSX.utils.book_new();
 
   // Helper Styling
@@ -10426,6 +10443,11 @@ function exportToExcel() {
   const s1Rows = [s1Headers];
   sourceData.forEach((item, idx) => {
     const cat = getPaskasCategory(item);
+    const isCancelled = item.attendance_status === 'cancelled';
+    const statusPresensi = isCancelled
+      ? `BATAL / MUNDUR${item.cancel_reason ? ': ' + item.cancel_reason : ''}`
+      : sanitizeSpreadsheetValue(item.attendance_status || 'Belum Hadir');
+
     s1Rows.push([
       idx + 1,
       sanitizeSpreadsheetValue(item.registration_code),
@@ -10454,7 +10476,7 @@ function exportToExcel() {
       sanitizeSpreadsheetValue(item.transport_departure),
       sanitizeSpreadsheetValue(item.cloth_size),
       sanitizeSpreadsheetValue(item.medical_history || 'Tidak Ada'),
-      sanitizeSpreadsheetValue(item.attendance_status || 'Belum Hadir'),
+      statusPresensi,
       sanitizeSpreadsheetValue(item.check_in_at || '-'),
       Number(item.total_fee || 0),
       Number(item.paid_amount || 0),
@@ -10465,6 +10487,13 @@ function exportToExcel() {
   });
   const ws1 = XLSX.utils.aoa_to_sheet(s1Rows);
   formatSheet(ws1, s1Rows, [0], '165B33', (rIdx, cIdx, val, row) => {
+    const isCancelled = String(row[27] || '').includes('BATAL / MUNDUR');
+    if (isCancelled) {
+      if (cIdx === 27) {
+        return createDataStyle(false, 'center', 'FEE2E2', 'DC2626', true);
+      }
+      return createDataStyle(false, cIdx === 0 || cIdx === 1 ? 'center' : 'left', 'FFF1F2', '991B1B');
+    }
     if (cIdx === 9) { // Indikator Keanggotaan
       const catVal = row[9];
       if (catVal === 'PASKAS Senior') return createDataStyle(rIdx % 2 === 0, 'center', 'DCFCE7', '15803D', true);
@@ -10573,7 +10602,7 @@ function exportToExcel() {
   // 2. HALAMAN KEDUA: KEDATANGAN & TRANSPORTASI (DIPISAH PER MODA & DIURUTKAN DARI TERAWAL)
   // ===================================================================
   const arrivalGroups = new Map();
-  sourceData.forEach(item => {
+  activeData.forEach(item => {
     const grp = getTransportGroup(item.transport_arrival);
     if (!arrivalGroups.has(grp)) arrivalGroups.set(grp, []);
     arrivalGroups.get(grp).push(item);
@@ -10623,7 +10652,7 @@ function exportToExcel() {
   });
 
   const rArrSumTotalIdx = s2Rows.length;
-  s2Rows.push(['TOTAL KESELURUHAN PESERTA', '', sourceData.length, '', '']);
+  s2Rows.push(['TOTAL PESERTA AKTIF', '', activeData.length, '', '']);
   s2Merges.push({ s: { r: rArrSumTotalIdx, c: 0 }, e: { r: rArrSumTotalIdx, c: 1 } });
 
   // Jeda baris pemisah antar bagian
@@ -10702,8 +10731,8 @@ function exportToExcel() {
   // ===================================================================
   // 3. HALAMAN KETIGA: JENIS KELAMIN (IKHWAN & AKHWAT DIPISAH)
   // ===================================================================
-  const ikhwanList = sourceData.filter(i => /laki|ikhwan|^l$/i.test(String(i.gender || '')));
-  const akhwatList = sourceData.filter(i => /perempuan|akhwat|^p$/i.test(String(i.gender || '')));
+  const ikhwanList = activeData.filter(i => /laki|ikhwan|^l$/i.test(String(i.gender || '')));
+  const akhwatList = activeData.filter(i => /perempuan|akhwat|^p$/i.test(String(i.gender || '')));
 
   // Urutkan alfabetis nama
   ikhwanList.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
@@ -10995,7 +11024,7 @@ function exportToExcel() {
   });
 
   const rDepSumTotalIdx = s5Rows.length;
-  s5Rows.push(['TOTAL KESELURUHAN PESERTA', '', sourceData.length, '', '']);
+  s5Rows.push(['TOTAL PESERTA AKTIF', '', activeData.length, '', '']);
   s5Merges.push({ s: { r: rDepSumTotalIdx, c: 0 }, e: { r: rDepSumTotalIdx, c: 1 } });
 
   // Jeda baris pemisah antar bagian
@@ -11132,7 +11161,7 @@ function exportToExcel() {
   // 7. HALAMAN KETUJUH: REKAPITULASI WILAYAH & INDIKATOR KEANGGOTAAN
   // ===================================================================
   const wilayahMap = new Map();
-  sourceData.forEach(item => {
+  activeData.forEach(item => {
     const w = (item.wilayah || 'Belum Ditentukan').trim();
     if (!wilayahMap.has(w)) wilayahMap.set(w, []);
     wilayahMap.get(w).push(item);
@@ -11696,11 +11725,86 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, ws9, 'Santri Di Bawah Umur');
 
   // ===================================================================
-  // UNDUH FILE WORKBOOK EXCEL LENGKAP 8 HALAMAN
+  // 10. HALAMAN KESEPULUH: PESERTA MENGUNDURKAN DIRI / BATAL HADIR
+  // ===================================================================
+  const s10Headers = [
+    'No', 'Kode Tiket', 'Nama Peserta', 'Jenis Kelamin', 'Usia', 
+    'Tipe Registrasi', 'Nama Kelompok / Kafilah', 'Koordinator Kelompok', 
+    'Wilayah', 'Daerah', 'No WhatsApp', 'No HP Darurat', 
+    'Alasan Pembatalan', 'Total Biaya (Tagihan)', 'Total Terbayar', 
+    'Status Pembayaran', 'Status Refund Keuangan', 'Catatan Panitia'
+  ];
+  const s10Rows = [];
+  const rCanTitleIdx = s10Rows.length;
+  s10Rows.push([
+    `DAFTAR PESERTA MENGUNDURKAN DIRI / BATAL HADIR — TOTAL: ${cancelledData.length} PESERTA (DIALIHKAN KE ANTREAN REFUND)`,
+    '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+  ]);
+  const rCanHeadIdx = s10Rows.length;
+  s10Rows.push([...s10Headers]);
+
+  cancelledData.forEach((item, idx) => {
+    const isPaid = Number(item.paid_amount || 0) > 0;
+    const refundStatus = isPaid ? 'Menunggu Pengembalian Dana (Refund)' : 'Tidak Ada Refund (Belum Bayar)';
+    s10Rows.push([
+      idx + 1,
+      sanitizeSpreadsheetValue(item.registration_code),
+      sanitizeSpreadsheetValue(item.full_name),
+      sanitizeSpreadsheetValue(item.gender),
+      item.age ? `${item.age} Th` : '-',
+      sanitizeSpreadsheetValue(item.registration_type),
+      sanitizeSpreadsheetValue(item.group_name || '-'),
+      sanitizeSpreadsheetValue(item.group_leader_name || '-'),
+      sanitizeSpreadsheetValue(item.wilayah),
+      sanitizeSpreadsheetValue(item.daerah || '-'),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      sanitizeSpreadsheetValue(item.emergency_phone || '-'),
+      sanitizeSpreadsheetValue(item.cancel_reason || 'Mengundurkan diri'),
+      Number(item.total_fee || 0),
+      Number(item.paid_amount || 0),
+      sanitizeSpreadsheetValue(item.payment_status || 'pending'),
+      refundStatus,
+      sanitizeSpreadsheetValue(item.notes || '-')
+    ]);
+  });
+
+  if (cancelledData.length === 0) {
+    s10Rows.push(['1', '-', 'Belum ada peserta yang membatalkan kehadiran (Alhamdulillah nihil)', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', 0, 0, '-', '-', '-']);
+  }
+
+  const ws10 = XLSX.utils.aoa_to_sheet(s10Rows);
+  ws10['!merges'] = [
+    { s: { r: rCanTitleIdx, c: 0 }, e: { r: rCanTitleIdx, c: s10Headers.length - 1 } }
+  ];
+
+  formatSheet(ws10, s10Rows, [rCanHeadIdx], '991B1B', (rIdx, cIdx) => {
+    if (rIdx === rCanTitleIdx) {
+      return {
+        fill: { fgColor: { rgb: '7F1D1D' } },
+        font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+      };
+    }
+    if (cIdx === 1 || cIdx === 0 || cIdx === 3 || cIdx === 4 || cIdx === 15) {
+      return createDataStyle(rIdx % 2 === 0, 'center', rIdx % 2 === 0 ? 'FFF1F2' : 'FFFFFF', '991B1B');
+    }
+    if (cIdx === 12) {
+      return createDataStyle(rIdx % 2 === 0, 'left', 'FEE2E2', '991B1B', true);
+    }
+    if (cIdx === 16) {
+      return createDataStyle(rIdx % 2 === 0, 'center', 'FEF3C7', 'B45309', true);
+    }
+    return createDataStyle(rIdx % 2 === 0, 'left', rIdx % 2 === 0 ? 'FFF1F2' : 'FFFFFF');
+  });
+
+  XLSX.utils.book_append_sheet(workbook, ws10, 'Peserta Mengundurkan Diri');
+
+  // ===================================================================
+  // UNDUH FILE WORKBOOK EXCEL LENGKAP 10 HALAMAN
   // ===================================================================
   const dateStr = new Date().toISOString().split('T')[0];
   XLSX.writeFile(workbook, `Rekap_Peserta_Paskas_Bahagia_${dateStr}.xlsx`);
-  showToast('File Excel 9 halaman lengkap (termasuk Santri Di Bawah Umur & Rekap Pembayaran) berhasil diunduh!', 'success');
+  showToast('File Excel 10 halaman lengkap (termasuk Tab Khusus Peserta Mengundurkan Diri) berhasil diunduh!', 'success');
 }
 
 function exportToCSV() {
@@ -11708,7 +11812,7 @@ function exportToCSV() {
     'No', 'Kode Tiket', 'Tipe', 'Nama Peserta', 'Usia', 'Kategori Usia', 'Orang Tua / Wali', 'Gedung', 'Kamar',
     'Gender', 'Wilayah', 'Daerah', 'Email', 'No WA', 'HP Darurat',
     'Tgl Datang', 'Kendaraan Datang', 'Tgl Pulang', 'Kendaraan Pulang', 
-    'Ukuran Baju', 'Riwayat Medis'
+    'Ukuran Baju', 'Riwayat Medis', 'Status Presensi', 'Alasan Pembatalan'
   ];
 
   const rows = filteredRegistrations.map((item, idx) => [
@@ -11732,7 +11836,9 @@ function exportToCSV() {
     `"${item.departure_date}"`,
     `"${item.transport_departure}"`,
     `"${item.cloth_size}"`,
-    `"${(item.medical_history || '').replace(/"/g, '""')}"`
+    `"${(item.medical_history || '').replace(/"/g, '""')}"`,
+    `"${(item.attendance_status || 'registered').replace(/"/g, '""')}"`,
+    `"${(item.cancel_reason || '-').replace(/"/g, '""')}"`
   ]);
 
   const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + 
@@ -11746,7 +11852,7 @@ function exportToCSV() {
   link.click();
   document.body.removeChild(link);
 
-  showToast('File CSV berhasil diunduh!', 'success');
+  showToast('File CSV berhasil diunduh (termasuk status presensi & alasan pembatalan)!', 'success');
 }
 
 // ===================================================================
@@ -15894,7 +16000,7 @@ function renderPresensiView() {
     else if (st === 'cancelled') cancelled++;
     else pending++;
 
-    if (p.registration_type === 'rombongan') {
+    if (p.registration_type === 'rombongan' || p.registration_type === 'kelompok') {
       rombonganCount++;
       if (p.group_name) kafilahSet.add(p.group_name.trim().toLowerCase());
     } else {
@@ -15902,27 +16008,41 @@ function renderPresensiView() {
     }
   });
 
-  const total = list.length;
+  const totalRoster = list.length;
+  const totalAktif = Math.max(0, totalRoster - cancelled);
   const hadirTotal = onTime + late + departed;
-  const hadirPct = total > 0 ? Math.round((hadirTotal / total) * 100) : 0;
-  const onTimePct = total > 0 ? Math.round((onTime / total) * 100) : 0;
+
+  // Persentase kehadiran dihitung secara akurat terhadap total peserta aktif (totalAktif)
+  const hadirPct = totalAktif > 0 ? Math.round((hadirTotal / totalAktif) * 100) : 0;
+  const onTimePct = totalAktif > 0 ? Math.round((onTime / totalAktif) * 100) : 0;
   const latePct = hadirTotal > 0 ? Math.round((late / hadirTotal) * 100) : 0;
-  const pendingPct = total > 0 ? Math.round((pending / total) * 100) : 0;
+  const pendingPct = totalAktif > 0 ? Math.round((pending / totalAktif) * 100) : 0;
   const departedPct = hadirTotal > 0 ? Math.round((departed / hadirTotal) * 100) : 0;
 
   const elTotal = document.getElementById('presensiStatTotal');
+  const elSub = document.getElementById('presensiStatSub');
   const elOnTime = document.getElementById('presensiStatOnTime');
   const elLate = document.getElementById('presensiStatLate');
   const elPending = document.getElementById('presensiStatPending');
   const elPctOnTime = document.getElementById('presensiPctOnTime');
 
-  if (elTotal) elTotal.innerHTML = `${total} <small class="pillar-unit">Jiwa</small>`;
+  if (elTotal) elTotal.innerHTML = `${totalAktif} <small class="pillar-unit">Jiwa Aktif</small>`;
+  if (elSub) {
+    if (cancelled > 0) {
+      elSub.innerHTML = `<span style="color:#059669;font-weight:700;"><i class="fa-solid fa-circle-check"></i> ${totalAktif} Siap Hadir</span> &bull; <span style="color:#dc2626;font-weight:700;"><i class="fa-solid fa-ban"></i> ${cancelled} Batal</span> (Total: ${totalRoster})`;
+    } else {
+      elSub.textContent = `Seluruh ${totalRoster} pendaftar resmi acara`;
+    }
+  }
   if (elOnTime) elOnTime.innerHTML = `${onTime} <small class="pillar-unit">Jiwa</small>`;
   if (elLate) elLate.innerHTML = `${late} <small class="pillar-unit">Jiwa</small>`;
   if (elPending) elPending.innerHTML = `${pending} <small class="pillar-unit">Jiwa</small>`;
   if (elPctOnTime) elPctOnTime.textContent = `${onTimePct}%`;
 
-  // Subpod items
+  // Subpod items Pillar 1 (Gabungan Opsi 1 & 2: Roster Awal & Pembatalan Terbuka)
+  const elSubTotalRoster = document.getElementById('presSubTotalRoster');
+  const elSubRosterDesc = document.getElementById('presSubRosterDesc');
+  const elSubCancelledCount = document.getElementById('presSubCancelledCount');
   const elSubMandiri = document.getElementById('presSubMandiri');
   const elSubRombongan = document.getElementById('presSubRombongan');
   const elKafilahCount = document.getElementById('presSubKafilahCount');
@@ -15931,6 +16051,9 @@ function renderPresensiView() {
   const elSubPendingCount = document.getElementById('presSubPendingCount');
   const elSubDepartedCount = document.getElementById('presSubDepartedCount');
 
+  if (elSubTotalRoster) elSubTotalRoster.textContent = `${totalRoster} Orang`;
+  if (elSubRosterDesc) elSubRosterDesc.textContent = `${individuCount} Mandiri \u2022 ${rombonganCount} Rombongan`;
+  if (elSubCancelledCount) elSubCancelledCount.textContent = `${cancelled} Orang`;
   if (elSubMandiri) elSubMandiri.textContent = `${individuCount} Orang`;
   if (elSubRombongan) elSubRombongan.textContent = `${rombonganCount} Orang`;
   if (elKafilahCount) elKafilahCount.textContent = `${kafilahSet.size} Kafilah terdaftar`;
@@ -15958,7 +16081,7 @@ function renderPresensiView() {
   const tabDeparted = document.getElementById('presTabDeparted');
   const tabCancelled = document.getElementById('presTabCancelled');
 
-  if (tabAll) tabAll.textContent = total;
+  if (tabAll) tabAll.textContent = totalRoster;
   if (tabOnTime) tabOnTime.textContent = onTime;
   if (tabLate) tabLate.textContent = late;
   if (tabPending) tabPending.textContent = pending;
@@ -15966,10 +16089,10 @@ function renderPresensiView() {
   if (tabCancelled) tabCancelled.textContent = cancelled;
 
   // Update 4 Bar Indikator Individual Masing-masing
-  const onTimeIndPct = total > 0 ? Math.round((onTime / total) * 100) : 0;
-  const lateIndPct = total > 0 ? Math.round((late / total) * 100) : 0;
-  const pendingIndPct = total > 0 ? Math.round((pending / total) * 100) : 0;
-  const cancelledIndPct = total > 0 ? Math.round((cancelled / total) * 100) : 0;
+  const onTimeIndPct = totalAktif > 0 ? Math.round((onTime / totalAktif) * 100) : 0;
+  const lateIndPct = totalAktif > 0 ? Math.round((late / totalAktif) * 100) : 0;
+  const pendingIndPct = totalAktif > 0 ? Math.round((pending / totalAktif) * 100) : 0;
+  const cancelledIndPct = totalRoster > 0 ? Math.round((cancelled / totalRoster) * 100) : 0;
 
   const elIndOnTimeCount = document.getElementById('presIndOnTimeCount');
   const elIndOnTimePct = document.getElementById('presIndOnTimePct');
