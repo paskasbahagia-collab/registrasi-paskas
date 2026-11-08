@@ -5706,29 +5706,55 @@ CREATE TABLE IF NOT EXISTS registrations (
         <div class="checkin-header-banner">
           <div class="checkin-badge-pill">
             <span class="checkin-pulse-dot"></span>
-            <span>HARI-H EVENT &bull; CHECK-IN MANDIRI</span>
+            <span>HARI-H EVENT &bull; PRESENSI &amp; CHECK-IN JEMAAH</span>
           </div>
           <h1 class="checkin-title">Presensi Kedatangan Jemaah</h1>
-          <p class="checkin-subtitle">Kumpul Keluarga PASKAS Bahagia</p>
+          <p class="checkin-subtitle">KUMPUL KELUARGA PASKAS BAHAGIA</p>
           <p class="checkin-desc">
-            Silakan masukkan <strong>Nomor Tiket (misal: PKB-025)</strong> atau <strong>Nama Lengkap</strong> Anda untuk konfirmasi kehadiran resmi.
+            Silakan masukkan <strong>Nomor Tiket (misal: PKB-025)</strong>, <strong>Nama Lengkap</strong>, atau <strong>Nama Rombongan / Kafilah</strong> untuk konfirmasi kehadiran resmi.
           </p>
+          <div class="checkin-header-actions">
+            <button type="button" class="btn-checkin-nav" onclick="navigateTo('rekap')" title="Buka Rekapitulasi Data">
+              <i class="fa-solid fa-chart-pie" style="color: #059669;"></i> Rekap Data
+            </button>
+            <button type="button" class="btn-checkin-nav" onclick="navigateTo('presensi')" title="Buka Meja Front Desk">
+              <i class="fa-solid fa-clipboard-check" style="color: #0284c7;"></i> Meja Front Desk
+            </button>
+            <button type="button" class="btn-checkin-nav" onclick="openGateQrModal()" title="Lihat QR Code Gerbang">
+              <i class="fa-solid fa-qrcode" style="color: #d97706;"></i> QR Gerbang
+            </button>
+            <button type="button" class="btn-checkin-nav" onclick="navigateTo('dashboard')" title="Kembali ke Beranda">
+              <i class="fa-solid fa-house" style="color: #64748b;"></i> Beranda
+            </button>
+          </div>
         </div>
 
         <!-- Step 1: Form Pencarian Peserta -->
         <div class="checkin-search-card" id="checkinSearchCard">
           <div class="checkin-search-input-box">
             <i class="fa-solid fa-magnifying-glass checkin-search-icon"></i>
-            <input type="text" id="checkinSearchInput" class="checkin-input" placeholder="Ketik nomor tiket (contoh: 025 atau PKB-025) atau nama..." autocomplete="off" oninput="handleCheckinSearchInput(this.value)">
-            <button type="button" class="checkin-clear-btn" id="checkinClearBtn" onclick="clearCheckinSearch()" style="display: none;">
+            <input type="text" id="checkinSearchInput" class="checkin-input" placeholder="Ketik nomor tiket (contoh: 025), nama lengkap, atau nama rombongan..." autocomplete="off" oninput="handleCheckinSearchInput(this.value)">
+            <button type="button" class="checkin-clear-btn" id="checkinClearBtn" onclick="clearCheckinSearch()" style="display: none;" title="Hapus pencarian">
               <i class="fa-solid fa-xmark"></i>
             </button>
+          </div>
+
+          <!-- Quick Rombongan Bar -->
+          <div class="checkin-quick-bar">
+            <button type="button" class="btn-rombongan-picker-toggle" onclick="openCheckinRombonganPicker()" title="Pilih Rombongan dari Daftar">
+              <i class="fa-solid fa-users"></i>
+              <span>Pilih Rombongan (44 Kafilah)</span>
+              <i class="fa-solid fa-caret-down" style="font-size: 11px;"></i>
+            </button>
+            <span style="font-size: 12px; color: #64748b; font-weight: 600;">
+              <i class="fa-solid fa-circle-check text-emerald"></i> Mendukung pencarian per rombongan
+            </span>
           </div>
 
           <!-- Loading Spinner -->
           <div id="checkinSearchLoading" style="display: none; text-align: center; padding: 20px 0; color: #047857;">
             <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
-            <p style="margin-top: 8px; font-size: 13px; font-weight: 600;">Mencari data jemaah...</p>
+            <p style="margin-top: 8px; font-size: 13px; font-weight: 600;">Mencari data jemaah &amp; rombongan...</p>
           </div>
 
           <!-- Live Results List -->
@@ -5736,8 +5762,8 @@ CREATE TABLE IF NOT EXISTS registrations (
 
           <!-- Empty Helper Hint -->
           <div class="checkin-helper-hint" id="checkinHelperHint">
-            <i class="fa-solid fa-circle-info text-amber"></i>
-            <span>Jika lupa nomor tiket, Anda cukup mengetik nama panggilan atau nama lengkap Anda.</span>
+            <i class="fa-solid fa-lightbulb" style="color: #059669; font-size: 16px;"></i>
+            <span><strong>Tips Pencarian:</strong> Anda dapat mencari berdasarkan <strong>Nomor Tiket</strong> (cth: PKB-025 / 025), <strong>Nama Lengkap / Panggilan</strong>, atau <strong>Nama Rombongan / Kafilah</strong> (cth: Lampung, Kubu Raya, Kediri, Palembang, Mojang, Blora, dll).</span>
           </div>
         </div>
 
@@ -7280,6 +7306,38 @@ CREATE TABLE IF NOT EXISTS registrations (
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka Layar Kiosk
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ======================================================= -->
+  <!-- MODAL: PILIH ROMBONGAN PRESENSI CHECK-IN MANDIRI        -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop" id="modalCheckinRombonganPicker" style="display: none;">
+    <div class="modal-card modal-preview-card" style="max-width: 680px; width: 95%;">
+      <div class="modal-header">
+        <div class="modal-title-with-icon">
+          <i class="fa-solid fa-users" style="color: #059669;"></i>
+          <h3>Pilih Rombongan / Kafilah</h3>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="closeCheckinRombonganPicker()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div style="padding: 16px 20px 8px;">
+        <div class="input-with-icon" style="position: relative;">
+          <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 13px; color: #059669;"></i>
+          <input type="text" id="rombonganPickerSearchInput" class="form-control" placeholder="Cari nama rombongan, ketua, atau daerah..." style="padding-left: 42px; border-radius: 12px;" oninput="filterCheckinRombonganPicker(this.value)">
+        </div>
+      </div>
+      <div class="modal-body-scrollable" style="max-height: 440px; padding: 12px 20px 20px;">
+        <div class="rombongan-picker-grid" id="rombonganPickerGrid">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="closeCheckinRombonganPicker()">Tutup</button>
       </div>
     </div>
   </div>

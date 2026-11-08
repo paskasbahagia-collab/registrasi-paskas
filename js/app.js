@@ -19539,11 +19539,47 @@ function clearCheckinSearch() {
   handleCheckinSearchInput('');
 }
 
+function renderCheckinParticipantCard(p) {
+  const code = escapeHtml(p.registration_code || 'PKB');
+  const name = escapeHtml(p.full_name || '-');
+  const group = (p.group_name && p.group_name.trim() !== '' && p.group_name.trim() !== '-') ? escapeHtml(p.group_name) : 'Mandiri';
+  const daerah = escapeHtml(p.daerah || p.wilayah || '-');
+  const st = p.attendance_status || 'registered';
+  const isAttended = st === 'attended' || st === 'attended_late';
+  
+  const photoUrl = p.photo_url || p.photo_data || '';
+  const initial = (p.full_name || 'P').trim()[0].toUpperCase();
+
+  const avatarHtml = photoUrl
+    ? `<img src="${escapeHtml(photoUrl)}" alt="${name}" class="checkin-result-avatar" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'checkin-result-avatar-initial\\'>${initial}</div>';">`
+    : `<div class="checkin-result-avatar-initial">${initial}</div>`;
+
+  const statusBadge = isAttended
+    ? `<span style="font-size: 11px; font-weight: 800; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 999px;"><i class="fa-solid fa-check-double"></i> Hadir</span>`
+    : `<span style="font-size: 11px; font-weight: 700; background: #fefce8; color: #b45309; border: 1px solid #fef08a; padding: 2px 8px; border-radius: 999px;"><i class="fa-regular fa-clock"></i> Belum Check-in</span>`;
+
+  return `
+    <div class="checkin-result-item" onclick="selectCheckinParticipant(${p.id})">
+      ${avatarHtml}
+      <div class="checkin-result-info">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div class="checkin-result-name">${name}</div>
+          ${statusBadge}
+        </div>
+        <div class="checkin-result-meta">
+          <span style="font-weight: 800; color: #b45309;">${code}</span> &bull; ${group} &bull; ${daerah}
+        </div>
+      </div>
+      <i class="fa-solid fa-chevron-right" style="color: #94a3b8; font-size: 13px;"></i>
+    </div>
+  `;
+}
+
 function executeCheckinSearchFilter(rawQuery) {
   const resultsList = document.getElementById('checkinResultsList');
   if (!resultsList) return;
 
-  const q = rawQuery.toLowerCase();
+  const q = (rawQuery || '').toLowerCase().trim();
   const cleanDigits = q.replace(/\D/g, '');
   const list = allRegistrations || [];
 
@@ -19552,7 +19588,9 @@ function executeCheckinSearchFilter(rawQuery) {
     const code = (p.registration_code || '').toLowerCase();
     const phone = (p.phone_number || '').replace(/\D/g, '');
     const group = (p.group_name || '').toLowerCase();
+    const leader = (p.group_leader_name || '').toLowerCase();
     const daerah = (p.daerah || '').toLowerCase();
+    const wilayah = (p.wilayah || '').toLowerCase();
 
     // Cocokkan kode tiket
     if (code === q || code.replace('pkb-', '') === q.replace('pkb-', '')) return true;
@@ -19561,60 +19599,113 @@ function executeCheckinSearchFilter(rawQuery) {
     if (name.includes(q)) return true;
     // Cocokkan no telepon
     if (cleanDigits.length >= 4 && phone.includes(cleanDigits)) return true;
-    // Cocokkan rombongan atau daerah
+    // Cocokkan rombongan atau koordinator atau daerah / wilayah
     if (group && group.includes(q)) return true;
+    if (leader && leader.includes(q)) return true;
     if (daerah && daerah.includes(q)) return true;
+    if (wilayah && wilayah.includes(q)) return true;
     return false;
-  }).slice(0, 15);
+  });
 
   resultsList.style.display = 'block';
 
   if (matched.length === 0) {
     resultsList.innerHTML = `
-      <div style="padding: 24px 16px; text-align: center; color: #64748b;">
-        <i class="fa-solid fa-user-xmark" style="font-size: 28px; color: #94a3b8; margin-bottom: 8px; display: block;"></i>
-        <strong style="color: #334155; font-size: 14px;">Data Jemaah Tidak Ditemukan</strong>
-        <p style="font-size: 12.5px; margin: 4px 0 0;">Pastikan ejaan nama atau nomor tiket yang Anda masukkan sudah sesuai.</p>
+      <div style="padding: 28px 16px; text-align: center; color: #64748b;">
+        <i class="fa-solid fa-user-xmark" style="font-size: 32px; color: #94a3b8; margin-bottom: 10px; display: block;"></i>
+        <strong style="color: #334155; font-size: 15px;">Data Jemaah / Rombongan Tidak Ditemukan</strong>
+        <p style="font-size: 13px; margin: 4px 0 0;">Pastikan ejaan nama, nomor tiket, atau nama rombongan yang Anda masukkan sudah sesuai.</p>
       </div>
     `;
     return;
   }
 
-  resultsList.innerHTML = matched.map(p => {
-    const code = escapeHtml(p.registration_code || 'PKB');
-    const name = escapeHtml(p.full_name || '-');
-    const group = (p.group_name && p.group_name.trim() !== '' && p.group_name.trim() !== '-') ? escapeHtml(p.group_name) : 'Mandiri';
-    const daerah = escapeHtml(p.daerah || p.wilayah || '-');
-    const st = p.attendance_status || 'registered';
-    const isAttended = st === 'attended' || st === 'attended_late';
-    
-    const photoUrl = p.photo_url || p.photo_data || '';
-    const initial = (p.full_name || 'P').trim()[0].toUpperCase();
+  // Pisahkan hasil berdasarkan rombongan dan individu
+  const groupsMap = {};
+  const individuals = [];
 
-    const avatarHtml = photoUrl
-      ? `<img src="${escapeHtml(photoUrl)}" alt="${name}" class="checkin-result-avatar" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'checkin-result-avatar-initial\\'>${initial}</div>';">`
-      : `<div class="checkin-result-avatar-initial">${initial}</div>`;
+  matched.forEach(p => {
+    const g = (p.group_name || '').trim();
+    const isGroup = g && g !== '-' && g.toLowerCase() !== 'mandiri';
+    if (isGroup) {
+      if (!groupsMap[g]) groupsMap[g] = [];
+      groupsMap[g].push(p);
+    } else {
+      individuals.push(p);
+    }
+  });
 
-    const statusBadge = isAttended
-      ? `<span style="font-size: 11px; font-weight: 800; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 999px;"><i class="fa-solid fa-check-double"></i> Hadir</span>`
-      : `<span style="font-size: 11px; font-weight: 700; background: #fefce8; color: #b45309; border: 1px solid #fef08a; padding: 2px 8px; border-radius: 999px;"><i class="fa-regular fa-clock"></i> Belum Check-in</span>`;
+  const groupKeys = Object.keys(groupsMap);
+  let html = '';
 
-    return `
-      <div class="checkin-result-item" onclick="selectCheckinParticipant(${p.id})">
-        ${avatarHtml}
-        <div class="checkin-result-info">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <div class="checkin-result-name">${name}</div>
-            ${statusBadge}
+  // 1. Tampilkan setiap Kafilah Rombongan yang cocok
+  if (groupKeys.length > 0) {
+    groupKeys.forEach(gName => {
+      const allMembersOfGroup = list.filter(m => (m.group_name || '').trim().toLowerCase() === gName.toLowerCase());
+      const total = allMembersOfGroup.length;
+      const attended = allMembersOfGroup.filter(m => m.attendance_status === 'attended' || m.attendance_status === 'attended_late').length;
+      const pending = total - attended;
+      const leaderName = allMembersOfGroup.find(m => m.group_leader_name)?.group_leader_name || '-';
+      const wilayahName = allMembersOfGroup[0]?.wilayah || allMembersOfGroup[0]?.daerah || '-';
+
+      const safeGroupName = escapeHtml(gName);
+      const safeLeader = escapeHtml(leaderName);
+      const safeWilayah = escapeHtml(wilayahName);
+
+      html += `
+        <div class="checkin-group-header-card" style="margin-top: 14px; margin-bottom: 8px;">
+          <div class="checkin-group-badge-top">
+            <i class="fa-solid fa-users-viewfinder"></i> Kafilah Rombongan Resmi
           </div>
-          <div class="checkin-result-meta">
-            <span style="font-weight: 800; color: #b45309;">${code}</span> &bull; ${group} &bull; ${daerah}
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+            <div>
+              <h3 style="margin: 0 0 4px; font-size: 17px; font-weight: 900; color: #064e3b;">${safeGroupName}</h3>
+              <div style="font-size: 12.5px; color: #475569; display: flex; gap: 12px; flex-wrap: wrap;">
+                <span><i class="fa-solid fa-user-tie text-amber"></i> Koordinator: <strong>${safeLeader}</strong></span>
+                <span><i class="fa-solid fa-map-location-dot text-emerald"></i> ${safeWilayah}</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <span class="checkin-group-stat-chip"><i class="fa-solid fa-users"></i> ${total} Total</span>
+              <span class="checkin-group-stat-chip" style="background: #ecfdf5; border-color: #a7f3d0; color: #047857;"><i class="fa-solid fa-circle-check"></i> ${attended} Hadir</span>
+              <span class="checkin-group-stat-chip" style="background: #fffbeb; border-color: #fde68a; color: #b45309;"><i class="fa-regular fa-clock"></i> ${pending} Belum</span>
+            </div>
           </div>
+          ${pending > 0 ? `
+            <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+              <button type="button" class="btn-mass-checkin" data-group="${safeGroupName}" onclick="massCheckinRombongan(this.dataset.group)">
+                <i class="fa-solid fa-bolt-lightning"></i> Check-in Semua Anggota Hadir (${pending} Orang)
+              </button>
+            </div>
+          ` : `
+            <div style="margin-top: 8px; font-size: 12px; font-weight: 700; color: #047857;">
+              <i class="fa-solid fa-circle-check"></i> Seluruh anggota kafilah (${total} orang) telah menyelesaikan check-in.
+            </div>
+          `}
         </div>
-        <i class="fa-solid fa-chevron-right" style="color: #94a3b8; font-size: 13px;"></i>
-      </div>
-    `;
-  }).join('');
+      `;
+
+      const isTargetedGroupSearch = q.includes(gName.toLowerCase()) || gName.toLowerCase().includes(q) || (leaderName !== '-' && leaderName.toLowerCase().includes(q));
+      const membersToRender = isTargetedGroupSearch ? allMembersOfGroup : groupsMap[gName];
+
+      html += membersToRender.map(renderCheckinParticipantCard).join('');
+    });
+  }
+
+  // 2. Tampilkan Peserta Mandiri / Individu
+  if (individuals.length > 0) {
+    if (groupKeys.length > 0) {
+      html += `
+        <div style="margin: 18px 0 8px; font-size: 13px; font-weight: 800; color: #475569; display: flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-user text-emerald"></i> Pendaftar Mandiri / Hasil Lainnya (${individuals.length})
+        </div>
+      `;
+    }
+    const limitedIndividuals = (groupKeys.length > 0) ? individuals.slice(0, 30) : individuals.slice(0, 60);
+    html += limitedIndividuals.map(renderCheckinParticipantCard).join('');
+  }
+
+  resultsList.innerHTML = html;
 }
 
 function selectCheckinParticipant(participantId) {
@@ -19995,5 +20086,167 @@ window.openGateQrModal = openGateQrModal;
 window.closeGateQrModal = closeGateQrModal;
 window.printGateQrPoster = printGateQrPoster;
 window.downloadGateQrImage = downloadGateQrImage;
+// =======================================================
+// CHECK-IN ROMBONGAN / KAFILAH & MASS CHECK-IN
+// =======================================================
+async function massCheckinRombongan(groupName) {
+  if (!groupName) return;
+  const list = allRegistrations || [];
+  const members = list.filter(m => (m.group_name || '').trim().toLowerCase() === groupName.trim().toLowerCase());
+  const pendingMembers = members.filter(m => m.attendance_status !== 'attended' && m.attendance_status !== 'attended_late');
+
+  if (pendingMembers.length === 0) {
+    showToast(`Seluruh anggota rombongan ${groupName} sudah selesai check-in!`, 'info');
+    return;
+  }
+
+  const ok = confirm(`Check-in Massal Rombongan:\n"${groupName}"\n\nApakah Anda yakin ingin menandai HADIR sekaligus untuk ${pendingMembers.length} anggota kafilah yang belum hadir?`);
+  if (!ok) return;
+
+  const nowIso = new Date().toISOString();
+  let successCount = 0;
+  showToast(`Memproses presensi ${pendingMembers.length} anggota kafilah...`, 'info');
+
+  for (const m of pendingMembers) {
+    try {
+      if (window.dataService && typeof window.dataService.recordPresenceCheckIn === 'function') {
+        await window.dataService.recordPresenceCheckIn(m.id, false, nowIso);
+      }
+      m.attendance_status = 'attended';
+      m.check_in_at = nowIso;
+      successCount++;
+    } catch (err) {
+      console.warn(`Gagal checkin ${m.full_name}:`, err);
+    }
+  }
+
+  if (typeof refreshActiveScreenViews === 'function') refreshActiveScreenViews();
+  showToast(`Alhamdulillah! ${successCount} anggota kafilah ${groupName} resmi hadir.`, 'success');
+
+  executeCheckinSearchFilter(groupName);
+}
+
+function openCheckinRombonganPicker() {
+  const modal = document.getElementById('modalCheckinRombonganPicker');
+  const grid = document.getElementById('rombonganPickerGrid');
+  const searchInp = document.getElementById('rombonganPickerSearchInput');
+  if (!modal || !grid) return;
+
+  const list = allRegistrations || [];
+  const groupsMap = {};
+
+  list.forEach(p => {
+    const g = (p.group_name || '').trim();
+    if (g && g !== '-' && g.toLowerCase() !== 'mandiri') {
+      if (!groupsMap[g]) {
+        groupsMap[g] = {
+          name: g,
+          leader: p.group_leader_name || '',
+          wilayah: p.wilayah || p.daerah || '-',
+          total: 0,
+          attended: 0
+        };
+      }
+      groupsMap[g].total++;
+      if (p.attendance_status === 'attended' || p.attendance_status === 'attended_late') {
+        groupsMap[g].attended++;
+      }
+      if (!groupsMap[g].leader && p.group_leader_name) {
+        groupsMap[g].leader = p.group_leader_name;
+      }
+    }
+  });
+
+  const sortedGroups = Object.values(groupsMap).sort((a, b) => a.name.localeCompare(b.name, 'id'));
+  window.__allRombongansCache = sortedGroups;
+
+  renderRombonganPickerList(sortedGroups);
+
+  if (searchInp) searchInp.value = '';
+  modal.style.display = 'flex';
+  setTimeout(() => { if (searchInp) searchInp.focus(); }, 150);
+}
+
+function renderRombonganPickerList(groups) {
+  const grid = document.getElementById('rombonganPickerGrid');
+  if (!grid) return;
+
+  if (groups.length === 0) {
+    grid.innerHTML = `
+      <div style="text-align: center; padding: 30px 10px; color: #64748b; grid-column: 1 / -1;">
+        <i class="fa-solid fa-users-slash" style="font-size: 28px; color: #94a3b8; margin-bottom: 8px; display: block;"></i>
+        <strong style="font-size: 14px; color: #334155;">Tidak Ada Kafilah Ditemukan</strong>
+        <p style="font-size: 12px; margin: 4px 0 0;">Coba ketik kata kunci nama rombongan atau koordinator lain.</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = groups.map(g => {
+    const name = escapeHtml(g.name);
+    const leader = escapeHtml(g.leader || 'Koordinator');
+    const wilayah = escapeHtml(g.wilayah || '-');
+    const isFull = g.attended >= g.total;
+    const badgeStyle = isFull 
+      ? 'background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;'
+      : (g.attended > 0 
+          ? 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;' 
+          : 'background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;');
+
+    return `
+      <div class="rombongan-picker-item" data-group="${name}" onclick="selectCheckinRombongan(this.dataset.group)">
+        <div class="rombongan-picker-name">${name}</div>
+        <div class="rombongan-picker-meta">
+          <span><i class="fa-solid fa-user-tie text-amber"></i> ${leader}</span>
+          <span><i class="fa-solid fa-map-pin text-emerald"></i> ${wilayah}</span>
+        </div>
+        <div class="rombongan-picker-badges">
+          <span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 700;">
+            <i class="fa-solid fa-users"></i> ${g.total} Anggota
+          </span>
+          <span class="badge" style="${badgeStyle} font-weight: 800;">
+            ${g.attended}/${g.total} Hadir
+          </span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterCheckinRombonganPicker(rawVal) {
+  const q = (rawVal || '').toLowerCase().trim();
+  const allGroups = window.__allRombongansCache || [];
+  if (!q) {
+    renderRombonganPickerList(allGroups);
+    return;
+  }
+  const filtered = allGroups.filter(g => {
+    return g.name.toLowerCase().includes(q) ||
+           (g.leader && g.leader.toLowerCase().includes(q)) ||
+           (g.wilayah && g.wilayah.toLowerCase().includes(q));
+  });
+  renderRombonganPickerList(filtered);
+}
+
+function closeCheckinRombonganPicker() {
+  const modal = document.getElementById('modalCheckinRombonganPicker');
+  if (modal) modal.style.display = 'none';
+}
+
+function selectCheckinRombongan(groupName) {
+  if (!groupName) return;
+  closeCheckinRombonganPicker();
+  const inp = document.getElementById('checkinSearchInput');
+  if (inp) {
+    inp.value = groupName;
+  }
+  handleCheckinSearchInput(groupName);
+}
+
 window.copyGateQrLink = copyGateQrLink;
+window.openCheckinRombonganPicker = openCheckinRombonganPicker;
+window.closeCheckinRombonganPicker = closeCheckinRombonganPicker;
+window.filterCheckinRombonganPicker = filterCheckinRombonganPicker;
+window.selectCheckinRombongan = selectCheckinRombongan;
+window.massCheckinRombongan = massCheckinRombongan;
 
