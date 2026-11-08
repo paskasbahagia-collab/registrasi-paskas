@@ -15421,7 +15421,7 @@ input:checked + .slider:before {
   font-weight: 900;
   color: #064e3b;
   letter-spacing: -0.5px;
-  margin: 6px 0 4px;
+  margin: 0 0 4px;
   text-shadow: none;
 }
 
@@ -15438,7 +15438,7 @@ input:checked + .slider:before {
   font-size: 14px;
   color: #475569;
   line-height: 1.6;
-  margin: 0 auto 16px;
+  margin: 0 auto;
   max-width: 580px;
 }
 
