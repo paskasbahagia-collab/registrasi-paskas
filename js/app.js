@@ -7928,6 +7928,26 @@ function applyRekapFilters() {
     return matchSearch && matchType && matchKloter && matchGender && matchWilayah && matchCloth && matchAge;
   });
 
+  // Urutkan data peserta berdasarkan opsi urutan jika dipilih pengguna
+  const sortOrder = document.getElementById('filterSort')?.value || 'default';
+  if (sortOrder === 'arrival') {
+    filteredRegistrations.sort((a, b) => {
+      const dtA = (a.arrival_date || '9999-99-99') + ' ' + (a.arrival_time || '99:99');
+      const dtB = (b.arrival_date || '9999-99-99') + ' ' + (b.arrival_time || '99:99');
+      if (dtA !== dtB) return dtA.localeCompare(dtB);
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    });
+  } else if (sortOrder === 'departure') {
+    filteredRegistrations.sort((a, b) => {
+      const dtA = (a.departure_date || '9999-99-99') + ' ' + (a.departure_time || '99:99');
+      const dtB = (b.departure_date || '9999-99-99') + ' ' + (b.departure_time || '99:99');
+      if (dtA !== dtB) return dtA.localeCompare(dtB);
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    });
+  } else if (sortOrder === 'name') {
+    filteredRegistrations.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  }
+
   // Re-calculate 5 pillars and chart statistics matching active kloter filter
   updateSummaryMetrics();
   renderCharts();
@@ -8028,7 +8048,14 @@ function renderRekapTable() {
         </td>
         <td><span style="color: #1e293b; font-weight: 600;">${escapeHtml(item.arrival_date)}</span> <br><small style="color: #64748b;">${escapeHtml(item.arrival_time || '10:00')}</small></td>
         <td><span style="color: #1e293b; font-weight: 600;">${escapeHtml(item.departure_date)}</span> <br><small style="color: #64748b;">${escapeHtml(item.departure_time || '16:00')}</small></td>
-        <td><span style="color: #1e293b; font-weight: 600;">${escapeHtml(item.transport_arrival)}</span></td>
+        <td>
+          <div style="font-size: 12px; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; gap: 4px;" title="Moda Transportasi Datang">
+            <i class="fa-solid fa-plane-arrival" style="font-size: 10px; color: #2563eb;"></i> ${escapeHtml(item.transport_arrival || '-')}
+          </div>
+          <div style="font-size: 11.5px; font-weight: 600; color: #4338ca; display: flex; align-items: center; gap: 4px; margin-top: 3px;" title="Moda Transportasi Pulang">
+            <i class="fa-solid fa-plane-departure" style="font-size: 10px; color: #4f46e5;"></i> ${escapeHtml(item.transport_departure || '-')}
+          </div>
+        </td>
         <td><span class="badge-size">${clothDisplay}</span></td>
         <td>
           ${isSpecialMed 
@@ -10599,134 +10626,70 @@ function exportToExcel() {
   }
 
   // ===================================================================
-  // 2. HALAMAN KEDUA: KEDATANGAN & TRANSPORTASI (DIPISAH PER MODA & DIURUTKAN DARI TERAWAL)
+  // 2. HALAMAN KEDUA: KEDATANGAN & KEPULANGAN TERPADU (JADIKAN SATU & URUT KEDATANGAN)
   // ===================================================================
-  const arrivalGroups = new Map();
-  activeData.forEach(item => {
-    const grp = getTransportGroup(item.transport_arrival);
-    if (!arrivalGroups.has(grp)) arrivalGroups.set(grp, []);
-    arrivalGroups.get(grp).push(item);
-  });
-
-  const sortedArrivalGroups = Array.from(arrivalGroups.entries()).sort((a, b) => {
-    const rA = getTransportSortRank(a[0]);
-    const rB = getTransportSortRank(b[0]);
-    if (rA !== rB) return rA - rB;
-    return b[1].length - a[1].length;
+  // Urutkan seluruh data peserta aktif berdasarkan jadwal kedatangan terawal s/d terakhir
+  const scheduleData = [...activeData].sort((a, b) => {
+    const dtA = getSortableDateTime(a.arrival_date, a.arrival_time, '10:00');
+    const dtB = getSortableDateTime(b.arrival_date, b.arrival_time, '10:00');
+    if (dtA !== dtB) return dtA.localeCompare(dtB);
+    const depA = getSortableDateTime(a.departure_date, a.departure_time, '16:00');
+    const depB = getSortableDateTime(b.departure_date, b.departure_time, '16:00');
+    if (depA !== depB) return depA.localeCompare(depB);
+    return (a.full_name || '').localeCompare(b.full_name || '');
   });
 
   const s2Headers = [
-    'No', 'Moda Transportasi', 'Tgl Kedatangan', 'Jam Kedatangan', 'Nama Peserta', 
-    'Jenis Kelamin', 'Usia', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan Kedatangan'
+    'No', 'Kode Tiket', 'Nama Peserta', 'Jenis Kelamin', 'Usia', 
+    'Wilayah', 'Daerah', 'No WhatsApp', 
+    'Tgl Kedatangan', 'Jam Kedatangan', 'Moda Transportasi Datang', 
+    'Tgl Kepulangan', 'Jam Kepulangan', 'Moda Transportasi Pulang', 
+    'Gedung / Kamar', 'Catatan Jadwal & Transportasi'
   ];
-  const s2Rows = [];
-  const s2HeaderIndexes = [];
-  const s2BannerIndexes = [];
-  const s2Merges = [];
+  const s2Rows = [s2Headers];
 
-  // BAGIAN 1: RINGKASAN ARMADA KEDATANGAN
-  const rArrSumTitleIdx = s2Rows.length;
-  s2Rows.push(['RINGKASAN REKAPITULASI KEDATANGAN PESERTA PER MODA TRANSPORTASI', '', '', '', '']);
-  s2BannerIndexes.push({ rIdx: rArrSumTitleIdx, color: '1E3A8A' });
-  s2Merges.push({ s: { r: rArrSumTitleIdx, c: 0 }, e: { r: rArrSumTitleIdx, c: 4 } });
+  scheduleData.forEach((item, idx) => {
+    const roomInfo = item.building 
+      ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+      : (item.room_name || item.room_number || '-');
 
-  const rArrSumHeadIdx = s2Rows.length;
-  s2Rows.push(['No', 'Moda Transportasi', 'Total Peserta', 'Kedatangan Terawal', 'Kedatangan Terakhir']);
-  s2HeaderIndexes.push(rArrSumHeadIdx);
-
-  sortedArrivalGroups.forEach(([grpName, items], idx) => {
-    // Urutkan jadwal kedatangan terawal s/d terakhir
-    items.sort((a, b) => {
-      const dtA = getSortableDateTime(a.arrival_date, a.arrival_time, '10:00');
-      const dtB = getSortableDateTime(b.arrival_date, b.arrival_time, '10:00');
-      if (dtA !== dtB) return dtA.localeCompare(dtB);
-      return (a.full_name || '').localeCompare(b.full_name || '');
-    });
-
-    const first = items[0];
-    const last = items[items.length - 1];
-    const firstStr = (first && first.arrival_date) ? `${first.arrival_date} ${first.arrival_time || '10:00'}` : '-';
-    const lastStr = (last && last.arrival_date) ? `${last.arrival_date} ${last.arrival_time || '10:00'}` : '-';
-
-    s2Rows.push([idx + 1, grpName, items.length, firstStr, lastStr]);
-  });
-
-  const rArrSumTotalIdx = s2Rows.length;
-  s2Rows.push(['TOTAL PESERTA AKTIF', '', activeData.length, '', '']);
-  s2Merges.push({ s: { r: rArrSumTotalIdx, c: 0 }, e: { r: rArrSumTotalIdx, c: 1 } });
-
-  // Jeda baris pemisah antar bagian
-  s2Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
-  s2Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
-
-  // BAGIAN 2: DAFTAR PESERTA PER MODA TRANSPORTASI KEDATANGAN
-  sortedArrivalGroups.forEach(([grpName, items]) => {
-    const first = items[0];
-    const last = items[items.length - 1];
-    const timeRange = (first && first.arrival_date) ? `(Jadwal: ${first.arrival_date} s/d ${(last && last.arrival_date) || first.arrival_date})` : '';
-
-    const rBannerIdx = s2Rows.length;
     s2Rows.push([
-      `MODA TRANSPORTASI: ${grpName.toUpperCase()} — TOTAL: ${items.length} PESERTA ${timeRange}`,
-      '', '', '', '', '', '', '', '', '', '', ''
+      idx + 1,
+      sanitizeSpreadsheetValue(item.registration_code),
+      sanitizeSpreadsheetValue(item.full_name),
+      sanitizeSpreadsheetValue(item.gender),
+      item.age ? `${item.age} Th` : '-',
+      sanitizeSpreadsheetValue(item.wilayah),
+      sanitizeSpreadsheetValue(item.daerah || '-'),
+      sanitizeSpreadsheetValue(item.phone_number || '-'),
+      sanitizeSpreadsheetValue(item.arrival_date || '-'),
+      sanitizeSpreadsheetValue(item.arrival_time || '-'),
+      sanitizeSpreadsheetValue(item.transport_arrival || 'Belum Ditentukan'),
+      sanitizeSpreadsheetValue(item.departure_date || '-'),
+      sanitizeSpreadsheetValue(item.departure_time || '-'),
+      sanitizeSpreadsheetValue(item.transport_departure || 'Belum Ditentukan'),
+      sanitizeSpreadsheetValue(roomInfo),
+      sanitizeSpreadsheetValue(item.notes || '-')
     ]);
-    s2BannerIndexes.push({ rIdx: rBannerIdx, color: '1D4ED8' });
-    s2Merges.push({ s: { r: rBannerIdx, c: 0 }, e: { r: rBannerIdx, c: s2Headers.length - 1 } });
-
-    const rHeadIdx = s2Rows.length;
-    s2Rows.push([...s2Headers]);
-    s2HeaderIndexes.push(rHeadIdx);
-
-    items.forEach((item, idx) => {
-      const roomInfo = item.building 
-        ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
-        : (item.room_name || item.room_number || '-');
-      s2Rows.push([
-        idx + 1,
-        sanitizeSpreadsheetValue(item.transport_arrival || grpName),
-        sanitizeSpreadsheetValue(item.arrival_date || '-'),
-        sanitizeSpreadsheetValue(item.arrival_time || '-'),
-        sanitizeSpreadsheetValue(item.full_name),
-        sanitizeSpreadsheetValue(item.gender),
-        item.age ? `${item.age} Th` : '-',
-        sanitizeSpreadsheetValue(item.wilayah),
-        sanitizeSpreadsheetValue(item.daerah || '-'),
-        sanitizeSpreadsheetValue(item.phone_number || '-'),
-        sanitizeSpreadsheetValue(roomInfo),
-        sanitizeSpreadsheetValue(item.notes || '-')
-      ]);
-    });
-
-    s2Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
   });
 
   const ws2 = XLSX.utils.aoa_to_sheet(s2Rows);
-  ws2['!merges'] = s2Merges;
-  formatSheet(ws2, s2Rows, s2HeaderIndexes, '1D4ED8', (rIdx, cIdx) => {
-    const banner = s2BannerIndexes.find(b => b.rIdx === rIdx);
-    if (banner) {
-      return {
-        fill: { fgColor: { rgb: banner.color } },
-        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
-      };
+  const endColRef = XLSX.utils.encode_col(s2Headers.length - 1);
+  ws2['!autofilter'] = { ref: `A1:${endColRef}${s2Rows.length}` };
+
+  formatSheet(ws2, s2Rows, [0], '1D4ED8', (rIdx, cIdx) => {
+    if (cIdx === 0 || cIdx === 1 || cIdx === 3 || cIdx === 4 || cIdx === 8 || cIdx === 9 || cIdx === 11 || cIdx === 12) {
+      return createDataStyle(rIdx % 2 === 0, 'center');
     }
-    if (rIdx === rArrSumTotalIdx) {
-      return {
-        fill: { fgColor: { rgb: 'DBEAFE' } },
-        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1E40AF' } },
-        alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : 'center', vertical: 'center' }
-      };
-    }
-    if (cIdx === 1) {
+    if (cIdx === 10) {
       return createDataStyle(rIdx % 2 === 0, 'center', null, '1D4ED8', true);
     }
-    if (cIdx === 2 || cIdx === 3 || cIdx === 6) {
-      return createDataStyle(rIdx % 2 === 0, 'center');
+    if (cIdx === 13) {
+      return createDataStyle(rIdx % 2 === 0, 'center', null, '4338CA', true);
     }
     return null;
   });
-  XLSX.utils.book_append_sheet(workbook, ws2, 'Kedatangan & Transport');
+  XLSX.utils.book_append_sheet(workbook, ws2, 'Kedatangan & Kepulangan');
 
   // ===================================================================
   // 3. HALAMAN KETIGA: JENIS KELAMIN (IKHWAN & AKHWAT DIPISAH)
@@ -10971,137 +10934,7 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, ws4, 'Rekap Baju');
 
   // ===================================================================
-  // 5. HALAMAN KELIMA: KEPULANGAN & TRANSPORTASI (DIPISAH PER MODA & DIURUTKAN DARI TERAWAL)
-  // ===================================================================
-  const departureGroups = new Map();
-  sourceData.forEach(item => {
-    const grp = getTransportGroup(item.transport_departure);
-    if (!departureGroups.has(grp)) departureGroups.set(grp, []);
-    departureGroups.get(grp).push(item);
-  });
-
-  const sortedDepartureGroups = Array.from(departureGroups.entries()).sort((a, b) => {
-    const rA = getTransportSortRank(a[0]);
-    const rB = getTransportSortRank(b[0]);
-    if (rA !== rB) return rA - rB;
-    return b[1].length - a[1].length;
-  });
-
-  const s5Headers = [
-    'No', 'Moda Transportasi Pulang', 'Tgl Kepulangan', 'Jam Kepulangan', 'Nama Peserta', 
-    'Jenis Kelamin', 'Usia', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan Kepulangan'
-  ];
-  const s5Rows = [];
-  const s5HeaderIndexes = [];
-  const s5BannerIndexes = [];
-  const s5Merges = [];
-
-  // BAGIAN 1: RINGKASAN ARMADA KEPULANGAN
-  const rDepSumTitleIdx = s5Rows.length;
-  s5Rows.push(['RINGKASAN REKAPITULASI KEPULANGAN PESERTA PER MODA TRANSPORTASI', '', '', '', '']);
-  s5BannerIndexes.push({ rIdx: rDepSumTitleIdx, color: '312E81' });
-  s5Merges.push({ s: { r: rDepSumTitleIdx, c: 0 }, e: { r: rDepSumTitleIdx, c: 4 } });
-
-  const rDepSumHeadIdx = s5Rows.length;
-  s5Rows.push(['No', 'Moda Transportasi Pulang', 'Total Peserta', 'Kepulangan Terawal', 'Kepulangan Terakhir']);
-  s5HeaderIndexes.push(rDepSumHeadIdx);
-
-  sortedDepartureGroups.forEach(([grpName, items], idx) => {
-    // Urutkan jadwal kepulangan terawal s/d terakhir (siapa yang pulang duluan di atas)
-    items.sort((a, b) => {
-      const dtA = getSortableDateTime(a.departure_date, a.departure_time, '16:00');
-      const dtB = getSortableDateTime(b.departure_date, b.departure_time, '16:00');
-      if (dtA !== dtB) return dtA.localeCompare(dtB);
-      return (a.full_name || '').localeCompare(b.full_name || '');
-    });
-
-    const first = items[0];
-    const last = items[items.length - 1];
-    const firstStr = (first && first.departure_date) ? `${first.departure_date} ${first.departure_time || '16:00'}` : '-';
-    const lastStr = (last && last.departure_date) ? `${last.departure_date} ${last.departure_time || '16:00'}` : '-';
-
-    s5Rows.push([idx + 1, grpName, items.length, firstStr, lastStr]);
-  });
-
-  const rDepSumTotalIdx = s5Rows.length;
-  s5Rows.push(['TOTAL PESERTA AKTIF', '', activeData.length, '', '']);
-  s5Merges.push({ s: { r: rDepSumTotalIdx, c: 0 }, e: { r: rDepSumTotalIdx, c: 1 } });
-
-  // Jeda baris pemisah antar bagian
-  s5Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
-  s5Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
-
-  // BAGIAN 2: DAFTAR PESERTA PER MODA TRANSPORTASI KEPULANGAN
-  sortedDepartureGroups.forEach(([grpName, items]) => {
-    const first = items[0];
-    const last = items[items.length - 1];
-    const timeRange = (first && first.departure_date) ? `(Jadwal: ${first.departure_date} s/d ${(last && last.departure_date) || first.departure_date})` : '';
-
-    const rBannerIdx = s5Rows.length;
-    s5Rows.push([
-      `MODA TRANSPORTASI PULANG: ${grpName.toUpperCase()} — TOTAL: ${items.length} PESERTA ${timeRange}`,
-      '', '', '', '', '', '', '', '', '', '', ''
-    ]);
-    s5BannerIndexes.push({ rIdx: rBannerIdx, color: '4338CA' });
-    s5Merges.push({ s: { r: rBannerIdx, c: 0 }, e: { r: rBannerIdx, c: s5Headers.length - 1 } });
-
-    const rHeadIdx = s5Rows.length;
-    s5Rows.push([...s5Headers]);
-    s5HeaderIndexes.push(rHeadIdx);
-
-    items.forEach((item, idx) => {
-      const roomInfo = item.building 
-        ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
-        : (item.room_name || item.room_number || '-');
-      s5Rows.push([
-        idx + 1,
-        sanitizeSpreadsheetValue(item.transport_departure || grpName),
-        sanitizeSpreadsheetValue(item.departure_date || '-'),
-        sanitizeSpreadsheetValue(item.departure_time || '-'),
-        sanitizeSpreadsheetValue(item.full_name),
-        sanitizeSpreadsheetValue(item.gender),
-        item.age ? `${item.age} Th` : '-',
-        sanitizeSpreadsheetValue(item.wilayah),
-        sanitizeSpreadsheetValue(item.daerah || '-'),
-        sanitizeSpreadsheetValue(item.phone_number || '-'),
-        sanitizeSpreadsheetValue(roomInfo),
-        sanitizeSpreadsheetValue(item.notes || '-')
-      ]);
-    });
-
-    s5Rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
-  });
-
-  const ws5 = XLSX.utils.aoa_to_sheet(s5Rows);
-  ws5['!merges'] = s5Merges;
-  formatSheet(ws5, s5Rows, s5HeaderIndexes, '4338CA', (rIdx, cIdx) => {
-    const banner = s5BannerIndexes.find(b => b.rIdx === rIdx);
-    if (banner) {
-      return {
-        fill: { fgColor: { rgb: banner.color } },
-        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-        alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
-      };
-    }
-    if (rIdx === rDepSumTotalIdx) {
-      return {
-        fill: { fgColor: { rgb: 'E0E7FF' } },
-        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '3730A3' } },
-        alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : 'center', vertical: 'center' }
-      };
-    }
-    if (cIdx === 1) { // Kolom Moda Transportasi Pulang bold & center
-      return createDataStyle(rIdx % 2 === 0, 'center', null, '4338CA', true);
-    }
-    if (cIdx === 2 || cIdx === 3 || cIdx === 6) {
-      return createDataStyle(rIdx % 2 === 0, 'center');
-    }
-    return null;
-  });
-  XLSX.utils.book_append_sheet(workbook, ws5, 'Kepulangan & Transport');
-
-  // ===================================================================
-  // 6. HALAMAN KEENAM: REKAP KESEHATAN (KHUSUS PESERTA DENGAN RIWAYAT MEDIS / SAKIT)
+  // 5. HALAMAN KELIMA: REKAP KESEHATAN (KHUSUS PESERTA DENGAN RIWAYAT MEDIS / SAKIT)
   // ===================================================================
   const healthIssueList = sourceData
     .filter(item => hasParticipantMedicalIssue(item))
@@ -11804,7 +11637,7 @@ function exportToExcel() {
   // ===================================================================
   const dateStr = new Date().toISOString().split('T')[0];
   XLSX.writeFile(workbook, `Rekap_Peserta_Paskas_Bahagia_${dateStr}.xlsx`);
-  showToast('File Excel 10 halaman lengkap (termasuk Tab Khusus Peserta Mengundurkan Diri) berhasil diunduh!', 'success');
+  showToast('File Excel rekap terpadu berhasil diunduh (Rekap Kedatangan & Kepulangan disatukan dan diurutkan terawal)!', 'success');
 }
 
 function exportToCSV() {

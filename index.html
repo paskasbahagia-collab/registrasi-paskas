@@ -4009,6 +4009,13 @@
               <option value="3XL">3XL</option>
               <option value="4XL">4XL</option>
             </select>
+
+            <select id="filterSort" class="filter-select" onchange="applyRekapFilters()" style="border-color: #3b82f6; font-weight: 700; color: #1d4ed8;" title="Urutkan Tampilan Tabel">
+              <option value="default"><i class="fa-solid fa-arrow-down-wide-short"></i> Urutan: Default</option>
+              <option value="arrival">📅 Urutan: Kedatangan Terawal</option>
+              <option value="departure">🛫 Urutan: Kepulangan Terawal</option>
+              <option value="name">🔤 Urutan: Nama (A-Z)</option>
+            </select>
           </div>
 
         <!-- Interactive Data Table Container -->
@@ -4025,7 +4032,7 @@
                   <th>Wilayah</th>
                   <th>Jadwal Datang</th>
                   <th>Jadwal Pulang</th>
-                  <th>Kendaraan</th>
+                  <th width="140">Kendaraan (Datang &amp; Pulang)</th>
                   <th width="75">Baju</th>
                   <th>Riwayat Medis</th>
                   <th width="110" style="text-align: center;">Aksi</th>
