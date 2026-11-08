@@ -15609,15 +15609,11 @@ input:checked + .slider:before {
 .checkin-group-header-card {
   background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
   color: #ffffff;
+  border: 1.5px solid #10b981;
   border-radius: 18px;
-  padding: 16px 20px;
+  padding: 18px 20px;
   margin: 16px 0 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  box-shadow: 0 8px 20px -4px rgba(4, 120, 87, 0.35);
-  flex-wrap: wrap;
+  box-shadow: 0 8px 24px -4px rgba(4, 120, 87, 0.45);
 }
 
 .checkin-group-badge-top {
@@ -15854,24 +15850,26 @@ input:checked + .slider:before {
 
 .checkin-profile-box {
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 16px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 18px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
   text-align: left;
   margin-bottom: 18px;
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.05);
 }
 
 .checkin-profile-photo {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
+  width: 86px;
+  height: 86px;
+  border-radius: 18px;
   object-fit: cover;
-  border: 3px solid #d97706;
+  border: 3.5px solid #d97706;
   background: #cbd5e1;
   flex-shrink: 0;
+  box-shadow: 0 6px 16px -2px rgba(217, 119, 6, 0.3);
 }
 
 .checkin-narrative-card {
@@ -15927,17 +15925,18 @@ input:checked + .slider:before {
 
 .btn-checkin-large {
   width: 100%;
-  padding: 16px 20px;
-  font-size: 16px;
+  padding: 17px 24px;
+  font-size: 16.5px;
   font-weight: 800;
-  border-radius: 14px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   cursor: pointer;
   border: none;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
 }
 
 .btn-checkin-large:hover {
@@ -15946,9 +15945,12 @@ input:checked + .slider:before {
 }
 
 .btn-checkin-primary {
-  background: linear-gradient(135deg, #059669, #047857);
+  position: relative;
+  background: linear-gradient(135deg, #059669 0%, #047857 50%, #064e3b 100%);
   color: #ffffff;
-  box-shadow: 0 10px 20px -5px rgba(5, 150, 105, 0.4);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 12px 26px -4px rgba(5, 150, 105, 0.45), 0 4px 10px -2px rgba(4, 120, 87, 0.25);
+  overflow: hidden;
 }
 
 /* MODAL: DAFTAR ROMBONGAN PRESENSI CHECKIN */
@@ -16025,3 +16027,32 @@ input:checked + .slider:before {
   }
 }
 
+
+.btn-checkin-narrative {
+  position: relative;
+  z-index: 1;
+  font-size: 16.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.checkin-group-header-card h3,
+.checkin-group-header-card .checkin-group-name {
+  color: #ffffff !important;
+  font-size: 19px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.checkin-group-header-card .checkin-group-meta {
+  color: #e2e8f0 !important;
+  font-size: 13px !important;
+}
+
+.checkin-group-header-card .checkin-group-meta strong {
+  color: #fef08a !important;
+  font-weight: 800 !important;
+}

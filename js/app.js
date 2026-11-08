@@ -19654,21 +19654,21 @@ function executeCheckinSearchFilter(rawQuery) {
 
       html += `
         <div class="checkin-group-header-card" style="margin-top: 14px; margin-bottom: 8px;">
-          <div class="checkin-group-badge-top">
-            <i class="fa-solid fa-users-viewfinder"></i> Kafilah Rombongan Resmi
+          <div class="checkin-group-badge-top" style="background: rgba(255, 255, 255, 0.22); border: 1px solid rgba(254, 240, 138, 0.45); color: #fef08a; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.5px;">
+            <i class="fa-solid fa-users-viewfinder"></i> KAFILAH ROMBONGAN RESMI
           </div>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
             <div>
-              <h3 style="margin: 0 0 4px; font-size: 17px; font-weight: 900; color: #064e3b;">${safeGroupName}</h3>
-              <div style="font-size: 12.5px; color: #475569; display: flex; gap: 12px; flex-wrap: wrap;">
-                <span><i class="fa-solid fa-user-tie text-amber"></i> Koordinator: <strong>${safeLeader}</strong></span>
-                <span><i class="fa-solid fa-map-location-dot text-emerald"></i> ${safeWilayah}</span>
+              <h3 class="checkin-group-name" style="margin: 0 0 6px; font-size: 19px; font-weight: 900; color: #ffffff !important; letter-spacing: -0.2px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">${safeGroupName}</h3>
+              <div class="checkin-group-meta" style="font-size: 13px; color: #e2e8f0; display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">
+                <span style="color: #f8fafc;"><i class="fa-solid fa-user-tie" style="color: #fde047; margin-right: 4px;"></i> Koordinator: <strong style="color: #fef08a; font-weight: 800;">${safeLeader}</strong></span>
+                <span style="color: #f8fafc;"><i class="fa-solid fa-map-location-dot" style="color: #6ee7b7; margin-right: 4px;"></i> Wilayah: <strong style="color: #a7f3d0; font-weight: 800;">${safeWilayah}</strong></span>
               </div>
             </div>
             <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-              <span class="checkin-group-stat-chip"><i class="fa-solid fa-users"></i> ${total} Total</span>
-              <span class="checkin-group-stat-chip" style="background: #ecfdf5; border-color: #a7f3d0; color: #047857;"><i class="fa-solid fa-circle-check"></i> ${attended} Hadir</span>
-              <span class="checkin-group-stat-chip" style="background: #fffbeb; border-color: #fde68a; color: #b45309;"><i class="fa-regular fa-clock"></i> ${pending} Belum</span>
+              <span class="checkin-group-stat-chip" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.4); color: #ffffff; font-weight: 800;"><i class="fa-solid fa-users"></i> ${total} Total</span>
+              <span class="checkin-group-stat-chip" style="background: #ffffff; border: 1.5px solid #a7f3d0; color: #047857; font-weight: 800;"><i class="fa-solid fa-circle-check" style="color: #059669;"></i> ${attended} Hadir</span>
+              <span class="checkin-group-stat-chip" style="background: #fef3c7; border: 1.5px solid #fde68a; color: #92400e; font-weight: 800;"><i class="fa-regular fa-clock" style="color: #b45309;"></i> ${pending} Belum</span>
             </div>
           </div>
           ${pending > 0 ? `
@@ -19678,8 +19678,8 @@ function executeCheckinSearchFilter(rawQuery) {
               </button>
             </div>
           ` : `
-            <div style="margin-top: 8px; font-size: 12px; font-weight: 700; color: #047857;">
-              <i class="fa-solid fa-circle-check"></i> Seluruh anggota kafilah (${total} orang) telah menyelesaikan check-in.
+            <div style="margin-top: 10px; font-size: 13px; font-weight: 800; color: #a7f3d0; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-circle-check" style="color: #6ee7b7;"></i> Seluruh anggota kafilah (${total} orang) telah menyelesaikan check-in.
             </div>
           `}
         </div>
@@ -19743,13 +19743,21 @@ function renderCheckinConfirmCard(p) {
   const code = escapeHtml(p.registration_code || 'PKB');
   const name = escapeHtml(p.full_name || '-');
   const group = (p.group_name && p.group_name.trim() !== '' && p.group_name.trim() !== '-') ? escapeHtml(p.group_name) : 'Mandiri';
-  const daerah = escapeHtml(p.daerah || p.wilayah || '-');
+  const daerah = escapeHtml(p.daerah || '-');
+  const wilayah = escapeHtml(p.wilayah || '');
+  const daerahFull = wilayah && wilayah !== daerah && daerah !== '-' ? `${daerah} (${wilayah})` : (daerah !== '-' ? daerah : (wilayah || '-'));
+  const joinYear = p.join_year ? escapeHtml(String(p.join_year)) : '';
+
   const photoUrl = p.photo_url || p.photo_data || '';
   const initial = (p.full_name || 'P').trim()[0].toUpperCase();
 
   const photoHtml = photoUrl
-    ? `<img src="${escapeHtml(photoUrl)}" alt="${name}" class="checkin-profile-photo" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'checkin-result-avatar-initial\\' style=\\'width:64px;height:64px;font-size:22px;\\'>${initial}</div>';">`
-    : `<div class="checkin-result-avatar-initial" style="width:64px;height:64px;font-size:22px;">${initial}</div>`;
+    ? `<img src="${escapeHtml(photoUrl)}" alt="${name}" class="checkin-profile-photo" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'checkin-result-avatar-initial\\' style=\\'width:86px;height:86px;font-size:32px;border-radius:18px;\\'>${initial}</div>';">`
+    : `<div class="checkin-result-avatar-initial" style="width:86px;height:86px;font-size:32px;border-radius:18px;">${initial}</div>`;
+
+  const joinYearBadge = joinYear
+    ? `<span style="font-size: 11.5px; font-weight: 800; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-medal" style="color: #059669;"></i> Bergabung: ${joinYear}</span>`
+    : '';
 
   // Cek apakah punya anggota rombongan lain yang belum hadir
   let groupSectionHtml = '';
@@ -19787,20 +19795,26 @@ function renderCheckinConfirmCard(p) {
     <h2 style="font-size: 20px; font-weight: 900; color: #1e293b; margin: 0 0 6px;">Konfirmasi Kehadiran Jemaah</h2>
     <p style="font-size: 13px; color: #64748b; margin: 0 0 16px;">Mohon pastikan identitas di bawah ini adalah data Anda:</p>
 
+    <!-- Data Diri Lengkap & Foto Besar -->
     <div class="checkin-profile-box">
       ${photoHtml}
       <div style="flex: 1; min-width: 0;">
-        <span style="font-size: 12px; font-weight: 800; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 6px;">${code}</span>
-        <div style="font-size: 17px; font-weight: 900; color: #0f172a; margin: 4px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
-        <div style="font-size: 12.5px; color: #64748b;">Kafilah: <strong>${group}</strong> &bull; ${daerah}</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 4px;">
+          <span style="font-size: 12px; font-weight: 800; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 6px;">${code}</span>
+          ${joinYearBadge}
+        </div>
+        <div style="font-size: 19px; font-weight: 900; color: #064e3b; margin: 2px 0 6px; text-transform: capitalize; line-height: 1.25;">${name}</div>
+        <div style="font-size: 12.5px; color: #475569; display: flex; flex-direction: column; gap: 3px;">
+          <div><i class="fa-solid fa-users text-emerald" style="width: 15px;"></i> Kafilah: <strong>${group}</strong></div>
+          <div><i class="fa-solid fa-map-pin text-amber" style="width: 15px;"></i> Asal: <strong>${daerahFull}</strong></div>
+        </div>
       </div>
     </div>
 
     ${groupSectionHtml}
 
     <button type="button" class="btn-checkin-large btn-checkin-primary" id="btnConfirmCheckinSubmit" onclick="confirmParticipantCheckin(${p.id})">
-      <i class="fa-solid fa-circle-check"></i>
-      <span>✅ Konfirmasi Kehadiran Saya Sekarang</span>
+      <span class="btn-checkin-narrative">Konfirmasi Kehadiran Saya Sekarang</span>
     </button>
 
     <div style="margin-top: 14px;">
@@ -19861,7 +19875,7 @@ async function confirmParticipantCheckin(participantId) {
     showToast('Gagal mencatat kehadiran: ' + (err.message || err), 'error');
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>Coba Lagi Konfirmasi Kehadiran</span>';
+      btn.innerHTML = '<span class="btn-checkin-narrative">Coba Lagi Konfirmasi Kehadiran</span>';
     }
   }
 }
@@ -19882,6 +19896,12 @@ function showCheckinSuccessPass(p, isJustCheckedIn = false) {
   const group = (p.group_name && p.group_name.trim() !== '' && p.group_name.trim() !== '-') ? escapeHtml(p.group_name) : 'Mandiri';
   const daerah = escapeHtml(p.daerah || p.wilayah || '-');
   const clothSize = escapeHtml(p.cloth_size || 'Belum Diisi');
+  const wilayah = escapeHtml(p.wilayah || '');
+  const daerahFull = wilayah && wilayah !== daerah && daerah !== '-' ? `${daerah} (${wilayah})` : (daerah !== '-' ? daerah : (wilayah || '-'));
+  const joinYear = p.join_year ? escapeHtml(String(p.join_year)) : '';
+  const joinYearBadge = joinYear
+    ? `<span style="font-size: 11.5px; font-weight: 800; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-medal" style="color: #059669;"></i> Bergabung: ${joinYear}</span>`
+    : '';
 
   // Info Kamar & Gedung
   let roomText = 'Belum ditentukan';
@@ -19922,7 +19942,7 @@ function showCheckinSuccessPass(p, isJustCheckedIn = false) {
 
   const photoHtml = photoUrl
     ? `<img src="${escapeHtml(photoUrl)}" alt="${name}" class="checkin-profile-photo" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'checkin-result-avatar-initial\\' style=\\'width:64px;height:64px;font-size:22px;\\'>${initial}</div>';">`
-    : `<div class="checkin-result-avatar-initial" style="width:64px;height:64px;font-size:22px;">${initial}</div>`;
+    : `<div class="checkin-result-avatar-initial" style="width:86px;height:86px;font-size:32px;border-radius:18px;">${initial}</div>`;
 
   // Bangun Narasi Ringkas Sesuai Kondisi
   let narrativeHtml = '';
@@ -19967,13 +19987,19 @@ function showCheckinSuccessPass(p, isJustCheckedIn = false) {
       <i class="fa-solid fa-clock text-emerald"></i> ${timeStr}
     </div>
 
-    <!-- Data Diri Peserta -->
+    <!-- Data Diri Peserta Lengkap & Foto Besar -->
     <div class="checkin-profile-box">
       ${photoHtml}
       <div style="flex: 1; min-width: 0;">
-        <span style="font-size: 12px; font-weight: 800; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 6px;">${code}</span>
-        <div style="font-size: 18px; font-weight: 900; color: #0f172a; margin: 4px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
-        <div style="font-size: 12.5px; color: #64748b;">Kafilah: <strong>${group}</strong> &bull; ${daerah}</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 4px;">
+          <span style="font-size: 12px; font-weight: 800; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 6px;">${code}</span>
+          ${joinYearBadge}
+        </div>
+        <div style="font-size: 19px; font-weight: 900; color: #064e3b; margin: 2px 0 6px; text-transform: capitalize; line-height: 1.25;">${name}</div>
+        <div style="font-size: 12.5px; color: #475569; display: flex; flex-direction: column; gap: 3px;">
+          <div><i class="fa-solid fa-users text-emerald" style="width: 15px;"></i> Kafilah: <strong>${group}</strong></div>
+          <div><i class="fa-solid fa-map-pin text-amber" style="width: 15px;"></i> Asal: <strong>${daerahFull}</strong></div>
+        </div>
       </div>
     </div>
 
