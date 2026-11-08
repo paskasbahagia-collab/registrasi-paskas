@@ -8367,6 +8367,13 @@ function viewAttendeeDetail(id) {
       <p style="font-size: 14px; color: #f8fafc; margin-top: 4px;">${attendee.medical_history || 'Tidak Ada (Sehat)'}</p>
     </div>
 
+    ${attendee.attendance_status === 'cancelled' ? `
+      <div style="margin-top: 14px; padding: 14px; border-radius: var(--radius-md); background: rgba(239, 68, 68, 0.12); border: 1.5px solid rgba(239, 68, 68, 0.4);">
+        <span class="item-label" style="color: #f87171; font-weight: 700;"><i class="fa-solid fa-ban"></i> Status Kehadiran Dibatalkan</span>
+        <p style="font-size: 13.5px; color: #ffffff; margin-top: 4px;">Alasan Pembatalan: <strong style="color: #fca5a5;">${attendee.cancel_reason || 'Tanpa keterangan'}</strong></p>
+      </div>
+    ` : ''}
+
     ${attendee.notes ? `
       <div style="margin-top: 14px;">
         <span class="item-label">Catatan Khusus:</span>
@@ -16251,7 +16258,7 @@ function renderPresensiTable() {
       }
       statusBadge = `<span class="badge-departed"><i class="fa-solid fa-plane-departure"></i> Pulang (${outStr || 'Selesai'})</span>`;
     } else if (st === 'cancelled') {
-      statusBadge = `<span class="badge-cancelled"><i class="fa-solid fa-ban"></i> Batal</span>`;
+      statusBadge = `<span class="badge-cancelled" title="${escapeHtml(p.cancel_reason || '')}"><i class="fa-solid fa-ban"></i> Batal</span>${p.cancel_reason ? `<div style="font-size: 11px; color: #dc2626; margin-top: 3px; font-style: italic; line-height: 1.2;">Alasan: ${escapeHtml(p.cancel_reason)}</div>` : ''}`;
     }
 
     // Payment badge (Selama belum diverifikasi maka belum lunas)

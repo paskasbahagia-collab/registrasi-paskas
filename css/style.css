@@ -16056,3 +16056,32 @@ input:checked + .slider:before {
   color: #fef08a !important;
   font-weight: 800 !important;
 }
+
+/* ============================================================== */
+/* INPUT ALASAN PEMBATALAN PRESENSI (HIGH-CONTRAST DARK TEXT)     */
+/* ============================================================== */
+#detCancelReasonInput,
+input#detCancelReasonInput.form-control {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  padding: 10px 14px !important;
+  border-radius: 8px !important;
+}
+
+#detCancelReasonInput:focus,
+input#detCancelReasonInput.form-control:focus {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25) !important;
+}
+
+#detCancelReasonInput::placeholder,
+input#detCancelReasonInput.form-control::placeholder {
+  color: #94a3b8 !important;
+  font-weight: 400 !important;
+  opacity: 1 !important;
+}
