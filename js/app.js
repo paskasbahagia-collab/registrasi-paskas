@@ -10789,7 +10789,7 @@ function exportToExcel() {
   // 4. HALAMAN KEEMPAT: REKAP BAJU (DIPISAH PER UKURAN: S SENDIRI, M, L, XL, DST)
   // ===================================================================
   const clothGroups = new Map();
-  sourceData.forEach(item => {
+  activeData.forEach(item => {
     const sz = normalizeClothSize(item.cloth_size, item.age);
     if (!clothGroups.has(sz)) clothGroups.set(sz, []);
     clothGroups.get(sz).push(item);
@@ -10800,7 +10800,7 @@ function exportToExcel() {
   });
 
   const s4Headers = [
-    'No', 'Ukuran Baju', 'Nama Peserta', 'Jenis Kelamin', 'Usia', 
+    'No', 'Ukuran Baju', 'Nama Peserta', 'Status Pembayaran', 'Jenis Kelamin', 'Usia', 
     'Kategori Usia', 'Wilayah', 'Daerah', 'No WhatsApp', 'Gedung / Kamar', 'Catatan'
   ];
   const s4Rows = [];
@@ -10850,8 +10850,8 @@ function exportToExcel() {
   }
 
   // Jeda baris pemisah antar bagian
-  s4Rows.push(['', '', '', '', '', '', '', '', '', '', '']);
-  s4Rows.push(['', '', '', '', '', '', '', '', '', '', '']);
+  s4Rows.push(new Array(s4Headers.length).fill(''));
+  s4Rows.push(new Array(s4Headers.length).fill(''));
 
   // BAGIAN 2: DAFTAR PESERTA PER UKURAN BAJU (S SENDIRI, M SENDIRI, L SENDIRI, DST)
   sortedClothGroups.forEach(([sz, items]) => {
@@ -10875,7 +10875,7 @@ function exportToExcel() {
       : `UKURAN SERAGAM: ${sz} — TOTAL: ${items.length} POTONG (Ikhwan: ${cIkh} Pcs | Akhwat: ${cAkh} Pcs)`;
 
     const rBannerIdx = s4Rows.length;
-    s4Rows.push([bannerTitle, '', '', '', '', '', '', '', '', '', '']);
+    s4Rows.push([bannerTitle, ...new Array(s4Headers.length - 1).fill('')]);
     s4BannerIndexes.push({ rIdx: rBannerIdx, color: isNoCloth ? '475569' : 'B45309' });
     s4Merges.push({ s: { r: rBannerIdx, c: 0 }, e: { r: rBannerIdx, c: s4Headers.length - 1 } });
 
@@ -10884,13 +10884,29 @@ function exportToExcel() {
     s4HeaderIndexes.push(rHeadIdx);
 
     items.forEach((item, idx) => {
+      const isK2 = isKloter2Participant(item);
+      const paid = Number(item.paid_amount || 0);
+      const fee = getParticipantFeeSafe(item);
+      const remaining = Number(item.remaining_amount !== undefined && item.remaining_amount !== null ? item.remaining_amount : Math.max(0, fee - paid));
+      const isPaid = item.payment_status === 'paid' || item.payment_status === 'lunas' || item.payment_verified === 'verified';
+      let payStatus = 'Belum Bayar';
+      if (isK2) {
+        payStatus = paid > 0 ? `Bebas Biaya (Infaq: Rp ${paid.toLocaleString('id-ID')})` : 'Bebas Biaya (Kloter 2)';
+      } else if (isPaid || (paid > 0 && remaining <= 0)) {
+        payStatus = 'Lunas';
+      } else if (paid > 0 && remaining > 0) {
+        payStatus = `Kurang (Sisa: Rp ${remaining.toLocaleString('id-ID')})`;
+      }
+
       const roomInfo = item.building 
         ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
         : (item.room_name || item.room_number || '-');
+
       s4Rows.push([
         idx + 1,
         sanitizeSpreadsheetValue(sz),
         sanitizeSpreadsheetValue(item.full_name),
+        sanitizeSpreadsheetValue(payStatus),
         sanitizeSpreadsheetValue(item.gender),
         item.age ? `${item.age} Th` : '-',
         (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
@@ -10902,12 +10918,12 @@ function exportToExcel() {
       ]);
     });
 
-    s4Rows.push(['', '', '', '', '', '', '', '', '', '', '']);
+    s4Rows.push(new Array(s4Headers.length).fill(''));
   });
 
   const ws4 = XLSX.utils.aoa_to_sheet(s4Rows);
   ws4['!merges'] = s4Merges;
-  formatSheet(ws4, s4Rows, s4HeaderIndexes, 'B45309', (rIdx, cIdx) => {
+  formatSheet(ws4, s4Rows, s4HeaderIndexes, 'B45309', (rIdx, cIdx, cellVal) => {
     const banner = s4BannerIndexes.find(b => b.rIdx === rIdx);
     if (banner) {
       return {
@@ -10923,10 +10939,34 @@ function exportToExcel() {
         alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : 'center', vertical: 'center' }
       };
     }
-    if (cIdx === 1) { // Ukuran baju diberi warna font & rata tengah
+    // Baris-baris pada tabel ringkasan atas
+    if (rIdx <= rClothSumTotalIdx) {
+      if (cIdx >= 2) return createDataStyle(rIdx % 2 === 0, 'center');
+      return null;
+    }
+    // Kolom 1: Ukuran baju (center & warna amber bold)
+    if (cIdx === 1) {
       return createDataStyle(rIdx % 2 === 0, 'center', null, 'B45309', true);
     }
-    if (cIdx === 2 || cIdx === 3 || cIdx === 4) {
+    // Kolom 3: Status Pembayaran (badge warna sesuai status)
+    if (cIdx === 3) {
+      const val = String(cellVal || '');
+      if (val.startsWith('Lunas')) {
+        return createDataStyle(rIdx % 2 === 0, 'center', 'D1FAE5', '047857', true);
+      }
+      if (val.startsWith('Bebas Biaya')) {
+        return createDataStyle(rIdx % 2 === 0, 'center', 'E0F2FE', '0284C7', true);
+      }
+      if (val.startsWith('Kurang')) {
+        return createDataStyle(rIdx % 2 === 0, 'center', 'FEF3C7', 'B45309', true);
+      }
+      if (val.startsWith('Belum')) {
+        return createDataStyle(rIdx % 2 === 0, 'center', 'FEE2E2', 'DC2626', true);
+      }
+      return createDataStyle(rIdx % 2 === 0, 'center');
+    }
+    // Kolom 4: Jenis Kelamin, Kolom 5: Usia, Kolom 6: Kategori Usia
+    if (cIdx === 4 || cIdx === 5 || cIdx === 6) {
       return createDataStyle(rIdx % 2 === 0, 'center');
     }
     return null;
