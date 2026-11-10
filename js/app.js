@@ -11016,21 +11016,7 @@ function exportToExcel() {
     return { fee, paid, remaining, statusRank, statusLabel };
   }
 
-  const sSumHeaders = [
-    'No', 'Nama Wilayah', 'Total Peserta', 'Peserta Ikhwan', 'Peserta Akhwat',
-    'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', 
-    'Total Kaos (Pcs)', 'Kaos Ikhwan', 'Kaos Akhwat',
-    'Lunas', 'Cicilan', 'Belum Bayar', 'Anak (Tanpa Kaos)'
-  ];
-
-  const sClothWilayahHeaders = [
-    'No', 'Kode Tiket', 'Nama Peserta', 'Jenis Kelamin', 'Ukuran Kaos', 'Status Pembayaran', 
-    'Total Tagihan (Rp)', 'Terbayar (Rp)', 'Sisa Piutang (Rp)', 'Usia', 'Kategori Usia', 
-    'Daerah / Kota', 'No WhatsApp', 'Gedung / Kamar', 'Catatan'
-  ];
-
-  const maxClothWilCols = Math.max(sSumHeaders.length, sClothWilayahHeaders.length);
-
+  const maxClothWilCols = 23;
   const sClothWilayahRows = [];
   const sClothWilayahHeaderIndexes = [];
   const sClothWilayahBannerIndexes = [];
@@ -11039,44 +11025,95 @@ function exportToExcel() {
 
   // BAGIAN 1: RINGKASAN REKAPITULASI PEMBAGIAN SERAGAM KAOS PER WILAYAH
   const rClothWilSumTitleIdx = sClothWilayahRows.length;
-  sClothWilayahRows.push(['RINGKASAN REKAPITULASI PEMBAGIAN SERAGAM KAOS PER WILAYAH (KHUSUS KLOTER 1)', ...new Array(maxClothWilCols - 1).fill('')]);
+  sClothWilayahRows.push(['RINGKASAN REKAPITULASI PEMBAGIAN SERAGAM KAOS PER WILAYAH — PEMISAHAN IKHWAN & AKHWAT PER UKURAN (KHUSUS KLOTER 1)', ...new Array(maxClothWilCols - 1).fill('')]);
   sClothWilayahBannerIndexes.push({ rIdx: rClothWilSumTitleIdx, color: '047857' });
   sClothWilayahMerges.push({ s: { r: rClothWilSumTitleIdx, c: 0 }, e: { r: rClothWilSumTitleIdx, c: maxClothWilCols - 1 } });
 
-  const rClothWilSumHeadIdx = sClothWilayahRows.length;
-  sClothWilayahRows.push([...sSumHeaders]);
-  sClothWilayahHeaderIndexes.push(rClothWilSumHeadIdx);
+  // HEADER BARIS 1: NAMA UKURAN KAOS (MERGE 2 KOLOM IKHWAN & AKHWAT)
+  const rClothWilSumHead1 = sClothWilayahRows.length;
+  sClothWilayahRows.push([
+    'No', 'Nama Wilayah',
+    'UKURAN S', '',
+    'UKURAN M', '',
+    'UKURAN L', '',
+    'UKURAN XL', '',
+    'UKURAN XXL', '',
+    'UKURAN 3XL', '',
+    'UKURAN 4XL', '',
+    'TOTAL KAOS (PCS)', '', '',
+    'STATUS PEMBAYARAN', '', '',
+    'ANAK (≤ 12 TH)'
+  ]);
+  sClothWilayahHeaderIndexes.push(rClothWilSumHead1);
 
-  let grandS = 0, grandM = 0, grandL = 0, grandXL = 0, grandXXL = 0, grand3XL = 0, grand4XL = 0;
-  let grandTotalKaos = 0, grandKaosIkh = 0, grandKaosAkh = 0;
-  let grandPeserta = 0, grandPesertaIkh = 0, grandPesertaAkh = 0;
+  // HEADER BARIS 2: SUB-KOLOM IKHWAN & AKHWAT
+  const rClothWilSumHead2 = sClothWilayahRows.length;
+  sClothWilayahRows.push([
+    '', '',
+    'Ikhwan', 'Akhwat',
+    'Ikhwan', 'Akhwat',
+    'Ikhwan', 'Akhwat',
+    'Ikhwan', 'Akhwat',
+    'Ikhwan', 'Akhwat',
+    'Ikhwan', 'Akhwat',
+    'Ikhwan', 'Akhwat',
+    'Ikhwan', 'Akhwat', 'Total',
+    'Lunas', 'Cicilan', 'Belum Bayar',
+    'Tanpa Kaos'
+  ]);
+  sClothWilayahHeaderIndexes.push(rClothWilSumHead2);
+
+  // Merge sel header baris 1 & baris 2
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 0 }, e: { r: rClothWilSumHead2, c: 0 } }); // No
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 1 }, e: { r: rClothWilSumHead2, c: 1 } }); // Wilayah
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 2 }, e: { r: rClothWilSumHead1, c: 3 } }); // S
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 4 }, e: { r: rClothWilSumHead1, c: 5 } }); // M
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 6 }, e: { r: rClothWilSumHead1, c: 7 } }); // L
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 8 }, e: { r: rClothWilSumHead1, c: 9 } }); // XL
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 10 }, e: { r: rClothWilSumHead1, c: 11 } }); // XXL
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 12 }, e: { r: rClothWilSumHead1, c: 13 } }); // 3XL
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 14 }, e: { r: rClothWilSumHead1, c: 15 } }); // 4XL
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 16 }, e: { r: rClothWilSumHead1, c: 18 } }); // Total Kaos
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 19 }, e: { r: rClothWilSumHead1, c: 21 } }); // Status Bayar
+  sClothWilayahMerges.push({ s: { r: rClothWilSumHead1, c: 22 }, e: { r: rClothWilSumHead2, c: 22 } }); // Anak
+
+  let grandIkhS = 0, grandAkhS = 0;
+  let grandIkhM = 0, grandAkhM = 0;
+  let grandIkhL = 0, grandAkhL = 0;
+  let grandIkhXL = 0, grandAkhXL = 0;
+  let grandIkhXXL = 0, grandAkhXXL = 0;
+  let grandIkh3XL = 0, grandAkh3XL = 0;
+  let grandIkh4XL = 0, grandAkh4XL = 0;
+  let grandTotalKaosIkh = 0, grandTotalKaosAkh = 0, grandTotalKaos = 0;
   let grandLunas = 0, grandKurang = 0, grandBelum = 0, grandAnak = 0;
 
   sortedWilayahClothList.forEach(([wName, wItems], idx) => {
-    let cS = 0, cM = 0, cL = 0, cXL = 0, cXXL = 0, c3XL = 0, c4XL = 0, cAnak = 0, totalKaos = 0;
-    let kaosIkh = 0, kaosAkh = 0;
-    let pesIkh = 0, pesAkh = 0;
-    let cLunas = 0, cKurang = 0, cBelum = 0;
+    let ikhS = 0, akhS = 0;
+    let ikhM = 0, akhM = 0;
+    let ikhL = 0, akhL = 0;
+    let ikhXL = 0, akhXL = 0;
+    let ikhXXL = 0, akhXXL = 0;
+    let ikh3XL = 0, akh3XL = 0;
+    let ikh4XL = 0, akh4XL = 0;
+    let totKaosIkh = 0, totKaosAkh = 0;
+    let cLunas = 0, cKurang = 0, cBelum = 0, cAnak = 0;
 
     wItems.forEach(i => {
       const isFem = /perempuan|akhwat|^p$/i.test(String(i.gender || ''));
-      if (isFem) pesAkh++;
-      else pesIkh++;
-
       const sz = normalizeClothSize(i.cloth_size, i.age, false);
-      if (sz === 'S') cS++;
-      else if (sz === 'M') cM++;
-      else if (sz === 'L') cL++;
-      else if (sz === 'XL') cXL++;
-      else if (sz === 'XXL') cXXL++;
-      else if (sz === '3XL') c3XL++;
-      else if (sz === '4XL') c4XL++;
-      else if (sz === '-') cAnak++;
+
+      if (sz === 'S') { if (isFem) akhS++; else ikhS++; }
+      else if (sz === 'M') { if (isFem) akhM++; else ikhM++; }
+      else if (sz === 'L') { if (isFem) akhL++; else ikhL++; }
+      else if (sz === 'XL') { if (isFem) akhXL++; else ikhXL++; }
+      else if (sz === 'XXL') { if (isFem) akhXXL++; else ikhXXL++; }
+      else if (sz === '3XL') { if (isFem) akh3XL++; else ikh3XL++; }
+      else if (sz === '4XL') { if (isFem) akh4XL++; else ikh4XL++; }
+      else if (sz === '-') { cAnak++; }
 
       if (sz !== '-') {
-        totalKaos++;
-        if (isFem) kaosAkh++;
-        else kaosIkh++;
+        if (isFem) totKaosAkh++;
+        else totKaosIkh++;
       }
 
       const pay = getClothPaymentInfo(i);
@@ -11085,17 +11122,28 @@ function exportToExcel() {
       else cBelum++;
     });
 
-    grandS += cS; grandM += cM; grandL += cL; grandXL += cXL; grandXXL += cXXL; grand3XL += c3XL; grand4XL += c4XL;
-    grandTotalKaos += totalKaos; grandKaosIkh += kaosIkh; grandKaosAkh += kaosAkh;
-    grandPeserta += wItems.length; grandPesertaIkh += pesIkh; grandPesertaAkh += pesAkh;
+    grandIkhS += ikhS; grandAkhS += akhS;
+    grandIkhM += ikhM; grandAkhM += akhM;
+    grandIkhL += ikhL; grandAkhL += akhL;
+    grandIkhXL += ikhXL; grandAkhXL += akhXL;
+    grandIkhXXL += ikhXXL; grandAkhXXL += akhXXL;
+    grandIkh3XL += ikh3XL; grandAkh3XL += akh3XL;
+    grandIkh4XL += ikh4XL; grandAkh4XL += akh4XL;
+    grandTotalKaosIkh += totKaosIkh; grandTotalKaosAkh += totKaosAkh;
+    grandTotalKaos += (totKaosIkh + totKaosAkh);
     grandLunas += cLunas; grandKurang += cKurang; grandBelum += cBelum; grandAnak += cAnak;
 
     sClothWilayahRows.push([
       idx + 1,
       wName,
-      wItems.length, pesIkh, pesAkh,
-      cS, cM, cL, cXL, cXXL, c3XL, c4XL,
-      totalKaos, kaosIkh, kaosAkh,
+      ikhS, akhS,
+      ikhM, akhM,
+      ikhL, akhL,
+      ikhXL, akhXL,
+      ikhXXL, akhXXL,
+      ikh3XL, akh3XL,
+      ikh4XL, akh4XL,
+      totKaosIkh, totKaosAkh, totKaosIkh + totKaosAkh,
       cLunas, cKurang, cBelum,
       cAnak
     ]);
@@ -11104,9 +11152,14 @@ function exportToExcel() {
   const rClothWilSumTotalIdx = sClothWilayahRows.length;
   sClothWilayahRows.push([
     'TOTAL KESELURUHAN (KLOTER 1)', '',
-    grandPeserta, grandPesertaIkh, grandPesertaAkh,
-    grandS, grandM, grandL, grandXL, grandXXL, grand3XL, grand4XL,
-    grandTotalKaos, grandKaosIkh, grandKaosAkh,
+    grandIkhS, grandAkhS,
+    grandIkhM, grandAkhM,
+    grandIkhL, grandAkhL,
+    grandIkhXL, grandAkhXL,
+    grandIkhXXL, grandAkhXXL,
+    grandIkh3XL, grandAkh3XL,
+    grandIkh4XL, grandAkh4XL,
+    grandTotalKaosIkh, grandTotalKaosAkh, grandTotalKaos,
     grandLunas, grandKurang, grandBelum,
     grandAnak
   ]);
@@ -11116,74 +11169,65 @@ function exportToExcel() {
   sClothWilayahRows.push(new Array(maxClothWilCols).fill(''));
   sClothWilayahRows.push(new Array(maxClothWilCols).fill(''));
 
-  // BAGIAN 2: RINCIAN DISTRIBUSI KAOS PER WILAYAH
+  // BAGIAN 2: RINCIAN DISTRIBUSI KAOS PER WILAYAH (SEKSI IKHWAN & SEKSI AKHWAT)
+  const detailHeaders = [
+    'No', 'Kode Tiket', 'Nama Peserta', 'Ukuran Kaos', 'Status Pembayaran', 
+    'Total Tagihan (Rp)', 'Terbayar (Rp)', 'Sisa Piutang (Rp)', 'Usia', 'Kategori Usia', 
+    'Daerah / Kota', 'No WhatsApp', 'Gedung / Kamar', 'Catatan'
+  ];
+
   sortedWilayahClothList.forEach(([wName, wItems]) => {
-    // Urutkan per wilayah: Lunas (1) -> Cicilan (2) -> Belum Bayar (3), lalu Nama (A-Z)
-    wItems.sort((a, b) => {
+    // Seksi Utama Wilayah Banner
+    const wKaosTot = wItems.filter(i => normalizeClothSize(i.cloth_size, i.age, false) !== '-').length;
+    const rWilTitle = sClothWilayahRows.length;
+    sClothWilayahRows.push([`WILAYAH: ${wName.toUpperCase()} — TOTAL DISTRIBUSI: ${wKaosTot} KAOS | ${wItems.length} PESERTA`, ...new Array(maxClothWilCols - 1).fill('')]);
+    sClothWilayahBannerIndexes.push({ rIdx: rWilTitle, color: '065F46' });
+    sClothWilayahMerges.push({ s: { r: rWilTitle, c: 0 }, e: { r: rWilTitle, c: maxClothWilCols - 1 } });
+
+    // Pisahkan Ikhwan & Akhwat di wilayah ini
+    const itemsIkh = wItems.filter(i => !/perempuan|akhwat|^p$/i.test(String(i.gender || '')));
+    const itemsAkh = wItems.filter(i => /perempuan|akhwat|^p$/i.test(String(i.gender || '')));
+
+    // Helper sort Lunas -> Cicilan -> Belum -> Nama A-Z
+    const sortFn = (a, b) => {
       const payA = getClothPaymentInfo(a);
       const payB = getClothPaymentInfo(b);
-      if (payA.statusRank !== payB.statusRank) {
-        return payA.statusRank - payB.statusRank;
-      }
+      if (payA.statusRank !== payB.statusRank) return payA.statusRank - payB.statusRank;
       return (a.full_name || '').localeCompare(b.full_name || '');
-    });
+    };
 
-    let wKaos = 0, wKaosIkh = 0, wKaosAkh = 0;
-    let wPesIkh = 0, wPesAkh = 0;
-    let wLunas = 0, wKurang = 0, wBelum = 0, wAnak = 0;
-    let wFee = 0, wPaid = 0, wRem = 0;
+    itemsIkh.sort(sortFn);
+    itemsAkh.sort(sortFn);
 
-    wItems.forEach(i => {
-      const isFem = /perempuan|akhwat|^p$/i.test(String(i.gender || ''));
-      if (isFem) wPesAkh++;
-      else wPesIkh++;
-
-      const sz = normalizeClothSize(i.cloth_size, i.age, false);
-      if (sz !== '-') {
-        wKaos++;
-        if (isFem) wKaosAkh++;
-        else wKaosIkh++;
-      } else {
-        wAnak++;
-      }
-
+    // 1. SUB-SEKSI IKHWAN
+    const ikhKaos = itemsIkh.filter(i => normalizeClothSize(i.cloth_size, i.age, false) !== '-').length;
+    let ikhFee = 0, ikhPaid = 0, ikhRem = 0, ikhLunas = 0, ikhKurang = 0, ikhBelum = 0;
+    itemsIkh.forEach(i => {
       const pay = getClothPaymentInfo(i);
-      if (pay.statusRank === 1) wLunas++;
-      else if (pay.statusRank === 2) wKurang++;
-      else wBelum++;
-
-      wFee += pay.fee;
-      wPaid += pay.paid;
-      wRem += pay.remaining;
+      ikhFee += pay.fee; ikhPaid += pay.paid; ikhRem += pay.remaining;
+      if (pay.statusRank === 1) ikhLunas++; else if (pay.statusRank === 2) ikhKurang++; else ikhBelum++;
     });
 
-    const bannerTitle = `WILAYAH: ${wName.toUpperCase()} — TOTAL: ${wKaos} KAOS (Ikhwan: ${wKaosIkh} Pcs | Akhwat: ${wKaosAkh} Pcs) | ${wItems.length} PESERTA (Ikhwan: ${wPesIkh} | Akhwat: ${wPesAkh}) — Lunas: ${wLunas} | Cicilan: ${wKurang} | Belum Bayar: ${wBelum} | Anak: ${wAnak}`;
-    const rBannerIdx = sClothWilayahRows.length;
-    sClothWilayahRows.push([bannerTitle, ...new Array(maxClothWilCols - 1).fill('')]);
-    sClothWilayahBannerIndexes.push({ rIdx: rBannerIdx, color: '065F46' });
-    sClothWilayahMerges.push({ s: { r: rBannerIdx, c: 0 }, e: { r: rBannerIdx, c: maxClothWilCols - 1 } });
+    const rIkhBanner = sClothWilayahRows.length;
+    sClothWilayahRows.push([`👨 IKHWAN (LAKI-LAKI) — WILAYAH ${wName.toUpperCase()}: ${ikhKaos} KAOS | ${itemsIkh.length} PESERTA (Lunas: ${ikhLunas} | Cicilan: ${ikhKurang} | Belum: ${ikhBelum})`, ...new Array(maxClothWilCols - 1).fill('')]);
+    sClothWilayahBannerIndexes.push({ rIdx: rIkhBanner, color: '1E3A8A' });
+    sClothWilayahMerges.push({ s: { r: rIkhBanner, c: 0 }, e: { r: rIkhBanner, c: maxClothWilCols - 1 } });
 
-    const rHeadIdx = sClothWilayahRows.length;
-    sClothWilayahRows.push([...sClothWilayahHeaders]);
-    sClothWilayahHeaderIndexes.push(rHeadIdx);
+    const rIkhHead = sClothWilayahRows.length;
+    sClothWilayahRows.push([...detailHeaders]);
+    sClothWilayahHeaderIndexes.push(rIkhHead);
 
-    wItems.forEach((item, idx) => {
+    itemsIkh.forEach((item, idx) => {
       const sz = normalizeClothSize(item.cloth_size, item.age, false);
       const pay = getClothPaymentInfo(item);
-      const roomInfo = item.building 
-        ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
-        : (item.room_name || item.room_number || '-');
-
+      const roomInfo = item.building ? `${item.building} - ${item.room_name || item.room_number || '-'}` : (item.room_name || item.room_number || '-');
       sClothWilayahRows.push([
         idx + 1,
         sanitizeSpreadsheetValue(item.registration_code),
         sanitizeSpreadsheetValue(item.full_name),
-        sanitizeSpreadsheetValue(item.gender),
         sanitizeSpreadsheetValue(sz),
         sanitizeSpreadsheetValue(pay.statusLabel),
-        pay.fee,
-        pay.paid,
-        pay.remaining,
+        pay.fee, pay.paid, pay.remaining,
         item.age ? `${item.age} Th` : '-',
         (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
         sanitizeSpreadsheetValue(item.daerah || '-'),
@@ -11193,15 +11237,55 @@ function exportToExcel() {
       ]);
     });
 
-    const rSubIdx = sClothWilayahRows.length;
-    sClothWilayahRows.push([
-      `SUBTOTAL WILAYAH ${wName.toUpperCase()} (${wItems.length} PESERTA: ${wPesIkh} IKHWAN, ${wPesAkh} AKHWAT | ${wKaos} KAOS: ${wKaosIkh} IKHWAN, ${wKaosAkh} AKHWAT)`,
-      '', '', '', '', '',
-      wFee, wPaid, wRem,
-      '', '', '', '', '', ''
-    ]);
-    sClothWilayahSubtotalIndexes.push(rSubIdx);
-    sClothWilayahMerges.push({ s: { r: rSubIdx, c: 0 }, e: { r: rSubIdx, c: 5 } });
+    const rIkhSub = sClothWilayahRows.length;
+    sClothWilayahRows.push([`SUBTOTAL IKHWAN ${wName.toUpperCase()} (${itemsIkh.length} Peserta, ${ikhKaos} Kaos)`, '', '', '', '', ikhFee, ikhPaid, ikhRem, '', '', '', '', '', '']);
+    sClothWilayahSubtotalIndexes.push(rIkhSub);
+    sClothWilayahMerges.push({ s: { r: rIkhSub, c: 0 }, e: { r: rIkhSub, c: 4 } });
+
+    sClothWilayahRows.push(new Array(maxClothWilCols).fill(''));
+
+    // 2. SUB-SEKSI AKHWAT
+    const akhKaos = itemsAkh.filter(i => normalizeClothSize(i.cloth_size, i.age, false) !== '-').length;
+    let akhFee = 0, akhPaid = 0, akhRem = 0, akhLunas = 0, akhKurang = 0, akhBelum = 0;
+    itemsAkh.forEach(i => {
+      const pay = getClothPaymentInfo(i);
+      akhFee += pay.fee; akhPaid += pay.paid; akhRem += pay.remaining;
+      if (pay.statusRank === 1) akhLunas++; else if (pay.statusRank === 2) akhKurang++; else akhBelum++;
+    });
+
+    const rAkhBanner = sClothWilayahRows.length;
+    sClothWilayahRows.push([`🧕 AKHWAT (PEREMPUAN) — WILAYAH ${wName.toUpperCase()}: ${akhKaos} KAOS | ${itemsAkh.length} PESERTA (Lunas: ${akhLunas} | Cicilan: ${akhKurang} | Belum: ${akhBelum})`, ...new Array(maxClothWilCols - 1).fill('')]);
+    sClothWilayahBannerIndexes.push({ rIdx: rAkhBanner, color: '831843' });
+    sClothWilayahMerges.push({ s: { r: rAkhBanner, c: 0 }, e: { r: rAkhBanner, c: maxClothWilCols - 1 } });
+
+    const rAkhHead = sClothWilayahRows.length;
+    sClothWilayahRows.push([...detailHeaders]);
+    sClothWilayahHeaderIndexes.push(rAkhHead);
+
+    itemsAkh.forEach((item, idx) => {
+      const sz = normalizeClothSize(item.cloth_size, item.age, false);
+      const pay = getClothPaymentInfo(item);
+      const roomInfo = item.building ? `${item.building} - ${item.room_name || item.room_number || '-'}` : (item.room_name || item.room_number || '-');
+      sClothWilayahRows.push([
+        idx + 1,
+        sanitizeSpreadsheetValue(item.registration_code),
+        sanitizeSpreadsheetValue(item.full_name),
+        sanitizeSpreadsheetValue(sz),
+        sanitizeSpreadsheetValue(pay.statusLabel),
+        pay.fee, pay.paid, pay.remaining,
+        item.age ? `${item.age} Th` : '-',
+        (item.is_child || (item.age && item.age < 15)) ? 'Anak-anak (<15)' : (item.age ? 'Dewasa' : '-'),
+        sanitizeSpreadsheetValue(item.daerah || '-'),
+        sanitizeSpreadsheetValue(item.phone_number || '-'),
+        sanitizeSpreadsheetValue(roomInfo),
+        sanitizeSpreadsheetValue(item.notes || '-')
+      ]);
+    });
+
+    const rAkhSub = sClothWilayahRows.length;
+    sClothWilayahRows.push([`SUBTOTAL AKHWAT ${wName.toUpperCase()} (${itemsAkh.length} Peserta, ${akhKaos} Kaos)`, '', '', '', '', akhFee, akhPaid, akhRem, '', '', '', '', '', '']);
+    sClothWilayahSubtotalIndexes.push(rAkhSub);
+    sClothWilayahMerges.push({ s: { r: rAkhSub, c: 0 }, e: { r: rAkhSub, c: 4 } });
 
     sClothWilayahRows.push(new Array(maxClothWilCols).fill(''));
   });
@@ -11217,29 +11301,71 @@ function exportToExcel() {
         alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
       };
     }
+    // Baris Header 1 Matriks (Level 1)
+    if (rIdx === rClothWilSumHead1) {
+      if (cIdx === 0 || cIdx === 1) return createHeaderStyle('047857');
+      if (cIdx >= 2 && cIdx <= 15) return createHeaderStyle('0F766E'); // Ukuran Kaos
+      if (cIdx >= 16 && cIdx <= 18) return createHeaderStyle('064E3B'); // Total Kaos
+      if (cIdx >= 19 && cIdx <= 21) return createHeaderStyle('B45309'); // Status Bayar
+      if (cIdx === 22) return createHeaderStyle('475569'); // Anak
+      return createHeaderStyle('047857');
+    }
+    // Baris Header 2 Matriks (Sub-kolom Ikhwan / Akhwat)
+    if (rIdx === rClothWilSumHead2) {
+      const isIkh = [2, 4, 6, 8, 10, 12, 14, 16].includes(cIdx);
+      const isAkh = [3, 5, 7, 9, 11, 13, 15, 17].includes(cIdx);
+      if (isIkh) return createHeaderStyle('1E40AF');
+      if (isAkh) return createHeaderStyle('9D174D');
+      if (cIdx === 18) return createHeaderStyle('065F46'); // Total
+      if (cIdx === 19) return createHeaderStyle('047857'); // Lunas
+      if (cIdx === 20) return createHeaderStyle('D97706'); // Cicilan
+      if (cIdx === 21) return createHeaderStyle('DC2626'); // Belum
+      if (cIdx === 22) return createHeaderStyle('475569'); // Tanpa Kaos
+      return createHeaderStyle('047857');
+    }
+    // Baris Grand Total Matriks
     if (rIdx === rClothWilSumTotalIdx) {
-      const isHeaderLabel = (cIdx === 0 || cIdx === 1);
-      const isIkh = (cIdx === 3 || cIdx === 13);
-      const isAkh = (cIdx === 4 || cIdx === 14);
+      const isIkh = [2, 4, 6, 8, 10, 12, 14, 16].includes(cIdx);
+      const isAkh = [3, 5, 7, 9, 11, 13, 15, 17].includes(cIdx);
       let textColor = '065F46';
-      if (isIkh) textColor = '1E40AF';
-      else if (isAkh) textColor = '9D174D';
-      else if (cIdx === 15) textColor = '047857';
-      else if (cIdx === 16) textColor = 'B45309';
-      else if (cIdx === 17) textColor = 'DC2626';
-      else if (cIdx === 18) textColor = '64748B';
+      let bgColor = 'D1FAE5';
+      if (isIkh) { textColor = '1E40AF'; bgColor = cIdx === 16 ? 'BFDBFE' : 'D1FAE5'; }
+      else if (isAkh) { textColor = '9D174D'; bgColor = cIdx === 17 ? 'FBCFE8' : 'D1FAE5'; }
+      else if (cIdx === 18) { textColor = '065F46'; bgColor = 'A7F3D0'; }
+      else if (cIdx === 19) textColor = '047857';
+      else if (cIdx === 20) textColor = 'B45309';
+      else if (cIdx === 21) textColor = 'DC2626';
+      else if (cIdx === 22) textColor = '64748B';
 
       return {
-        fill: { fgColor: { rgb: cIdx === 12 ? 'A7F3D0' : 'D1FAE5' } },
+        fill: { fgColor: { rgb: bgColor } },
         font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: textColor } },
-        alignment: { horizontal: isHeaderLabel ? 'left' : 'center', vertical: 'center' }
+        alignment: { horizontal: (cIdx === 0 || cIdx === 1) ? 'left' : 'center', vertical: 'center' }
       };
     }
+    // Baris Data Matriks Bagian 1
+    if (rIdx < rClothWilSumTotalIdx) {
+      if (cIdx === 0) return createDataStyle(rIdx % 2 === 0, 'center');
+      if (cIdx === 1) return createDataStyle(rIdx % 2 === 0, 'left', null, null, true);
+      const isIkh = [2, 4, 6, 8, 10, 12, 14].includes(cIdx);
+      const isAkh = [3, 5, 7, 9, 11, 13, 15].includes(cIdx);
+      if (isIkh) return createDataStyle(rIdx % 2 === 0, 'center', null, '1E40AF');
+      if (isAkh) return createDataStyle(rIdx % 2 === 0, 'center', null, '9D174D');
+      if (cIdx === 16) return createDataStyle(rIdx % 2 === 0, 'center', 'EFF6FF', '1E40AF', true); // Total Ikh
+      if (cIdx === 17) return createDataStyle(rIdx % 2 === 0, 'center', 'FDF2F8', '9D174D', true); // Total Akh
+      if (cIdx === 18) return createDataStyle(rIdx % 2 === 0, 'center', 'ECFDF5', '065F46', true); // Total Kaos
+      if (cIdx === 19) return createDataStyle(rIdx % 2 === 0, 'center', 'D1FAE5', '047857', true); // Lunas
+      if (cIdx === 20) return createDataStyle(rIdx % 2 === 0, 'center', 'FEF3C7', 'B45309', true); // Cicilan
+      if (cIdx === 21) return createDataStyle(rIdx % 2 === 0, 'center', 'FEE2E2', 'DC2626', true); // Belum
+      if (cIdx === 22) return createDataStyle(rIdx % 2 === 0, 'center', null, '64748B'); // Anak
+      return null;
+    }
+    // Baris Subtotal Bagian 2
     if (sClothWilayahSubtotalIndexes.includes(rIdx)) {
       return {
         fill: { fgColor: { rgb: 'F1F5F9' } },
         font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '0F172A' } },
-        alignment: { horizontal: cIdx <= 5 ? 'left' : (cIdx >= 6 && cIdx <= 8 ? 'right' : 'center'), vertical: 'center' },
+        alignment: { horizontal: cIdx <= 4 ? 'left' : (cIdx >= 5 && cIdx <= 7 ? 'right' : 'center'), vertical: 'center' },
         border: {
           top: { style: 'thin', color: { rgb: '94A3B8' } },
           bottom: { style: 'double', color: { rgb: '0F172A' } },
@@ -11248,38 +11374,15 @@ function exportToExcel() {
         }
       };
     }
-    // Baris pada Tabel Ringkasan Bagian 1
-    if (rIdx < rClothWilSumTotalIdx) {
-      if (cIdx === 0) return createDataStyle(rIdx % 2 === 0, 'center');
-      if (cIdx === 1) return createDataStyle(rIdx % 2 === 0, 'left', null, null, true);
-      if (cIdx === 2) return createDataStyle(rIdx % 2 === 0, 'center', 'F8FAFC', '0F172A', true); // Total Peserta
-      if (cIdx === 3) return createDataStyle(rIdx % 2 === 0, 'center', 'EFF6FF', '1E40AF', true); // Peserta Ikhwan
-      if (cIdx === 4) return createDataStyle(rIdx % 2 === 0, 'center', 'FDF2F8', '9D174D', true); // Peserta Akhwat
-      if (cIdx >= 5 && cIdx <= 11) return createDataStyle(rIdx % 2 === 0, 'center'); // Ukuran S-4XL
-      if (cIdx === 12) return createDataStyle(rIdx % 2 === 0, 'center', 'ECFDF5', '065F46', true); // Total Kaos
-      if (cIdx === 13) return createDataStyle(rIdx % 2 === 0, 'center', 'EFF6FF', '1E40AF', true); // Kaos Ikhwan
-      if (cIdx === 14) return createDataStyle(rIdx % 2 === 0, 'center', 'FDF2F8', '9D174D', true); // Kaos Akhwat
-      if (cIdx === 15) return createDataStyle(rIdx % 2 === 0, 'center', 'D1FAE5', '047857', true); // Lunas
-      if (cIdx === 16) return createDataStyle(rIdx % 2 === 0, 'center', 'FEF3C7', 'B45309', true); // Cicilan
-      if (cIdx === 17) return createDataStyle(rIdx % 2 === 0, 'center', 'FEE2E2', 'DC2626', true); // Belum Bayar
-      if (cIdx === 18) return createDataStyle(rIdx % 2 === 0, 'center', null, '64748B'); // Anak
-      return null;
-    }
-    // Baris pada Rincian Peserta Bagian 2
+    // Baris Data Detail Bagian 2
     if (cIdx === 0) return createDataStyle(rIdx % 2 === 0, 'center');
     if (cIdx === 1) return createDataStyle(rIdx % 2 === 0, 'center', null, '475569'); // Kode Tiket
-    if (cIdx === 3) { // Jenis Kelamin
-      const val = String(cellVal || '');
-      const isFem = /perempuan|akhwat|^p$/i.test(val);
-      if (isFem) return createDataStyle(rIdx % 2 === 0, 'center', 'FDF2F8', '9D174D', true);
-      return createDataStyle(rIdx % 2 === 0, 'center', 'EFF6FF', '1E40AF', true);
-    }
-    if (cIdx === 4) { // Ukuran Kaos
+    if (cIdx === 3) { // Ukuran Kaos
       const val = String(cellVal || '');
       if (val === '-') return createDataStyle(rIdx % 2 === 0, 'center', null, '94A3B8');
       return createDataStyle(rIdx % 2 === 0, 'center', 'F0FDF4', '047857', true);
     }
-    if (cIdx === 5) { // Status Pembayaran
+    if (cIdx === 4) { // Status Pembayaran
       const val = String(cellVal || '');
       if (val.startsWith('Lunas')) {
         return createDataStyle(rIdx % 2 === 0, 'center', 'D1FAE5', '047857', true);
@@ -11292,10 +11395,10 @@ function exportToExcel() {
       }
       return createDataStyle(rIdx % 2 === 0, 'center');
     }
-    if (cIdx >= 6 && cIdx <= 8) { // Tagihan, Terbayar, Piutang
+    if (cIdx >= 5 && cIdx <= 7) { // Tagihan, Terbayar, Piutang
       return createDataStyle(rIdx % 2 === 0, 'right');
     }
-    if (cIdx === 9 || cIdx === 10) { // Usia, Kategori Usia
+    if (cIdx === 8 || cIdx === 9) { // Usia, Kategori Usia
       return createDataStyle(rIdx % 2 === 0, 'center');
     }
     return null;
