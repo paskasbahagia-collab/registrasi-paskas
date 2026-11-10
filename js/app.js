@@ -10584,7 +10584,8 @@ function exportToExcel() {
   }
 
   // Helper: Normalisasi Ukuran Seragam Kaos
-  function normalizeClothSize(sz, age) {
+  function normalizeClothSize(sz, age, isK2 = false) {
+    if (isK2) return '-';
     if (age && parseInt(age, 10) <= 12) return '-';
     if (!sz) return '-';
     const c = String(sz).toUpperCase().trim();
@@ -10786,11 +10787,14 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, ws3, 'Ikhwan & Akhwat');
 
   // ===================================================================
-  // 4. HALAMAN KEEMPAT: REKAP BAJU (DIPISAH PER UKURAN: S SENDIRI, M, L, XL, DST)
+  // 4. HALAMAN KEEMPAT: REKAP BAJU (KHUSUS KLOTER 1 - DIPISAH PER UKURAN)
   // ===================================================================
+  // Fasilitas seragam kaos HANYA diperuntukkan bagi peserta Kloter 1.
+  // Peserta Kloter 2 bebas biaya pendaftaran dan tidak mendapatkan fasilitas seragam kaos.
+  const k1ActiveClothData = activeData.filter(item => !isKloter2Participant(item));
   const clothGroups = new Map();
-  activeData.forEach(item => {
-    const sz = normalizeClothSize(item.cloth_size, item.age);
+  k1ActiveClothData.forEach(item => {
+    const sz = normalizeClothSize(item.cloth_size, item.age, false);
     if (!clothGroups.has(sz)) clothGroups.set(sz, []);
     clothGroups.get(sz).push(item);
   });
@@ -10808,9 +10812,9 @@ function exportToExcel() {
   const s4BannerIndexes = [];
   const s4Merges = [];
 
-  // BAGIAN 1: RINGKASAN TOTAL PEMESANAN SERAGAM KAOS
+  // BAGIAN 1: RINGKASAN TOTAL PEMESANAN SERAGAM KAOS (KHUSUS KLOTER 1)
   const rClothSumTitleIdx = s4Rows.length;
-  s4Rows.push(['RINGKASAN TOTAL PEMESANAN SERAGAM KAOS PASKAS BAHAGIA', '', '', '', '']);
+  s4Rows.push(['RINGKASAN TOTAL PEMESANAN SERAGAM KAOS PASKAS BAHAGIA (KHUSUS KLOTER 1)', '', '', '', '']);
   s4BannerIndexes.push({ rIdx: rClothSumTitleIdx, color: '78350F' });
   s4Merges.push({ s: { r: rClothSumTitleIdx, c: 0 }, e: { r: rClothSumTitleIdx, c: 4 } });
 
@@ -10840,12 +10844,12 @@ function exportToExcel() {
   });
 
   const rClothSumTotalIdx = s4Rows.length;
-  s4Rows.push(['TOTAL KEBUTUHAN SERAGAM KAOS', '', grandClothIkhwan, grandClothAkhwat, grandClothTotal]);
+  s4Rows.push(['TOTAL KEBUTUHAN SERAGAM KAOS (KLOTER 1)', '', grandClothIkhwan, grandClothAkhwat, grandClothTotal]);
   s4Merges.push({ s: { r: rClothSumTotalIdx, c: 0 }, e: { r: rClothSumTotalIdx, c: 1 } });
 
   if (grandChildNoCloth > 0) {
     const rClothChildNoteIdx = s4Rows.length;
-    s4Rows.push([`CATATAN: ${grandChildNoCloth} Peserta Anak (Usia ≤ 12 Tahun) Tanpa Seragam Kaos (Diberi Tanda -)`, '', '', '', '']);
+    s4Rows.push([`CATATAN: ${grandChildNoCloth} Peserta Anak Kloter 1 (Usia ≤ 12 Tahun) Tanpa Seragam Kaos (Diberi Tanda -)`, '', '', '', '']);
     s4Merges.push({ s: { r: rClothChildNoteIdx, c: 0 }, e: { r: rClothChildNoteIdx, c: 4 } });
   }
 
@@ -10871,8 +10875,8 @@ function exportToExcel() {
 
     const isNoCloth = (sz === '-');
     const bannerTitle = isNoCloth
-      ? `PESERTA TANPA SERAGAM KAOS (-) — KHUSUS ANAK USIA ≤ 12 TAHUN (TOTAL: ${items.length} PESERTA)`
-      : `UKURAN SERAGAM: ${sz} — TOTAL: ${items.length} POTONG (Ikhwan: ${cIkh} Pcs | Akhwat: ${cAkh} Pcs)`;
+      ? `PESERTA KLOTER 1 TANPA SERAGAM KAOS (-) — KHUSUS ANAK USIA ≤ 12 TAHUN (TOTAL: ${items.length} PESERTA)`
+      : `UKURAN SERAGAM: ${sz} (KLOTER 1) — TOTAL: ${items.length} POTONG (Ikhwan: ${cIkh} Pcs | Akhwat: ${cAkh} Pcs)`;
 
     const rBannerIdx = s4Rows.length;
     s4Rows.push([bannerTitle, ...new Array(s4Headers.length - 1).fill('')]);
