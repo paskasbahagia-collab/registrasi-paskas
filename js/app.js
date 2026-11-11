@@ -10734,6 +10734,7 @@ function exportToExcel() {
     const cRows = [];
     const cHeaderIndexes = [];
     const cBannerIndexes = [];
+    const cSubtotalIndexes = [];
     const cMerges = [];
 
     let countLunas = 0, countCicilan = 0, countBelum = 0;
@@ -10744,80 +10745,119 @@ function exportToExcel() {
       else countBelum++;
     });
 
-    // Banner Utama Meja Registrasi
+    // 1. BANNER UTAMA MEJA REGISTRASI
     const rTitle = cRows.length;
     cRows.push([
-      `MEJA REGISTRASI KEDATANGAN ${genderLabel.toUpperCase()} — TOTAL: ${list.length} PESERTA (LUNAS: ${countLunas} | CICILAN: ${countCicilan} | BELUM BAYAR: ${countBelum})`,
+      `MEJA REGISTRASI KEDATANGAN ${genderLabel.toUpperCase()} PER WILAYAH — TOTAL: ${list.length} PESERTA (LUNAS: ${countLunas} | CICILAN: ${countCicilan} | BELUM BAYAR: ${countBelum})`,
       ...new Array(checkinHeaders.length - 1).fill('')
     ]);
     cBannerIndexes.push({ rIdx: rTitle, color: themeColor });
     cMerges.push({ s: { r: rTitle, c: 0 }, e: { r: rTitle, c: checkinHeaders.length - 1 } });
 
-    // Kelompok Status: Lunas / Bebas (1), Cicilan / Kurang (2), Belum Bayar (3)
-    const groups = [
-      { rank: 1, title: `🟢 PESERTA ${genderLabel.toUpperCase()} — STATUS LUNAS / BEBAS BIAYA (${countLunas} PESERTA)`, color: '065F46', items: [] },
-      { rank: 2, title: `🟡 PESERTA ${genderLabel.toUpperCase()} — STATUS CICILAN / KURANG (${countCicilan} PESERTA)`, color: 'B45309', items: [] },
-      { rank: 3, title: `🔴 PESERTA ${genderLabel.toUpperCase()} — STATUS BELUM BAYAR (${countBelum} PESERTA)`, color: '991B1B', items: [] }
-    ];
-
+    // Kelompokkan per Wilayah
+    const wilMap = new Map();
     list.forEach(item => {
-      const pay = getCheckinPaymentInfo(item);
-      const g = groups.find(grp => grp.rank === pay.statusRank);
-      if (g) g.items.push(item);
+      const w = (item.wilayah || 'Belum Ditentukan').trim();
+      if (!wilMap.has(w)) wilMap.set(w, []);
+      wilMap.get(w).push(item);
     });
 
-    // Urutkan alfabetis Nama A - Z di masing-masing grup status
-    groups.forEach(g => {
-      g.items.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
-    });
+    // Urutkan wilayah berdasarkan jumlah peserta terbanyak
+    const sortedWilayah = Array.from(wilMap.entries()).sort((a, b) => b[1].length - a[1].length);
 
-    let counter = 1;
-
-    groups.forEach(group => {
-      if (group.items.length === 0) return;
-
-      // Sub-banner grup status
-      const rGrpBanner = cRows.length;
-      cRows.push([group.title, ...new Array(checkinHeaders.length - 1).fill('')]);
-      cBannerIndexes.push({ rIdx: rGrpBanner, color: group.color });
-      cMerges.push({ s: { r: rGrpBanner, c: 0 }, e: { r: rGrpBanner, c: checkinHeaders.length - 1 } });
-
-      // Header kolom tabel
-      const rHead = cRows.length;
-      cRows.push([...checkinHeaders]);
-      cHeaderIndexes.push(rHead);
-
-      // Data baris peserta
-      group.items.forEach(item => {
-        const pay = getCheckinPaymentInfo(item);
-        const isK2 = isKloter2Participant(item);
-        const sz = isK2 ? '- (Kloter 2)' : normalizeClothSize(item.cloth_size, item.age, false);
-        const roomInfo = item.building 
-          ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
-          : (item.room_name || item.room_number || '-');
-        
-        const arrivalSchedule = item.arrival_date 
-          ? `${item.arrival_date}${item.arrival_time ? ` (${item.arrival_time})` : ''}` 
-          : '-';
-
-        cRows.push([
-          counter++,
-          sanitizeSpreadsheetValue(item.registration_code),
-          sanitizeSpreadsheetValue(item.full_name),
-          sanitizeSpreadsheetValue(item.wilayah),
-          sanitizeSpreadsheetValue(item.daerah || '-'),
-          sanitizeSpreadsheetValue(pay.statusLabel),
-          sanitizeSpreadsheetValue(sz),
-          sanitizeSpreadsheetValue(arrivalSchedule),
-          sanitizeSpreadsheetValue(item.transport_arrival || 'Belum Ditentukan'),
-          sanitizeSpreadsheetValue(roomInfo),
-          sanitizeSpreadsheetValue(item.phone_number || '-'),
-          sanitizeSpreadsheetValue(item.notes || '-'),
-          '' // Kolom kosong tanda tangan / paraf
-        ]);
+    sortedWilayah.forEach(([wName, wItems]) => {
+      let wLunas = 0, wCicilan = 0, wBelum = 0;
+      wItems.forEach(i => {
+        const pay = getCheckinPaymentInfo(i);
+        if (pay.statusRank === 1) wLunas++;
+        else if (pay.statusRank === 2) wCicilan++;
+        else wBelum++;
       });
 
-      // Baris kosong jeda antar grup
+      // Banner Utama Wilayah
+      const rWilBanner = cRows.length;
+      cRows.push([
+        `🏛️ WILAYAH: ${wName.toUpperCase()} — TOTAL: ${wItems.length} PESERTA ${genderLabel.toUpperCase()} (LUNAS: ${wLunas} | CICILAN: ${wCicilan} | BELUM: ${wBelum})`,
+        ...new Array(checkinHeaders.length - 1).fill('')
+      ]);
+      cBannerIndexes.push({ rIdx: rWilBanner, color: '0F766E' });
+      cMerges.push({ s: { r: rWilBanner, c: 0 }, e: { r: rWilBanner, c: checkinHeaders.length - 1 } });
+
+      // Klasifikasikan dalam wilayah: 1. Lunas / Sudah Bayar, 2. Cicilan / Kurang, 3. Belum Bayar
+      const statusGroups = [
+        { rank: 1, title: `🟢 [${wName.toUpperCase()}] STATUS: SUDAH BAYAR / LUNAS (${wLunas} PESERTA) — Urut Nama A s/d Z`, color: '065F46', items: [] },
+        { rank: 2, title: `🟡 [${wName.toUpperCase()}] STATUS: CICILAN / KURANG (${wCicilan} PESERTA) — Urut Nama A s/d Z`, color: 'B45309', items: [] },
+        { rank: 3, title: `🔴 [${wName.toUpperCase()}] STATUS: BELUM BAYAR (${wBelum} PESERTA) — Urut Nama A s/d Z`, color: '991B1B', items: [] }
+      ];
+
+      wItems.forEach(item => {
+        const pay = getCheckinPaymentInfo(item);
+        const sg = statusGroups.find(g => g.rank === pay.statusRank);
+        if (sg) sg.items.push(item);
+      });
+
+      // Urutkan A-Z di masing-masing status
+      statusGroups.forEach(sg => {
+        sg.items.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+      });
+
+      let wCounter = 1;
+
+      statusGroups.forEach(sg => {
+        if (sg.items.length === 0) return;
+
+        // Sub-banner status dalam wilayah
+        const rStatusBanner = cRows.length;
+        cRows.push([sg.title, ...new Array(checkinHeaders.length - 1).fill('')]);
+        cBannerIndexes.push({ rIdx: rStatusBanner, color: sg.color });
+        cMerges.push({ s: { r: rStatusBanner, c: 0 }, e: { r: rStatusBanner, c: checkinHeaders.length - 1 } });
+
+        // Header kolom tabel
+        const rHead = cRows.length;
+        cRows.push([...checkinHeaders]);
+        cHeaderIndexes.push(rHead);
+
+        // Data baris peserta
+        sg.items.forEach(item => {
+          const pay = getCheckinPaymentInfo(item);
+          const isK2 = isKloter2Participant(item);
+          const sz = isK2 ? '- (Kloter 2)' : normalizeClothSize(item.cloth_size, item.age, false);
+          const roomInfo = item.building 
+            ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+            : (item.room_name || item.room_number || '-');
+          
+          const arrivalSchedule = item.arrival_date 
+            ? `${item.arrival_date}${item.arrival_time ? ` (${item.arrival_time})` : ''}` 
+            : '-';
+
+          cRows.push([
+            wCounter++,
+            sanitizeSpreadsheetValue(item.registration_code),
+            sanitizeSpreadsheetValue(item.full_name),
+            sanitizeSpreadsheetValue(item.wilayah),
+            sanitizeSpreadsheetValue(item.daerah || '-'),
+            sanitizeSpreadsheetValue(pay.statusLabel),
+            sanitizeSpreadsheetValue(sz),
+            sanitizeSpreadsheetValue(arrivalSchedule),
+            sanitizeSpreadsheetValue(item.transport_arrival || 'Belum Ditentukan'),
+            sanitizeSpreadsheetValue(roomInfo),
+            sanitizeSpreadsheetValue(item.phone_number || '-'),
+            sanitizeSpreadsheetValue(item.notes || '-'),
+            '' // Kolom kosong tanda tangan / paraf
+          ]);
+        });
+      });
+
+      // Subtotal Wilayah
+      const rSub = cRows.length;
+      cRows.push([
+        `SUBTOTAL WILAYAH ${wName.toUpperCase()} — Total: ${wItems.length} Peserta (Lunas: ${wLunas} | Cicilan: ${wCicilan} | Belum: ${wBelum})`,
+        ...new Array(checkinHeaders.length - 1).fill('')
+      ]);
+      cSubtotalIndexes.push(rSub);
+      cMerges.push({ s: { r: rSub, c: 0 }, e: { r: rSub, c: checkinHeaders.length - 1 } });
+
+      // Baris kosong jeda antar wilayah
       cRows.push(new Array(checkinHeaders.length).fill(''));
     });
 
@@ -10831,6 +10871,19 @@ function exportToExcel() {
           fill: { fgColor: { rgb: banner.color } },
           font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
           alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+        };
+      }
+      if (cSubtotalIndexes.includes(rIdx)) {
+        return {
+          fill: { fgColor: { rgb: 'F1F5F9' } },
+          font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '0F172A' } },
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 },
+          border: {
+            top: { style: 'thin', color: { rgb: '94A3B8' } },
+            bottom: { style: 'double', color: { rgb: '0F172A' } },
+            left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            right: { style: 'thin', color: { rgb: 'E2E8F0' } }
+          }
         };
       }
       // No, No Registrasi
