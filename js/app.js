@@ -10693,6 +10693,205 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, ws2, 'Kedatangan & Kepulangan');
 
   // ===================================================================
+  // HALAMAN REGISTRASI KEDATANGAN TERPISAH (OPSI 2: IKHWAN & AKHWAT)
+  // Diurutkan berdasarkan: Status Pembayaran (Lunas -> Cicilan -> Belum Bayar) -> Nama A-Z
+  // Kolom: No, No Registrasi, Nama, Wilayah, Asal Daerah, Status Bayar, Ukuran Baju,
+  // Jam Kedatangan, Moda Transportasi, Kamar, No WhatsApp, Keterangan, Paraf / Ceklis
+  // ===================================================================
+  function getCheckinPaymentInfo(p) {
+    const isK2 = isKloter2Participant(p);
+    const paid = Number(p.paid_amount || 0);
+    const fee = getParticipantFeeSafe(p);
+    const remaining = Number(p.remaining_amount !== undefined && p.remaining_amount !== null ? p.remaining_amount : Math.max(0, fee - paid));
+    const isPaid = p.payment_status === 'paid' || p.payment_status === 'lunas' || p.payment_verified === 'verified';
+
+    if (isK2) {
+      return {
+        statusRank: 1,
+        statusLabel: paid > 0 ? `Bebas Biaya (Infaq: Rp ${paid.toLocaleString('id-ID')})` : 'Bebas Biaya (Kloter 2)',
+        fee: 0,
+        paid: paid,
+        remaining: 0
+      };
+    }
+
+    if (isPaid || (paid > 0 && remaining <= 0)) {
+      return { statusRank: 1, statusLabel: 'Lunas', fee, paid, remaining: 0 };
+    } else if (paid > 0 && remaining > 0) {
+      return { statusRank: 2, statusLabel: `Kurang (Sisa: Rp ${remaining.toLocaleString('id-ID')})`, fee, paid, remaining };
+    } else {
+      return { statusRank: 3, statusLabel: 'Belum Bayar', fee, paid, remaining: fee };
+    }
+  }
+
+  function createRegistrationCheckinSheet(list, genderLabel, themeColor, headerColor) {
+    const checkinHeaders = [
+      'No', 'No Registrasi', 'Nama Lengkap Peserta', 'Wilayah', 'Asal Daerah', 
+      'Status Pembayaran', 'Ukuran Kaos', 'Jadwal Kedatangan', 'Moda Transportasi', 
+      'Gedung / Kamar', 'No WhatsApp', 'Keterangan / Rombongan', 'Paraf / Ceklis Kedatangan'
+    ];
+
+    const cRows = [];
+    const cHeaderIndexes = [];
+    const cBannerIndexes = [];
+    const cMerges = [];
+
+    let countLunas = 0, countCicilan = 0, countBelum = 0;
+    list.forEach(i => {
+      const pay = getCheckinPaymentInfo(i);
+      if (pay.statusRank === 1) countLunas++;
+      else if (pay.statusRank === 2) countCicilan++;
+      else countBelum++;
+    });
+
+    // Banner Utama Meja Registrasi
+    const rTitle = cRows.length;
+    cRows.push([
+      `MEJA REGISTRASI KEDATANGAN ${genderLabel.toUpperCase()} — TOTAL: ${list.length} PESERTA (LUNAS: ${countLunas} | CICILAN: ${countCicilan} | BELUM BAYAR: ${countBelum})`,
+      ...new Array(checkinHeaders.length - 1).fill('')
+    ]);
+    cBannerIndexes.push({ rIdx: rTitle, color: themeColor });
+    cMerges.push({ s: { r: rTitle, c: 0 }, e: { r: rTitle, c: checkinHeaders.length - 1 } });
+
+    // Kelompok Status: Lunas / Bebas (1), Cicilan / Kurang (2), Belum Bayar (3)
+    const groups = [
+      { rank: 1, title: `🟢 PESERTA ${genderLabel.toUpperCase()} — STATUS LUNAS / BEBAS BIAYA (${countLunas} PESERTA)`, color: '065F46', items: [] },
+      { rank: 2, title: `🟡 PESERTA ${genderLabel.toUpperCase()} — STATUS CICILAN / KURANG (${countCicilan} PESERTA)`, color: 'B45309', items: [] },
+      { rank: 3, title: `🔴 PESERTA ${genderLabel.toUpperCase()} — STATUS BELUM BAYAR (${countBelum} PESERTA)`, color: '991B1B', items: [] }
+    ];
+
+    list.forEach(item => {
+      const pay = getCheckinPaymentInfo(item);
+      const g = groups.find(grp => grp.rank === pay.statusRank);
+      if (g) g.items.push(item);
+    });
+
+    // Urutkan alfabetis Nama A - Z di masing-masing grup status
+    groups.forEach(g => {
+      g.items.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+    });
+
+    let counter = 1;
+
+    groups.forEach(group => {
+      if (group.items.length === 0) return;
+
+      // Sub-banner grup status
+      const rGrpBanner = cRows.length;
+      cRows.push([group.title, ...new Array(checkinHeaders.length - 1).fill('')]);
+      cBannerIndexes.push({ rIdx: rGrpBanner, color: group.color });
+      cMerges.push({ s: { r: rGrpBanner, c: 0 }, e: { r: rGrpBanner, c: checkinHeaders.length - 1 } });
+
+      // Header kolom tabel
+      const rHead = cRows.length;
+      cRows.push([...checkinHeaders]);
+      cHeaderIndexes.push(rHead);
+
+      // Data baris peserta
+      group.items.forEach(item => {
+        const pay = getCheckinPaymentInfo(item);
+        const isK2 = isKloter2Participant(item);
+        const sz = isK2 ? '- (Kloter 2)' : normalizeClothSize(item.cloth_size, item.age, false);
+        const roomInfo = item.building 
+          ? `${item.building} - ${item.room_name || item.room_number || '-'}` 
+          : (item.room_name || item.room_number || '-');
+        
+        const arrivalSchedule = item.arrival_date 
+          ? `${item.arrival_date}${item.arrival_time ? ` (${item.arrival_time})` : ''}` 
+          : '-';
+
+        cRows.push([
+          counter++,
+          sanitizeSpreadsheetValue(item.registration_code),
+          sanitizeSpreadsheetValue(item.full_name),
+          sanitizeSpreadsheetValue(item.wilayah),
+          sanitizeSpreadsheetValue(item.daerah || '-'),
+          sanitizeSpreadsheetValue(pay.statusLabel),
+          sanitizeSpreadsheetValue(sz),
+          sanitizeSpreadsheetValue(arrivalSchedule),
+          sanitizeSpreadsheetValue(item.transport_arrival || 'Belum Ditentukan'),
+          sanitizeSpreadsheetValue(roomInfo),
+          sanitizeSpreadsheetValue(item.phone_number || '-'),
+          sanitizeSpreadsheetValue(item.notes || '-'),
+          '' // Kolom kosong tanda tangan / paraf
+        ]);
+      });
+
+      // Baris kosong jeda antar grup
+      cRows.push(new Array(checkinHeaders.length).fill(''));
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(cRows);
+    ws['!merges'] = cMerges;
+
+    formatSheet(ws, cRows, cHeaderIndexes, headerColor, (rIdx, cIdx, cellVal) => {
+      const banner = cBannerIndexes.find(b => b.rIdx === rIdx);
+      if (banner) {
+        return {
+          fill: { fgColor: { rgb: banner.color } },
+          font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 }
+        };
+      }
+      // No, No Registrasi
+      if (cIdx === 0 || cIdx === 1) return createDataStyle(rIdx % 2 === 0, 'center');
+      // Nama Lengkap Peserta
+      if (cIdx === 2) return createDataStyle(rIdx % 2 === 0, 'left', null, null, true);
+      // Wilayah, Asal Daerah
+      if (cIdx === 3 || cIdx === 4) return createDataStyle(rIdx % 2 === 0, 'center');
+      // Status Pembayaran
+      if (cIdx === 5) {
+        const val = String(cellVal || '');
+        if (val.startsWith('Lunas') || val.startsWith('Bebas Biaya')) {
+          return createDataStyle(rIdx % 2 === 0, 'center', 'D1FAE5', '047857', true);
+        }
+        if (val.startsWith('Kurang')) {
+          return createDataStyle(rIdx % 2 === 0, 'center', 'FEF3C7', 'B45309', true);
+        }
+        if (val.startsWith('Belum')) {
+          return createDataStyle(rIdx % 2 === 0, 'center', 'FEE2E2', 'DC2626', true);
+        }
+        return createDataStyle(rIdx % 2 === 0, 'center');
+      }
+      // Ukuran Kaos
+      if (cIdx === 6) {
+        const val = String(cellVal || '');
+        if (val === '-' || val.startsWith('-')) return createDataStyle(rIdx % 2 === 0, 'center', null, '94A3B8');
+        return createDataStyle(rIdx % 2 === 0, 'center', 'F0FDF4', '047857', true);
+      }
+      // Jadwal Kedatangan, Moda Transportasi, Gedung / Kamar, No WhatsApp
+      if (cIdx >= 7 && cIdx <= 10) return createDataStyle(rIdx % 2 === 0, 'center');
+      // Keterangan / Rombongan
+      if (cIdx === 11) return createDataStyle(rIdx % 2 === 0, 'left');
+      // Paraf / Ceklis Kedatangan (diberi garis kotak agar mudah ditandatangani panitia)
+      if (cIdx === 12) {
+        return {
+          fill: { fgColor: { rgb: rIdx % 2 === 0 ? 'F8FAFC' : 'FFFFFF' } },
+          border: {
+            top: { style: 'thin', color: { rgb: '94A3B8' } },
+            bottom: { style: 'thin', color: { rgb: '94A3B8' } },
+            left: { style: 'thin', color: { rgb: '94A3B8' } },
+            right: { style: 'thin', color: { rgb: '94A3B8' } }
+          },
+          alignment: { horizontal: 'center', vertical: 'center' }
+        };
+      }
+      return null;
+    });
+
+    return ws;
+  }
+
+  const checkinIkhwanList = activeData.filter(i => !/perempuan|akhwat|^p$/i.test(String(i.gender || '')));
+  const checkinAkhwatList = activeData.filter(i => /perempuan|akhwat|^p$/i.test(String(i.gender || '')));
+
+  const wsRegIkhwan = createRegistrationCheckinSheet(checkinIkhwanList, 'Ikhwan (Laki-laki)', '1E3A8A', '1E40AF');
+  const wsRegAkhwat = createRegistrationCheckinSheet(checkinAkhwatList, 'Akhwat (Perempuan)', '831843', '9D174D');
+
+  XLSX.utils.book_append_sheet(workbook, wsRegIkhwan, 'Registrasi Datang - Ikhwan');
+  XLSX.utils.book_append_sheet(workbook, wsRegAkhwat, 'Registrasi Datang - Akhwat');
+
+  // ===================================================================
   // 3. HALAMAN KETIGA: JENIS KELAMIN (IKHWAN & AKHWAT DIPISAH)
   // ===================================================================
   const ikhwanList = activeData.filter(i => /laki|ikhwan|^l$/i.test(String(i.gender || '')));
