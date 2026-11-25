@@ -555,6 +555,118 @@ function normalizeWilayahName(str) {
   }).join(' ');
 }
 
+/**
+ * Standardisasi dan normalisasi nama daerah/kota asal peserta
+ * Mengelompokkan variasi penulisan kota ke dalam entitas nama kota baku yang rapi
+ */
+function cleanDaerahName(str) {
+  if (!str || typeof str !== 'string') return 'Lainnya';
+  let s = str.trim().replace(/\s+/g, ' ');
+  if (!s || s === '-' || s === '?' || s.toLowerCase() === 'null') return 'Lainnya';
+  const lower = s.toLowerCase();
+
+  // Ibt (Indonesia Bagian Timur)
+  if (lower.includes('pinrang')) return 'Pinrang';
+  if (lower.includes('gorontalo')) return 'Gorontalo';
+  if (lower.includes('palopo')) return 'Palopo';
+  if (lower.includes('bone')) return 'Bone';
+  if (lower.includes('palu')) return 'Palu';
+  if (lower.includes('manado')) return 'Manado';
+  if (lower.includes('parepare') || lower.includes('pare pare')) return 'Parepare';
+  if (lower.includes('polman') || lower.includes('polewali')) return 'Polman';
+  if (lower.includes('sidrap') || lower.includes('sidenreng')) return 'Sidrap';
+  if (lower.includes('tolitoli')) return 'Tolitoli';
+  if (lower.includes('bulukumba')) return 'Bulukumba';
+  if (lower.includes('barru')) return 'Barru';
+  if (lower.includes('pasangkayu')) return 'Pasangkayu';
+  if (lower.includes('enrekang')) return 'Enrekang';
+  if (lower.includes('bitung')) return 'Bitung';
+  if (lower.includes('makassar')) return 'Makassar';
+
+  // Kalimantan 1 (Kalbar)
+  if (lower.includes('kubu raya')) return 'Pontianak & Kubu Raya';
+  if (lower.includes('pontianak')) return 'Pontianak';
+  if (lower.includes('singkawang')) return 'Singkawang';
+  if (lower.includes('sintang')) return 'Sintang';
+  if (lower.includes('sanggau')) return 'Sanggau';
+  if (lower.includes('bengkayang')) return 'Bengkayang';
+  if (lower.includes('ketapang')) return 'Ketapang';
+  if (lower.includes('landak')) return 'Landak';
+  if (lower.includes('kayong')) return 'Kayong Utara';
+
+  // Kalimantan 2 (Kaltim, Kalsel, Kaltara, Kalteng)
+  if (lower.includes('samarinda') || lower.includes('samarimda')) return 'Samarinda';
+  if (lower.includes('balikpapan')) return 'Balikpapan';
+  if (lower.includes('tarakan')) return 'Tarakan';
+  if (lower.includes('kutai')) return 'Kutai Kartanegara';
+  if (lower.includes('kotabaru')) return 'Kotabaru';
+
+  // 3 J (Jateng, Jatim, DIY)
+  if (lower.includes('jogja') || lower.includes('yogyakarta')) return 'Yogyakarta';
+  if (lower.includes('solo')) return 'Solo / Surakarta';
+  if (lower.includes('magetan') || lower.includes('madiun') || lower.includes('nganjuk')) return 'Magetan, Madiun & Nganjuk';
+  if (lower.includes('cilacap')) return 'Cilacap';
+  if (lower.includes('blora')) return 'Blora';
+  if (lower.includes('mojang')) return 'Mojang (Mojokerto/Jombang)';
+  if (lower.includes('gresik')) return 'Gresik';
+  if (lower.includes('purbalingga')) return 'Purbalingga';
+  if (lower.includes('gunungkidul') || lower.includes('gunung kidul')) return 'Gunungkidul';
+  if (lower.includes('banjarnegara') || lower.includes('banjar negara')) return 'Banjarnegara';
+  if (lower.includes('sleman')) return 'Sleman';
+  if (lower.includes('ponorogo')) return 'Ponorogo';
+  if (lower.includes('purwokerto')) return 'Purwokerto';
+  if (lower.includes('kediri')) return 'Kediri';
+  if (lower.includes('boyolali')) return 'Boyolali';
+  if (lower.includes('kudus')) return 'Kudus';
+  if (lower.includes('bantul')) return 'Bantul';
+  if (lower.includes('klaten')) return 'Klaten';
+  if (lower.includes('tuban')) return 'Tuban';
+  if (lower.includes('surabaya')) return 'Surabaya';
+  if (lower.includes('sidoarjo')) return 'Sidoarjo';
+  if (lower.includes('blitar')) return 'Blitar';
+  if (lower.includes('batang')) return 'Batang';
+  if (lower.includes('situbondo')) return 'Situbondo';
+  if (lower.includes('trenggalek')) return 'Trenggalek';
+  if (lower.includes('jember')) return 'Jember';
+  if (lower.includes('semarang')) return 'Semarang';
+  if (lower.includes('purworejo')) return 'Purworejo';
+  if (lower.includes('wonosobo')) return 'Wonosobo';
+  if (lower.includes('probolinggo')) return 'Probolinggo';
+  if (lower.includes('bondowoso')) return 'Bondowoso';
+  if (lower.includes('kendal')) return 'Kendal';
+  if (lower.includes('sukoharjo')) return 'Sukoharjo';
+  if (lower.includes('pati')) return 'Pati';
+  if (lower.includes('pasuruan')) return 'Pasuruan';
+  if (lower.includes('kebumen')) return 'Kebumen';
+
+  // Barat Jawa (Jabar, Banten, DKI Jakarta)
+  if (lower.includes('bogor')) return 'Bogor';
+  if (lower.includes('bandung')) return 'Bandung';
+  if (lower.includes('tasikmalaya')) return 'Tasikmalaya';
+  if (lower.includes('karawang')) return 'Karawang';
+  if (lower.includes('jakarta')) return 'Jakarta';
+  if (lower.includes('serang')) return 'Serang';
+  if (lower.includes('pandeglang')) return 'Pandeglang';
+  if (lower.includes('tangerang')) return 'Tangerang';
+  if (lower.includes('banten')) return 'Banten';
+
+  // Sumatera 1 & 2
+  if (lower.includes('tulang bawang')) return 'Tulang Bawang';
+  if (lower.includes('tanggamus')) return 'Tanggamus';
+  if (lower.includes('bangka')) return 'Bangka Belitung';
+  if (lower.includes('palembang')) return 'Palembang';
+  if (lower.includes('pangkalpinang') || lower.includes('pangkal pinang')) return 'Pangkal Pinang';
+  if (lower.includes('lampung')) return 'Lampung';
+  if (lower.includes('jambi')) return 'Jambi';
+  if (lower.includes('padang')) return 'Padang';
+  if (lower.includes('way kanan')) return 'Way Kanan';
+  if (lower.includes('batam')) return 'Batam';
+  if (lower.includes('aceh')) return 'Aceh';
+  if (lower.includes('solok')) return 'Solok';
+
+  return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
 function getMasterWilayahList() {
   try {
     const raw = safeStorage.getItem('paskas_master_wilayah');
@@ -9190,11 +9302,14 @@ function renderCharts() {
   }
   const topTransportPct = totalOrang > 0 ? Math.round((topTransportCount / totalOrang) * 100) : 0;
 
-  // Wilayah (Grouped case-insensitively, identical region names merged automatically)
+  // Wilayah & Kota Aggregation (Grouped case-insensitively, identical region/city names merged automatically)
   const wilayahAggregated = {};
+  const allCitiesMap = {};
+
   chartSourceData.forEach(r => {
     if (r.wilayah) {
       const w = normalizeWilayahName(r.wilayah);
+      const c = cleanDaerahName(r.daerah);
       if (!wilayahAggregated[w]) {
         wilayahAggregated[w] = {
           name: w,
@@ -9202,23 +9317,65 @@ function renderCharts() {
           male: 0,
           female: 0,
           individu: 0,
-          kelompok: 0
+          kelompok: 0,
+          cities: {}
         };
       }
       wilayahAggregated[w].count += 1;
-      if (r.gender === 'Laki-laki') wilayahAggregated[w].male += 1;
-      else if (r.gender === 'Perempuan') wilayahAggregated[w].female += 1;
+      const isFem = isFemaleGender(r.gender);
+      if (isFem) wilayahAggregated[w].female += 1;
+      else wilayahAggregated[w].male += 1;
       if (r.registration_type === 'individu') wilayahAggregated[w].individu += 1;
       else if (r.registration_type === 'kelompok') wilayahAggregated[w].kelompok += 1;
+
+      // Add to cities of this wilayah
+      if (!wilayahAggregated[w].cities[c]) {
+        wilayahAggregated[w].cities[c] = {
+          name: c,
+          wilayah: w,
+          count: 0,
+          male: 0,
+          female: 0,
+          individu: 0,
+          kelompok: 0
+        };
+      }
+      wilayahAggregated[w].cities[c].count += 1;
+      if (isFem) wilayahAggregated[w].cities[c].female += 1;
+      else wilayahAggregated[w].cities[c].male += 1;
+      if (r.registration_type === 'individu') wilayahAggregated[w].cities[c].individu += 1;
+      else if (r.registration_type === 'kelompok') wilayahAggregated[w].cities[c].kelompok += 1;
+
+      // Add to global cities map
+      const gKey = `${w}:::${c}`;
+      if (!allCitiesMap[gKey]) {
+        allCitiesMap[gKey] = {
+          name: c,
+          wilayah: w,
+          count: 0,
+          male: 0,
+          female: 0,
+          individu: 0,
+          kelompok: 0
+        };
+      }
+      allCitiesMap[gKey].count += 1;
+      if (isFem) allCitiesMap[gKey].female += 1;
+      else allCitiesMap[gKey].male += 1;
+      if (r.registration_type === 'individu') allCitiesMap[gKey].individu += 1;
+      else if (r.registration_type === 'kelompok') allCitiesMap[gKey].kelompok += 1;
     }
   });
 
   const sortedWilayahList = Object.values(wilayahAggregated).sort((a, b) => b.count - a.count);
+  const allCitiesList = Object.values(allCitiesMap).sort((a, b) => b.count - a.count);
+  const totalDistinctCities = allCitiesList.length;
   const sortedWilayah = sortedWilayahList.map(item => [item.name, item.count]);
   const topWilayahEntries = sortedWilayah.slice(0, 8);
   const topWilayahName = sortedWilayah.length > 0 ? sortedWilayah[0][0] : '-';
   const topWilayahCount = sortedWilayah.length > 0 ? sortedWilayah[0][1] : 0;
   const topWilayahPct = totalOrang > 0 ? Math.round((topWilayahCount / totalOrang) * 100) : 0;
+  const topCityGlobal = allCitiesList.length > 0 ? allCitiesList[0] : null;
 
   // Gender & Type
   const female = chartSourceData.filter(r => isFemaleGender(r.gender)).length;
@@ -9230,8 +9387,8 @@ function renderCharts() {
   const indPct = totalOrang > 0 ? Math.round((individu / totalOrang) * 100) : 0;
   const kelPct = totalOrang > 0 ? (100 - indPct) : 0;
 
-  // Render Rekapitulasi Peserta per Daerah Table
-  renderRekapWilayahSummaryTable(sortedWilayahList, totalOrang, male, female, individu, kelompok);
+  // Render Rekapitulasi Peserta per Daerah & Kota Table
+  renderRekapWilayahSummaryTable(sortedWilayahList, totalOrang, male, female, individu, kelompok, allCitiesList);
 
   // Health computation (terstandarisasi)
   const healthyList = chartSourceData.filter(r => !hasParticipantMedicalIssue(r));
@@ -9454,13 +9611,19 @@ function renderCharts() {
     listWil.innerHTML = `
       <div class="insight-item">
         <span class="insight-item-name"><i class="fa-solid fa-earth-asia text-green"></i> Total Cakupan Wilayah</span>
-        <span class="insight-item-val">${sortedWilayah.length} Kota/Kab</span>
+        <span class="insight-item-val">${sortedWilayah.length} Wilayah (${totalDistinctCities} Kota/Kab)</span>
       </div>
       <div class="insight-item">
-        <span class="insight-item-name"><i class="fa-solid fa-location-pin text-green"></i> Daerah Asal Terbanyak</span>
+        <span class="insight-item-name"><i class="fa-solid fa-location-pin text-green"></i> Wilayah Terbanyak</span>
         <span class="insight-item-val">${topWilayahName} (${topWilayahCount} Org / ${topWilayahPct}%)</span>
       </div>
-    ` + topWilayahEntries.slice(0, 4).map(([w, c], idx) => {
+      ${topCityGlobal ? `
+      <div class="insight-item">
+        <span class="insight-item-name"><i class="fa-solid fa-city text-green"></i> Kota Terbanyak Nasional</span>
+        <span class="insight-item-val" style="color: #15803d; font-weight: 700;">${topCityGlobal.name} (${topCityGlobal.count} Org &bull; ${topCityGlobal.wilayah})</span>
+      </div>
+      ` : ''}
+    ` + topWilayahEntries.slice(0, 3).map(([w, c], idx) => {
       const p = totalOrang > 0 ? Math.round((c / totalOrang) * 100) : 0;
       return `
         <div class="insight-item">
@@ -9694,13 +9857,68 @@ function renderCharts() {
     });
   }
 
-  // Chart Function: Wilayah (Horizontal Bar)
+  // Chart Function: Wilayah & Kota (Horizontal Bar)
   function renderWilayahChart(canvasId, refInstance) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
     if (refInstance) refInstance.destroy();
 
-    const maxWVal = topWilayahEntries.length > 0 ? Math.max(...topWilayahEntries.map(e => e[1])) : 0;
+    const modeSelect = document.getElementById('selectWilayahChartMode');
+    const selectedMode = (canvasId === 'chartWilayah' && modeSelect) ? modeSelect.value : 'all';
+
+    let chartLabels = [];
+    let chartData = [];
+    let chartTitle = 'Sebaran Peserta per Wilayah (Top Daerah)';
+    let barColor = '#2d6a4f';
+
+    if (selectedMode === 'all') {
+      chartLabels = topWilayahEntries.map(e => e[0]);
+      chartData = topWilayahEntries.map(e => e[1]);
+      chartTitle = 'Sebaran Peserta per Wilayah (7 Wilayah)';
+      barColor = '#2d6a4f';
+      const tagWil = document.getElementById('tagWilayahLead');
+      if (tagWil) tagWil.textContent = `Wilayah Utama: ${topWilayahName} (${topWilayahCount} Org)`;
+    } else if (selectedMode === 'top_cities') {
+      const top15 = allCitiesList.slice(0, 15);
+      chartLabels = top15.map(c => `${c.name} (${c.wilayah})`);
+      chartData = top15.map(c => c.count);
+      chartTitle = `Top 15 Kota Se-Indonesia (Total ${allCitiesList.length} Kota)`;
+      barColor = '#15803d';
+      const tagWil = document.getElementById('tagWilayahLead');
+      if (tagWil && top15.length > 0) tagWil.textContent = `Kota Terbanyak: ${top15[0].name} (${top15[0].count} Org)`;
+    } else {
+      // Selected specific wilayah, e.g. '3 J', 'Barat Jawa'
+      const targetW = sortedWilayahList.find(w => w.name.toLowerCase() === selectedMode.toLowerCase());
+      if (targetW) {
+        const sortedCities = Object.values(targetW.cities).sort((a, b) => b.count - a.count);
+        const topCitiesOfW = sortedCities.slice(0, 15);
+        chartLabels = topCitiesOfW.map(c => c.name);
+        chartData = topCitiesOfW.map(c => c.count);
+        chartTitle = `Sebaran Kota di Wilayah ${targetW.name} (${sortedCities.length} Kota Terdata)`;
+        barColor = '#047857';
+
+        const tagWil = document.getElementById('tagWilayahLead');
+        if (tagWil && topCitiesOfW.length > 0) {
+          tagWil.textContent = `Kota Terbanyak: ${topCitiesOfW[0].name} (${topCitiesOfW[0].count} Org)`;
+        }
+      } else {
+        chartLabels = topWilayahEntries.map(e => e[0]);
+        chartData = topWilayahEntries.map(e => e[1]);
+      }
+    }
+
+    const titleEl = document.getElementById('labelWilayahChartTitle');
+    if (titleEl) titleEl.textContent = chartTitle;
+
+    // Attach listener to modeSelect if not already attached
+    if (modeSelect && !modeSelect.dataset.listenerAttached) {
+      modeSelect.dataset.listenerAttached = 'true';
+      modeSelect.addEventListener('change', () => {
+        chartWilayahInstance = renderWilayahChart('chartWilayah', chartWilayahInstance);
+      });
+    }
+
+    const maxWVal = chartData.length > 0 ? Math.max(...chartData) : 0;
 
     const horizontalBarValuesPlugin = {
       id: 'horizontalBarValuesPlugin',
@@ -9726,11 +9944,11 @@ function renderCharts() {
       type: 'bar',
       plugins: [horizontalBarValuesPlugin],
       data: {
-        labels: topWilayahEntries.map(e => e[0]),
+        labels: chartLabels,
         datasets: [{
           label: 'Jumlah Peserta',
-          data: topWilayahEntries.map(e => e[1]),
-          backgroundColor: '#2d6a4f',
+          data: chartData,
+          backgroundColor: barColor,
           borderRadius: 6,
           borderWidth: 0
         }]
@@ -9741,7 +9959,7 @@ function renderCharts() {
         maintainAspectRatio: false,
         layout: {
           padding: {
-            right: 42
+            right: 48
           }
         },
         plugins: {
@@ -9760,12 +9978,12 @@ function renderCharts() {
         scales: {
           x: {
             beginAtZero: true,
-            suggestedMax: Math.max(2, maxWVal + 1),
+            suggestedMax: Math.max(2, maxWVal + 2),
             ticks: { color: '#52796f', precision: 0 },
             grid: { color: '#edf4f0' }
           },
           y: {
-            ticks: { color: '#132a1c', font: { weight: '700' } },
+            ticks: { color: '#132a1c', font: { weight: '700', size: chartLabels.length > 10 ? 11 : 12 } },
             grid: { display: false }
           }
         }
@@ -10168,71 +10386,364 @@ function renderPaskasSection(paskasByWilayah, countBaru, countMadya, countSenior
   }).join('');
 }
 
-/**
- * Render Tabel Rekapitulasi Jumlah Peserta per Daerah Asal Kafilah
- * Mengakumulasikan kuota peserta per daerah, jika ada nama daerah yang sama langsung ditambahkan jumlahnya.
- */
-function renderRekapWilayahSummaryTable(sortedList, totalOrang, male, female, individu, kelompok) {
+// State for the interactive Wilayah & Kota table
+let wilayahTableState = {
+  mode: 'hierarchical', // 'hierarchical' | 'all_cities'
+  expanded: new Set(),
+  search: '',
+  sortedList: [],
+  allCitiesList: [],
+  totalOrang: 0,
+  male: 0,
+  female: 0,
+  individu: 0,
+  kelompok: 0
+};
+
+function initRekapWilayahTableEvents() {
+  const btnHierarki = document.getElementById('btnModeWilayahHierarki');
+  const btnNasional = document.getElementById('btnModeKotaNasional');
+  const btnExpandAll = document.getElementById('btnRekapExpandAll');
+  const btnCollapseAll = document.getElementById('btnRekapCollapseAll');
+  const searchInput = document.getElementById('rekapWilayahSearchInput');
+
+  if (btnHierarki && !btnHierarki.dataset.bound) {
+    btnHierarki.dataset.bound = 'true';
+    btnHierarki.addEventListener('click', () => {
+      wilayahTableState.mode = 'hierarchical';
+      btnHierarki.style.background = '#2d6a4f';
+      btnHierarki.style.color = '#ffffff';
+      btnHierarki.style.border = 'none';
+      if (btnNasional) {
+        btnNasional.style.background = '#ffffff';
+        btnNasional.style.color = '#475569';
+        btnNasional.style.border = '1px solid #cbd5e1';
+      }
+      drawRekapWilayahTable();
+    });
+  }
+
+  if (btnNasional && !btnNasional.dataset.bound) {
+    btnNasional.dataset.bound = 'true';
+    btnNasional.addEventListener('click', () => {
+      wilayahTableState.mode = 'all_cities';
+      btnNasional.style.background = '#2d6a4f';
+      btnNasional.style.color = '#ffffff';
+      btnNasional.style.border = 'none';
+      if (btnHierarki) {
+        btnHierarki.style.background = '#ffffff';
+        btnHierarki.style.color = '#475569';
+        btnHierarki.style.border = '1px solid #cbd5e1';
+      }
+      drawRekapWilayahTable();
+    });
+  }
+
+  if (btnExpandAll && !btnExpandAll.dataset.bound) {
+    btnExpandAll.dataset.bound = 'true';
+    btnExpandAll.addEventListener('click', () => {
+      wilayahTableState.sortedList.forEach(w => wilayahTableState.expanded.add(w.name));
+      drawRekapWilayahTable();
+    });
+  }
+
+  if (btnCollapseAll && !btnCollapseAll.dataset.bound) {
+    btnCollapseAll.dataset.bound = 'true';
+    btnCollapseAll.addEventListener('click', () => {
+      wilayahTableState.expanded.clear();
+      drawRekapWilayahTable();
+    });
+  }
+
+  if (searchInput && !searchInput.dataset.bound) {
+    searchInput.dataset.bound = 'true';
+    searchInput.addEventListener('input', (e) => {
+      wilayahTableState.search = (e.target.value || '').trim().toLowerCase();
+      drawRekapWilayahTable();
+    });
+  }
+}
+
+function drawRekapWilayahTable() {
   const tbody = document.getElementById('rekapWilayahSummaryTableBody');
-  const badge = document.getElementById('rekapWilayahTotalBadge');
+  const theadRow = document.getElementById('rekapWilayahTableHeader');
+  const badgeWilayah = document.getElementById('rekapWilayahTotalBadge');
+  const badgeKota = document.getElementById('rekapKotaTotalBadge');
   const sumTotal = document.getElementById('rekapWilayahSumTotal');
   const sumGender = document.getElementById('rekapWilayahSumGender');
   const sumType = document.getElementById('rekapWilayahSumType');
+  const footLabel = document.getElementById('rekapWilayahFootLabel');
 
-  if (badge) badge.textContent = `${sortedList.length} Daerah Terdata`;
+  const { sortedList, allCitiesList, totalOrang, male, female, individu, kelompok, mode, search } = wilayahTableState;
+
+  if (badgeWilayah) badgeWilayah.textContent = `${sortedList.length} Wilayah Terdata`;
+  if (badgeKota) badgeKota.textContent = `${allCitiesList.length} Kota/Kab Terdata`;
   if (sumTotal) sumTotal.textContent = `${totalOrang} Orang`;
   if (sumGender) sumGender.textContent = `${male} L / ${female} P`;
   if (sumType) sumType.textContent = `${individu} Mandiri / ${kelompok} Rombongan`;
 
   if (!tbody) return;
 
-  if (sortedList.length === 0) {
+  if (mode === 'all_cities') {
+    // Mode: Peringkat Seluruh Kota Se-Indonesia
+    if (theadRow) {
+      theadRow.innerHTML = `
+        <th width="50" style="text-align: center;">No</th>
+        <th>Nama Kota / Kabupaten</th>
+        <th width="130" style="text-align: center;">Wilayah Asal</th>
+        <th width="120" style="text-align: center;">Jumlah Peserta</th>
+        <th width="110" style="text-align: center;">Proporsi (%)</th>
+        <th width="150" style="text-align: center;">Ikhwan / Akhwat</th>
+        <th width="180" style="text-align: center;">Tipe Kepesertaan</th>
+      `;
+    }
+    if (footLabel) footLabel.colSpan = 3;
+
+    let filteredCities = allCitiesList;
+    if (search) {
+      filteredCities = allCitiesList.filter(c => c.name.toLowerCase().includes(search) || c.wilayah.toLowerCase().includes(search));
+    }
+
+    if (filteredCities.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; color: #64748b; padding: 26px;">
+            <i class="fa-solid fa-city" style="font-size: 24px; margin-bottom: 8px; display: block; opacity: 0.5;"></i>
+            Tidak ada kota/kabupaten yang cocok dengan pencarian "<strong>${escapeHtml(search)}</strong>".
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = filteredCities.map((c, idx) => {
+      const pct = totalOrang > 0 ? ((c.count / totalOrang) * 100).toFixed(1) : 0;
+      const rankBadge = idx === 0 
+        ? '<span style="color: #fbbf24; font-weight: 800;"><i class="fa-solid fa-crown"></i> 1</span>'
+        : (idx === 1 ? '<span style="color: #94a3b8; font-weight: 700;">2</span>' 
+        : (idx === 2 ? '<span style="color: #b45309; font-weight: 700;">3</span>' : `${idx + 1}`));
+
+      return `
+        <tr style="border-bottom: 1px solid #f1f5f9; ${idx % 2 === 1 ? 'background: #fcfdfe;' : ''}">
+          <td style="text-align: center; vertical-align: middle;">${rankBadge}</td>
+          <td style="vertical-align: middle;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-tree-city text-green" style="font-size: 13px;"></i>
+              <strong style="color: #132a1c; font-size: 13px;">${escapeHtml(c.name)}</strong>
+            </div>
+          </td>
+          <td style="text-align: center; vertical-align: middle;">
+            <span class="badge" style="background: rgba(45, 106, 79, 0.12); color: #2d6a4f; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-size: 11.5px;">
+              ${escapeHtml(c.wilayah)}
+            </span>
+          </td>
+          <td style="text-align: center; vertical-align: middle;">
+            <span style="font-size: 14px; font-weight: 800; color: #132a1c;">${c.count}</span>
+            <span style="font-size: 11.5px; color: #64748b;"> Org</span>
+          </td>
+          <td style="text-align: center; vertical-align: middle;">
+            <span class="badge" style="background: #f1f5f9; color: #334155; font-weight: 700; padding: 3px 8px; border-radius: 4px; font-size: 11px;">
+              ${pct}%
+            </span>
+          </td>
+          <td style="text-align: center; vertical-align: middle; font-size: 12px;">
+            <span style="color: #0284c7; font-weight: 600;">♂ ${c.male}</span> &bull; 
+            <span style="color: #db2777; font-weight: 600;">♀ ${c.female}</span>
+          </td>
+          <td style="text-align: center; vertical-align: middle; font-size: 12px; color: #475569;">
+            <span>${c.individu} Mandiri</span> &bull; <span>${c.kelompok} Rombongan</span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+    return;
+  }
+
+  // Mode: Hierarchical (Per Wilayah & Rincian Kota)
+  if (theadRow) {
+    theadRow.innerHTML = `
+      <th width="50" style="text-align: center;">No</th>
+      <th>Nama Wilayah (Klik Rincian Kota)</th>
+      <th width="130" style="text-align: center;">Jumlah Peserta</th>
+      <th width="120" style="text-align: center;">Proporsi (%)</th>
+      <th width="160" style="text-align: center;">Ikhwan / Akhwat</th>
+      <th width="180" style="text-align: center;">Tipe Kepesertaan</th>
+    `;
+  }
+  if (footLabel) footLabel.colSpan = 2;
+
+  let displayList = sortedList;
+  if (search) {
+    displayList = sortedList.filter(item => {
+      const matchW = item.name.toLowerCase().includes(search);
+      const cityList = item.cities ? Object.values(item.cities) : [];
+      const matchC = cityList.some(c => c.name.toLowerCase().includes(search));
+      return matchW || matchC;
+    });
+  }
+
+  if (displayList.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; color: #64748b; padding: 26px;">
           <i class="fa-solid fa-map-location-dot" style="font-size: 24px; margin-bottom: 8px; display: block; opacity: 0.5;"></i>
-          Belum ada data pendaftar daerah asal kafilah.
+          ${search ? `Tidak ada wilayah/kota yang cocok dengan "${escapeHtml(search)}".` : 'Belum ada data pendaftar daerah asal kafilah.'}
         </td>
       </tr>
     `;
     return;
   }
 
-  tbody.innerHTML = sortedList.map((item, idx) => {
+  let html = '';
+  displayList.forEach((item, idx) => {
     const pct = totalOrang > 0 ? ((item.count / totalOrang) * 100).toFixed(1) : 0;
     const rankBadge = idx === 0 
       ? '<span style="color: #fbbf24; font-weight: 800;"><i class="fa-solid fa-crown"></i> 1</span>'
       : (idx === 1 ? '<span style="color: #94a3b8; font-weight: 700;">2</span>' 
       : (idx === 2 ? '<span style="color: #b45309; font-weight: 700;">3</span>' : `${idx + 1}`));
 
-    return `
-      <tr>
-        <td style="text-align: center;">${rankBadge}</td>
-        <td>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <i class="fa-solid fa-location-dot" style="color: #2d6a4f; font-size: 13px;"></i>
-            <strong style="color: #132a1c;">${escapeHtml(item.name)}</strong>
+    let cityList = item.cities ? Object.values(item.cities).sort((a, b) => b.count - a.count) : [];
+    if (search && !item.name.toLowerCase().includes(search)) {
+      cityList = cityList.filter(c => c.name.toLowerCase().includes(search));
+    }
+
+    // Auto-expand if user searched a specific city
+    const isAutoExpanded = Boolean(search && cityList.length > 0 && !item.name.toLowerCase().includes(search));
+    const isExpanded = isAutoExpanded || wilayahTableState.expanded.has(item.name);
+
+    html += `
+      <tr class="wilayah-parent-row" data-wilayah="${escapeAttr(item.name)}" style="background: ${isExpanded ? '#f0fdf4' : '#ffffff'}; cursor: pointer; transition: background 0.15s; border-bottom: ${isExpanded ? 'none' : '1px solid #f1f5f9'};">
+        <td style="text-align: center; vertical-align: middle;">${rankBadge}</td>
+        <td style="vertical-align: middle;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-location-dot" style="color: #2d6a4f; font-size: 14px;"></i>
+              <strong style="color: #132a1c; font-size: 13.5px;">${escapeHtml(item.name)}</strong>
+              <span style="background: rgba(45, 106, 79, 0.12); color: #2d6a4f; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px;">
+                ${Object.keys(item.cities || {}).length} Kota/Kab
+              </span>
+            </div>
+            <button type="button" class="btn-toggle-city-sub btn btn-sm" data-wilayah="${escapeAttr(item.name)}" style="border: 1px solid #cbd5e1; background: ${isExpanded ? '#2d6a4f' : '#ffffff'}; color: ${isExpanded ? '#ffffff' : '#1e3a29'}; border-radius: 6px; padding: 3px 9px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+              <span>${isExpanded ? 'Tutup Kota' : 'Rincian Kota'}</span>
+              <i class="fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}" style="color: ${isExpanded ? '#ffffff' : '#2d6a4f'};"></i>
+            </button>
           </div>
         </td>
-        <td style="text-align: center;">
+        <td style="text-align: center; vertical-align: middle;">
           <span style="font-size: 14px; font-weight: 800; color: #132a1c;">${item.count}</span>
           <span style="font-size: 11.5px; color: #64748b;"> Org</span>
         </td>
-        <td style="text-align: center;">
+        <td style="text-align: center; vertical-align: middle;">
           <span class="badge" style="background: rgba(45, 106, 79, 0.12); color: #2d6a4f; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
             ${pct}%
           </span>
         </td>
-        <td style="text-align: center; font-size: 12.5px;">
+        <td style="text-align: center; vertical-align: middle; font-size: 12.5px;">
           <span style="color: #0284c7; font-weight: 600;"><i class="fa-solid fa-mars"></i> ${item.male}</span> &bull; 
           <span style="color: #db2777; font-weight: 600;"><i class="fa-solid fa-venus"></i> ${item.female}</span>
         </td>
-        <td style="text-align: center; font-size: 12.5px; color: #475569;">
+        <td style="text-align: center; vertical-align: middle; font-size: 12.5px; color: #475569;">
           <span>${item.individu} Mandiri</span> &bull; <span>${item.kelompok} Rombongan</span>
         </td>
       </tr>
     `;
-  }).join('');
+
+    if (isExpanded) {
+      html += `
+        <tr class="city-subtable-row" style="background: #f8fafc; border-bottom: 2px solid #cbd5e1;">
+          <td colspan="6" style="padding: 10px 16px 14px 16px;">
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+              <div style="background: #f1f5f9; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
+                <span style="font-weight: 700; font-size: 12px; color: #132a1c;">
+                  <i class="fa-solid fa-city text-green"></i> Rincian Kota / Daerah di Wilayah <strong>${escapeHtml(item.name)}</strong>:
+                </span>
+                <span style="font-size: 11.5px; color: #475569;">
+                  Total: <strong>${cityList.length} Kota/Kabupaten</strong> &bull; <strong>${item.count} Orang</strong>
+                </span>
+              </div>
+              <div style="max-height: 280px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <thead>
+                    <tr style="background: #f8fafc; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 11px;">
+                      <th width="35" style="padding: 6px 8px; text-align: center;">No</th>
+                      <th style="padding: 6px 10px; text-align: left;">Nama Kota / Kabupaten</th>
+                      <th width="120" style="padding: 6px 10px; text-align: center;">Jumlah Peserta</th>
+                      <th width="110" style="padding: 6px 10px; text-align: center;">% di Wilayah</th>
+                      <th width="150" style="padding: 6px 10px; text-align: center;">Ikhwan / Akhwat</th>
+                      <th width="170" style="padding: 6px 10px; text-align: center;">Tipe Kepesertaan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${cityList.map((c, cIdx) => {
+                      const cPct = item.count > 0 ? ((c.count / item.count) * 100).toFixed(1) : 0;
+                      return `
+                        <tr style="border-bottom: 1px solid #f1f5f9; ${cIdx % 2 === 1 ? 'background: #fcfdfe;' : ''}">
+                          <td style="padding: 6px 8px; text-align: center; color: #94a3b8; font-weight: 600;">${cIdx + 1}</td>
+                          <td style="padding: 6px 10px; font-weight: 700; color: #1e293b;">
+                            <i class="fa-solid fa-tree-city text-green" style="font-size: 11px; margin-right: 6px; opacity: 0.8;"></i>
+                            ${escapeHtml(c.name)}
+                          </td>
+                          <td style="padding: 6px 10px; text-align: center;">
+                            <span style="font-weight: 800; color: #132a1c; font-size: 12.5px;">${c.count}</span>
+                            <span style="font-size: 11px; color: #64748b;"> Org</span>
+                          </td>
+                          <td style="padding: 6px 10px; text-align: center;">
+                            <span style="background: rgba(45, 106, 79, 0.08); color: #2d6a4f; font-weight: 700; padding: 2px 7px; border-radius: 4px; font-size: 11px;">
+                              ${cPct}%
+                            </span>
+                          </td>
+                          <td style="padding: 6px 10px; text-align: center; font-size: 11.5px;">
+                            <span style="color: #0284c7; font-weight: 600;">♂ ${c.male}</span> &bull; 
+                            <span style="color: #db2777; font-weight: 600;">♀ ${c.female}</span>
+                          </td>
+                          <td style="padding: 6px 10px; text-align: center; font-size: 11px; color: #64748b;">
+                            ${c.individu} Mandiri &bull; ${c.kelompok} Rombongan
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+  });
+
+  tbody.innerHTML = html;
+
+  // Bind row click & toggle button click
+  tbody.querySelectorAll('.wilayah-parent-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      const wName = row.dataset.wilayah;
+      if (!wName) return;
+      if (wilayahTableState.expanded.has(wName)) {
+        wilayahTableState.expanded.delete(wName);
+      } else {
+        wilayahTableState.expanded.add(wName);
+      }
+      drawRekapWilayahTable();
+    });
+  });
+}
+
+/**
+ * Render Tabel Rekapitulasi Jumlah Peserta per Daerah & Kota Asal Kafilah
+ * Mengakumulasikan kuota peserta per wilayah dan per kota, dengan rincian interaktif.
+ */
+function renderRekapWilayahSummaryTable(sortedList, totalOrang, male, female, individu, kelompok, allCitiesList) {
+  wilayahTableState.sortedList = sortedList || [];
+  wilayahTableState.allCitiesList = allCitiesList || [];
+  wilayahTableState.totalOrang = totalOrang || 0;
+  wilayahTableState.male = male || 0;
+  wilayahTableState.female = female || 0;
+  wilayahTableState.individu = individu || 0;
+  wilayahTableState.kelompok = kelompok || 0;
+
+  initRekapWilayahTableEvents();
+  drawRekapWilayahTable();
 }
 
 /**

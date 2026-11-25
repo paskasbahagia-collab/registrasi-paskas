@@ -3676,12 +3676,27 @@
             <div class="chart-view-panel" id="chartViewWilayah" style="display: none;">
               <div class="chart-focused-grid">
                 <div class="chart-box main-chart-box">
-                  <div class="chart-box-top">
-                    <h4 class="chart-title">
-                      <i class="fa-solid fa-map-location-dot text-green"></i>
-                      Sebaran Peserta per Wilayah (Top Daerah)
-                    </h4>
-                    <span class="chart-badge-tag" id="tagWilayahLead">Daerah Utama: -</span>
+                  <div class="chart-box-top" style="flex-wrap: wrap; gap: 8px;">
+                    <div>
+                      <h4 class="chart-title">
+                        <i class="fa-solid fa-map-location-dot text-green"></i>
+                        <span id="labelWilayahChartTitle">Sebaran Peserta per Wilayah (Top Daerah)</span>
+                      </h4>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <select id="selectWilayahChartMode" style="font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #132a1c; cursor: pointer;">
+                        <option value="all">🗺️ Seluruh Wilayah (7 Wilayah)</option>
+                        <option value="top_cities">🏆 Top 15 Kota Se-Indonesia</option>
+                        <option value="3 J">📍 Wilayah 3 J (Per Kota)</option>
+                        <option value="Barat Jawa">📍 Wilayah Barat Jawa (Per Kota)</option>
+                        <option value="Kalimantan 1">📍 Wilayah Kalimantan 1 (Per Kota)</option>
+                        <option value="Ibt">📍 Wilayah Ibt (Per Kota)</option>
+                        <option value="Sumatera 2">📍 Wilayah Sumatera 2 (Per Kota)</option>
+                        <option value="Kalimantan 2">📍 Wilayah Kalimantan 2 (Per Kota)</option>
+                        <option value="Sumatera 1">📍 Wilayah Sumatera 1 (Per Kota)</option>
+                      </select>
+                      <span class="chart-badge-tag" id="tagWilayahLead">Daerah Utama: -</span>
+                    </div>
                   </div>
                   <div class="chart-canvas-wrapper" style="height: 310px;">
                     <canvas id="chartWilayah"></canvas>
@@ -3690,7 +3705,7 @@
 
                 <!-- Insight Pod -->
                 <div class="chart-insight-box">
-                  <h5 class="insight-title"><i class="fa-solid fa-circle-info"></i> Konsentrasi Sebaran Wilayah</h5>
+                  <h5 class="insight-title"><i class="fa-solid fa-circle-info"></i> Konsentrasi Sebaran Wilayah & Kota</h5>
                   <div class="insight-metric-list" id="wilayahInsightList">
                     <!-- Populated dynamically via JS -->
                   </div>
@@ -3699,22 +3714,52 @@
 
               <!-- Tabel Rekapitulasi Peserta Berdasarkan Daerah Inputan -->
               <div class="rekap-wilayah-table-card" style="margin-top: 24px;">
-                <div class="rekap-section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+                <div class="rekap-section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
                   <div>
                     <h4 style="font-size: 16px; font-weight: 700; color: #132a1c; margin: 0; display: flex; align-items: center; gap: 8px;">
-                      <i class="fa-solid fa-table-list text-green"></i> Rekapitulasi Jumlah Peserta per Daerah Asal
+                      <i class="fa-solid fa-table-list text-green"></i> Rekapitulasi Jumlah Peserta per Wilayah & Kota
                     </h4>
                     <p style="font-size: 12.5px; color: #475569; margin: 3px 0 0 0;">
-                      Total kuota peserta diakumulasikan otomatis per nama daerah inputan (daerah yang sama langsung digabungkan tanpa duplikasi).
+                      Klik baris wilayah untuk melihat rincian jumlah peserta dari masing-masing kota/kabupaten.
                     </p>
                   </div>
-                  <span class="chart-badge-tag" id="rekapWilayahTotalBadge">0 Daerah Terdata</span>
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span class="chart-badge-tag" id="rekapWilayahTotalBadge">0 Daerah Terdata</span>
+                    <span class="chart-badge-tag" id="rekapKotaTotalBadge" style="background: rgba(30, 41, 59, 0.08); color: #1e293b;">0 Kota/Kab Terdata</span>
+                  </div>
                 </div>
 
-                <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
-                  <table class="data-table" style="font-size: 13px;">
+                <!-- Control Bar: Tabs, Search & Expand/Collapse -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                  <!-- View Mode Pills -->
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <button type="button" id="btnModeWilayahHierarki" class="btn btn-sm" style="font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 6px; background: #2d6a4f; color: #ffffff; border: none; cursor: pointer;">
+                      <i class="fa-solid fa-layer-group"></i> Per Wilayah & Rincian Kota
+                    </button>
+                    <button type="button" id="btnModeKotaNasional" class="btn btn-sm" style="font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 6px; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; cursor: pointer;">
+                      <i class="fa-solid fa-city"></i> Peringkat Seluruh Kota (Nasional)
+                    </button>
+                  </div>
+
+                  <!-- Search & Collapse Controls -->
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <div style="position: relative;">
+                      <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: #94a3b8;"></i>
+                      <input type="text" id="rekapWilayahSearchInput" placeholder="Cari wilayah / kota..." style="font-size: 12px; padding: 5px 10px 5px 28px; border-radius: 6px; border: 1px solid #cbd5e1; width: 190px; outline: none; background: #ffffff;">
+                    </div>
+                    <button type="button" id="btnRekapExpandAll" class="btn btn-sm" title="Buka seluruh rincian kota" style="font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 6px; background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; cursor: pointer;">
+                      <i class="fa-solid fa-angles-down text-green"></i> Buka Semua Kota
+                    </button>
+                    <button type="button" id="btnRekapCollapseAll" class="btn btn-sm" title="Tutup seluruh rincian kota" style="font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 6px; background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; cursor: pointer;">
+                      <i class="fa-solid fa-angles-up text-green"></i> Tutup Semua Kota
+                    </button>
+                  </div>
+                </div>
+
+                <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                  <table class="data-table" id="tableRekapWilayahKota" style="font-size: 13px;">
                     <thead>
-                      <tr>
+                      <tr id="rekapWilayahTableHeader">
                         <th width="50" style="text-align: center;">No</th>
                         <th>Nama Wilayah / Daerah Asal</th>
                         <th width="130" style="text-align: center;">Jumlah Peserta</th>
@@ -3728,7 +3773,7 @@
                     </tbody>
                     <tfoot>
                       <tr style="background: rgba(45, 106, 79, 0.08); font-weight: 700; color: #132a1c;">
-                        <td colspan="2" style="text-align: right; padding: 12px 14px;">TOTAL KESELURUHAN:</td>
+                        <td colspan="2" style="text-align: right; padding: 12px 14px;" id="rekapWilayahFootLabel">TOTAL KESELURUHAN:</td>
                         <td style="text-align: center;" id="rekapWilayahSumTotal">0 Orang</td>
                         <td style="text-align: center;">100%</td>
                         <td style="text-align: center;" id="rekapWilayahSumGender">0 L / 0 P</td>
